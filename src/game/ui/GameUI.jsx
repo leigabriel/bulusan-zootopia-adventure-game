@@ -4,10 +4,9 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import * as THREE from 'three';
 import { resolveAssetUrl } from '../utils/localAssets.js';
-import { ActionButton, GameButton, IconButton, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
+import { ActionButton, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
-import { ANIMAL_METADATA } from '../data/animalMetadata.js';
 import { getPlayerProfile, isPlayerProfileComplete, PLAYER_GENDERS, savePlayerProfile } from '../utils/playerProfile.js';
 
 const SETTINGS_KEY = 'minizoo_settings';
@@ -42,7 +41,6 @@ function readSettings() {
         return { ...UI_DEFAULT_SETTINGS };
     }
 }
-
 function persistSettings(updated) {
     try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
@@ -87,49 +85,18 @@ function useIsTouchDevice() {
     return isTouch;
 }
 
-function ToggleRow({ label, description, enabled, onToggle }) {
-    return (
-        <button
-            type="button"
-            onClick={onToggle}
-            className={cx(
-                "flex w-full items-center justify-between rounded-2xl border-2 px-4 py-3 transition-all active:translate-y-1 active:shadow-none",
-                enabled
-                    ? "border-emerald-100 bg-emerald-50 shadow-[0_4px_0_0_#d1fae5]"
-                    : "border-slate-100 bg-slate-50 shadow-[0_4px_0_0_#f1f5f9]"
-            )}
-        >
-            <div className="text-left">
-                <span className={cx("block text-sm font-black uppercase tracking-wider", enabled ? "text-emerald-800" : "text-slate-500")}>
-                    {label}
-                </span>
-                {description && <span className="block text-[10px] font-semibold text-slate-400">{description}</span>}
-            </div>
-            <div className={cx(
-                "h-6 w-11 rounded-full p-1 transition-colors",
-                enabled ? "bg-emerald-500" : "bg-slate-300"
-            )}>
-                <div className={cx(
-                    "h-4 w-4 rounded-full bg-white transition-transform",
-                    enabled ? "translate-x-5" : "translate-x-0"
-                )} />
-            </div>
-        </button>
-    );
-}
-
 function VolumeSliderRow({ label, description, value, onChange }) {
     return (
         <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-slate-100 bg-white p-4 shadow-sm">
             <div className="flex justify-between items-center px-1">
                 <div className="text-left">
                     <span className="block text-sm font-black uppercase tracking-wider text-slate-800">{label}</span>
-                    {description && <span className="block text-[10px] font-semibold text-slate-400">{description}</span>}
+                    {description && <span className="block text-[11px] font-semibold text-slate-500">{description}</span>}
                 </div>
                 <span className="text-xs font-black text-emerald-600">{Math.round(value * 100)}%</span>
             </div>
 
-            <div className="relative mt-1 h-8 flex items-center px-1">
+            <div className="relative mt-1 h-11 flex items-center px-1">
                 <input
                     type="range"
                     min="0"
@@ -137,7 +104,7 @@ function VolumeSliderRow({ label, description, value, onChange }) {
                     step="0.01"
                     value={value}
                     onChange={(e) => onChange(parseFloat(e.target.value))}
-                    className="w-full h-3 rounded-full appearance-none bg-slate-100 cursor-pointer accent-emerald-500 [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:-mt-1.5"
+                    className="w-full h-11 rounded-full appearance-none bg-transparent cursor-pointer accent-emerald-500 [&::-webkit-slider-runnable-track]:h-3 [&::-webkit-slider-runnable-track]:bg-slate-100 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:-mt-1.5"
                 />
             </div>
         </div>
@@ -147,7 +114,7 @@ function VolumeSliderRow({ label, description, value, onChange }) {
 function SelectRow({ label, options = [], value, onChange }) {
     return (
         <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-sm">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 px-1">
+            <span className="text-[11px] font-black uppercase tracking-wide text-slate-500 px-1">
                 {label}
             </span>
             <div className="flex flex-wrap gap-2" role="radiogroup">
@@ -161,7 +128,7 @@ function SelectRow({ label, options = [], value, onChange }) {
                             aria-checked={isSelected}
                             onClick={() => onChange(opt.value)}
                             className={cx(
-                                'min-w-24 flex-1 rounded-xl px-2 py-2 text-xs font-black uppercase tracking-wider transition-all',
+                                 'min-h-11 min-w-24 flex-1 rounded-xl px-2 py-2 text-xs font-black uppercase tracking-wide transition-all',
                                 isSelected
                                     ? 'bg-emerald-500 text-white shadow-[0_4px_0_0_#065f46]'
                                     : 'bg-emerald-50 text-emerald-700 shadow-[0_4px_0_0_#d1fae5] hover:bg-emerald-100'
@@ -176,45 +143,37 @@ function SelectRow({ label, options = [], value, onChange }) {
     );
 }
 
-function ProgressChip({ completed, total, className = '' }) {
-    return (
-        <span className={cx('rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-widest text-emerald-800', className)}>
-            {completed}/{total} fed
-        </span>
-    );
-}
-
 function HowToPlayContent() {
     const [page, setPage] = useState(0);
     const usesTouchControls = Capacitor.isNativePlatform() || /android/i.test(navigator.userAgent || '');
     const pages = usesTouchControls
         ? [
-            { label: 'Move', color: 'text-emerald-600', icon: '🕹️', iconClass: 'bg-emerald-100', text: 'Drag the joystick on the lower left. Your explorer runs automatically in the direction you move.' },
-            { label: 'Look & Jump', color: 'text-amber-600', icon: '👆', iconClass: 'bg-amber-100', text: 'Swipe an open area to look around. Tap Jump on the lower right to clear obstacles.' },
-            { label: 'Care & Explore', color: 'text-sky-600', icon: '🍎', iconClass: 'bg-sky-100', text: 'Approach an animal, then hold Feed. Use the book and camera buttons at the bottom of the screen.' },
-            { label: 'Ranger & Goal', color: 'text-emerald-700', icon: '🏅', iconClass: 'bg-lime-100', text: 'Tap Talk near Ranger Lino. Feed every safe animal to earn your completion certificate.' },
+             { label: 'Move', color: 'text-emerald-600', icon: '🕹️', iconClass: 'bg-emerald-100', text: 'Drag the joystick to move.' },
+             { label: 'Look and jump', color: 'text-amber-600', icon: '👆', iconClass: 'bg-amber-100', text: 'Swipe to look. Tap Jump to hop.' },
+             { label: 'Care for animals', color: 'text-sky-600', icon: '🍎', iconClass: 'bg-sky-100', text: 'Go near a safe animal. Hold Feed.' },
+             { label: 'Meet the ranger', color: 'text-emerald-700', icon: '🏅', iconClass: 'bg-lime-100', text: 'Tap Talk. Finish tasks to earn a prize.' },
         ]
         : [
-            { label: 'Move & Look', color: 'text-emerald-600', icon: 'WASD', iconClass: 'bg-emerald-100 text-xs', text: 'Use W, A, S, and D to move. Hold the left mouse button and drag to look around. Your explorer runs automatically.' },
-            { label: 'Jump & View', color: 'text-amber-600', icon: 'SPACE', iconClass: 'bg-amber-100 text-[9px]', text: 'Press Space to jump. Press V to switch between first-person and third-person views.' },
-            { label: 'Interact', color: 'text-sky-600', icon: 'F / T', iconClass: 'bg-sky-100 text-xs', text: 'Hold F near an animal to feed it. Press T or E near Ranger Lino to talk.' },
-            { label: 'Menus & Goal', color: 'text-emerald-700', icon: 'ESC', iconClass: 'bg-lime-100 text-xs', text: 'Press Escape to close open panels. Feed every safe animal to earn your completion certificate.' },
+             { label: 'Move and look', color: 'text-emerald-600', icon: 'WASD', iconClass: 'bg-emerald-100 text-xs', text: 'Use WASD to move. Drag the mouse to look.' },
+             { label: 'Jump and view', color: 'text-amber-600', icon: 'SPACE', iconClass: 'bg-amber-100 text-[11px]', text: 'Press Space to jump. Press V to change view.' },
+             { label: 'Care and talk', color: 'text-sky-600', icon: 'F / T', iconClass: 'bg-sky-100 text-xs', text: 'Hold F to feed. Press T or E to talk.' },
+             { label: 'Finish tasks', color: 'text-emerald-700', icon: 'ESC', iconClass: 'bg-lime-100 text-xs', text: 'Press Escape to close. Finish tasks to earn a prize.' },
         ];
     const current = pages[page];
 
     return (
-        <div className="flex min-h-64 flex-col gap-4 text-sm text-slate-700">
-            <p className="font-semibold text-center italic">{usesTouchControls ? 'Android touch controls' : 'Desktop keyboard and mouse controls'}</p>
-            <div className="flex flex-1 items-center rounded-2xl border-2 border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex min-h-0 flex-col gap-3 text-sm text-slate-700">
+            <p className="text-center text-[11px] font-semibold italic">{usesTouchControls ? 'Touch controls' : 'Keyboard and mouse'}</p>
+            <div className="flex min-h-20 flex-1 items-center rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-sm">
                 <div className="flex items-center gap-4">
                     <div className={cx('flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl', current.iconClass)}>{current.icon}</div>
                     <div>
-                        <p className={cx('mb-2 text-[10px] font-black uppercase tracking-[0.15em]', current.color)}>{current.label}</p>
-                        <p className="font-bold leading-relaxed text-slate-800">{current.text}</p>
+                        <p className={cx('mb-1 text-[11px] font-black uppercase tracking-wide', current.color)}>{current.label}</p>
+                        <p className="font-bold leading-snug text-slate-800">{current.text}</p>
                     </div>
                 </div>
             </div>
-            <PaginationControls page={page} pageCount={pages.length} onPageChange={setPage} />
+            <PaginationControls className="sticky bottom-0 bg-white" page={page} pageCount={pages.length} onPageChange={setPage} />
         </div>
     );
 }
@@ -233,7 +192,7 @@ function CreditsContent() {
     const visibleCredits = page === 0 ? [] : modelCredits.slice((page - 1) * 2, (page - 1) * 2 + 2);
 
     return (
-        <div className="flex min-h-72 flex-col gap-3 text-center text-sm text-slate-700">
+        <div className="flex min-h-0 flex-col gap-3 text-center text-sm text-slate-700">
             <div className="flex-1 space-y-2 text-left">
                 {page === 0 ? (
                     <div className="grid h-full content-center gap-4 text-center">
@@ -250,11 +209,11 @@ function CreditsContent() {
                     <div key={source} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
                         <p className="font-black text-slate-800">{title}</p>
                         <p className="text-xs font-semibold">By {author} | {license}</p>
-                        <a href={source} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-500 px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-[0_3px_0_0_#065f46] transition-all active:translate-y-0.5 active:shadow-none">Link</a>
+                        <a href={source} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-500 px-4 text-[11px] font-black uppercase tracking-wide text-white shadow-[0_3px_0_0_#065f46] transition-all active:translate-y-0.5 active:shadow-none">Link</a>
                     </div>
                 ))}
             </div>
-            <PaginationControls page={page} pageCount={pageCount} onPageChange={setPage} />
+            <PaginationControls className="sticky bottom-0 bg-white" page={page} pageCount={pageCount} onPageChange={setPage} />
         </div>
     );
 }
@@ -269,12 +228,8 @@ function ConfirmModal({
     confirmVariant = 'danger',
 }) {
     return (
-        <ModalShell isOpen={isOpen} onClose={onCancel} title={title} size="sm">
+        <ModalShell isOpen={isOpen} onClose={onCancel} title={title} size="sm" footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onCancel}>Back</ActionButton><ActionButton variant={confirmVariant} onClick={onConfirm}>{confirmLabel}</ActionButton></div>}>
             <p className="text-sm font-semibold leading-relaxed text-slate-600">{message}</p>
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <ActionButton variant="secondary" onClick={onCancel}>Cancel</ActionButton>
-                <ActionButton variant={confirmVariant} onClick={onConfirm}>{confirmLabel}</ActionButton>
-            </div>
         </ModalShell>
     );
 }
@@ -484,13 +439,13 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
     if (activeSection) {
         return (
             <ModalShell isOpen={isOpen && Boolean(activeSection)} onClose={() => setActiveSection(null)} title={sectionTitles[activeSection]} size="md">
-                <div className="flex min-h-52 flex-col gap-4">
+                <div className="flex min-h-0 flex-col gap-3">
                     <ActionButton variant="secondary" size="sm" className="self-start" onClick={() => setActiveSection(null)}>
                         <span aria-hidden="true">&lsaquo;</span> Settings
                     </ActionButton>
 
                     {activeSection === 'graphics' ? (
-                        <div className="grid flex-1 content-center gap-4 sm:grid-cols-2">
+                        <div className="grid flex-1 content-center gap-3 min-[568px]:grid-cols-2">
                             <SelectRow
                                 label="Graphics Quality"
                                 options={[
@@ -515,7 +470,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                     ) : null}
 
                     {activeSection === 'audio' ? (
-                        <div className="grid flex-1 content-center gap-3 sm:grid-cols-2">
+                        <div className="grid flex-1 content-center gap-3 min-[568px]:grid-cols-2">
                             <VolumeSliderRow label="Music" description="Background" value={settings.musicVolume ?? 0.5} onChange={(value) => handleVolumeChange('musicVolume', value)} />
                             <VolumeSliderRow label="Ambience" description="Nature" value={settings.ambienceVolume ?? 1} onChange={(value) => handleVolumeChange('ambienceVolume', value)} />
                             <VolumeSliderRow label="SFX" description="Animals" value={settings.sfxVolume ?? 1} onChange={(value) => handleVolumeChange('sfxVolume', value)} />
@@ -560,18 +515,18 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
     }
 
     const categories = [
-        ...(inGame ? [{ id: 'resume', label: 'Resume', className: 'bg-emerald-500 text-white shadow-[0_5px_0_0_#065f46]' }] : []),
-        { id: 'graphics', label: 'Graphics', className: 'bg-sky-500 text-white shadow-[0_5px_0_0_#075985]' },
-        { id: 'audio', label: 'Audio', className: 'bg-violet-500 text-white shadow-[0_5px_0_0_#5b21b6]' },
-        { id: 'sensitivity', label: 'Sensitivity', className: 'bg-amber-400 text-amber-950 shadow-[0_5px_0_0_#92400e]' },
-        { id: 'perspective', label: 'View Perspective', className: 'bg-teal-500 text-white shadow-[0_5px_0_0_#115e59]' },
-        ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit Game', className: 'bg-rose-500 text-white shadow-[0_5px_0_0_#9f1239]' }] : []),
+        ...(inGame ? [{ id: 'resume', label: 'Resume', icon: '▶', className: 'border-emerald-400 bg-emerald-500 text-white' }] : []),
+        { id: 'graphics', label: 'Graphics', icon: '▣', className: 'border-sky-200 bg-white text-slate-800' },
+        { id: 'audio', label: 'Audio', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
+        { id: 'sensitivity', label: 'Look Speed', icon: '↔', className: 'border-amber-200 bg-white text-slate-800' },
+        { id: 'perspective', label: 'Camera View', icon: '◉', className: 'border-teal-200 bg-white text-slate-800' },
+        ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit', icon: '×', className: 'border-rose-200 bg-rose-50 text-rose-700' }] : []),
     ];
 
     return (
         <ModalShell isOpen={isOpen && !activeSection} onClose={onClose} title="Game Settings" size="md">
-            <div className="space-y-4">
-                <div className="flex flex-col gap-3.5 w-full">
+            <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5 w-full">
                     {categories.map((category) => (
                         <button
                             key={category.id}
@@ -582,11 +537,13 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                                 else setActiveSection(category.id);
                             }}
                             className={cx(
-                                'flex w-full min-h-13 items-center justify-center rounded-2xl px-5 py-3 text-center font-black uppercase tracking-wider text-sm sm:text-base transition-all active:translate-y-1 active:shadow-none',
+                                'flex min-h-12 w-full items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-left font-black text-sm shadow-[0_3px_0_0_#dbe4ea] transition-all active:translate-y-1 active:shadow-none',
                                 category.className
                             )}
                         >
-                            <span>{category.label}</span>
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100/80 text-base" aria-hidden="true">{category.icon}</span>
+                            <span className="min-w-0 flex-1">{category.label}</span>
+                            {category.id !== 'resume' && category.id !== 'quit' ? <span aria-hidden="true">›</span> : null}
                         </button>
                     ))}
                 </div>
@@ -606,7 +563,7 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
     const submit = () => {
         const profile = savePlayerProfile({ name, gender });
         if (!profile) {
-            setError('Enter your IGN and choose a gender.');
+            setError('Enter your name and choose a character.');
             return;
         }
         playGameButtonSfx('confirm');
@@ -615,15 +572,24 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
     };
 
     return (
-        <ModalShell isOpen={true} onClose={onClose} closeOnBackdrop={!required} showClose={!required} title={storedProfile.name ? 'Player Details' : 'Welcome, Explorer!'} size="md">
-            <div className="space-y-4">
-                <div>
-                    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700" htmlFor="player-ign">In-game Name</label>
-                    <input id="player-ign" type="text" maxLength={24} value={name} onChange={(event) => { setName(event.target.value); setError(''); }} className="block w-full rounded-xl border-2 border-emerald-100 bg-emerald-50 px-4 py-3 text-base font-black text-slate-800 outline-none focus:border-emerald-400 focus:bg-white" placeholder="Enter your IGN" autoFocus />
+        <ModalShell
+            isOpen={true}
+            onClose={onClose}
+            closeOnBackdrop={!required}
+            showClose={!required}
+            title={storedProfile.name ? 'Player Details' : 'Welcome, Explorer!'}
+            size="md"
+            footer={<ActionButton className="w-full" onClick={submit}>Save</ActionButton>}
+        >
+            <div className="grid min-[568px]:grid-cols-[1.2fr_1fr] gap-3">
+                <div className="flex flex-col justify-center">
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-emerald-700" htmlFor="player-ign">Player name</label>
+                    <input id="player-ign" type="text" maxLength={24} value={name} onChange={(event) => { setName(event.target.value); setError(''); }} className="block min-h-11 w-full rounded-xl border-2 border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-slate-800 outline-none focus:border-emerald-400 focus:bg-white" placeholder="Your name" autoFocus />
+                    {error ? <p className="mt-2 text-[11px] font-black text-rose-600" role="alert">{error}</p> : null}
                 </div>
-                <fieldset>
-                    <legend className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Gender</legend>
-                    <div className="flex flex-col gap-3 w-full">
+                <fieldset className="min-w-0">
+                    <legend className="mb-1 text-[11px] font-black uppercase tracking-wide text-emerald-700">Choose a character</legend>
+                    <div className="grid grid-cols-2 gap-2 w-full">
                         {PLAYER_GENDERS.map((option) => (
                             <button
                                 key={option.id}
@@ -631,9 +597,8 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
                                 aria-pressed={gender === option.id}
                                 onClick={() => { setGender(option.id); setError(''); }}
                                 className={cx(
-                                    'flex w-full min-h-12 items-center justify-center rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-wider transition-all active:translate-y-1 active:shadow-none',
-                                    option.id === 'boy' ? 'bg-sky-500 text-white shadow-[0_5px_0_0_#075985]' : 'bg-rose-400 text-white shadow-[0_5px_0_0_#9f1239]',
-                                    gender === option.id && 'ring-4 ring-emerald-950/80 ring-offset-2'
+                                    'flex w-full min-h-11 items-center justify-center rounded-xl border-2 px-2 py-2 text-sm font-black transition-all active:translate-y-1',
+                                    gender === option.id ? 'border-emerald-600 bg-emerald-500 text-white shadow-[0_3px_0_0_#065f46]' : 'border-emerald-100 bg-white text-slate-700 shadow-sm'
                                 )}
                             >
                                 {option.label}
@@ -641,8 +606,6 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
                         ))}
                     </div>
                 </fieldset>
-                {error ? <p className="text-center text-xs font-black text-rose-600" role="alert">{error}</p> : null}
-                <ActionButton className="w-full" size="lg" onClick={submit}>Save Player</ActionButton>
             </div>
         </ModalShell>
     );
@@ -725,7 +688,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
         <div
             onPointerDownCapture={onMenuInteraction}
             className={cx(
-                "fixed inset-0 z-40 flex flex-col items-center justify-between overflow-hidden select-none touch-none bg-emerald-900 transition-all duration-400 ease-in-out py-3 sm:py-6 px-4",
+                "main-menu fixed inset-0 z-40 flex flex-col items-center justify-between overflow-hidden select-none touch-none bg-emerald-900 transition-all duration-400 ease-in-out py-3 px-4",
                 starting ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
             )}
         >
@@ -744,26 +707,26 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
             </div>
 
             {/* Main Interface Content Container */}
-            <div className="relative z-30 flex h-full w-full max-w-xl flex-col items-center justify-center pointer-events-auto safe-area-inset py-1 sm:py-2">
+            <div className="relative z-30 flex h-full w-full max-w-xl flex-col items-center justify-center pointer-events-auto safe-area-inset py-1">
 
                 {/* 1. TOP TITLE BANNER */}
-                <div className="w-full flex justify-center pt-0 shrink-0 transform scale-[0.65] sm:scale-85 md:scale-100 origin-top">
+                <div className="menu-title-wrap w-full flex justify-center pt-0 shrink-0 origin-top">
                     <WoodenTitle titlePart1="Bulusan" titlePart2="Zootopia Adventure Game" />
                 </div>
 
                 {/* 2. CENTER STACKED PRIMARY ACTION BUTTONS */}
-                <div className="w-full max-w-xs sm:max-w-sm flex flex-col items-center gap-1.5 sm:gap-3 my-auto py-0.5">
+                <div className="menu-primary w-full max-w-sm flex flex-col items-center gap-1 my-auto py-0.5">
 
                     {/* PLAY GAME */}
                     <button
                         type="button"
                         onClick={handleStart}
                         disabled={starting}
-                        className="group flex items-center justify-center gap-2.5 sm:gap-3.5 px-4 py-1.5 sm:py-2 transition-transform hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+                        className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
                     >
-                        <img src="/ui-buttons/play-button.png" alt="Play" className="h-8 w-8 sm:h-11 sm:w-11 object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
-                        <span className="text-lg sm:text-2xl font-black uppercase tracking-widest text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
-                            PLAY GAME
+                        <img src="/ui-buttons/play-button.png" alt="Play" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
+                            PLAY
                         </span>
                     </button>
 
@@ -771,10 +734,10 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     <button
                         type="button"
                         onClick={() => setSettingsOpen(true)}
-                        className="group flex items-center justify-center gap-2.5 sm:gap-3.5 px-4 py-1.5 sm:py-2 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                        className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                        <img src="/ui-buttons/settings-button.png" alt="Settings" className="h-8 w-8 sm:h-11 sm:w-11 object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
-                        <span className="text-lg sm:text-2xl font-black uppercase tracking-widest text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
+                        <img src="/ui-buttons/settings-button.png" alt="Settings" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
                             SETTINGS
                         </span>
                     </button>
@@ -783,10 +746,10 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     <button
                         type="button"
                         onClick={() => setShowExitConfirm(true)}
-                        className="group flex items-center justify-center gap-2.5 sm:gap-3.5 px-4 py-1.5 sm:py-2 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                        className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                        <img src="/ui-buttons/quit-button.png" alt="Quit" className="h-8 w-8 sm:h-11 sm:w-11 object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
-                        <span className="text-lg sm:text-2xl font-black uppercase tracking-widest text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
+                        <img src="/ui-buttons/quit-button.png" alt="Quit" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
                             QUIT
                         </span>
                     </button>
@@ -794,18 +757,18 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
             </div>
 
             {/* BOTTOM BAR: LEFT = 3 UI BUTTONS (GUIDE, PLAYER, CREDITS), RIGHT = VERSION ONLY */}
-            <div className="pointer-events-auto absolute inset-x-3 sm:inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+0.35rem)] z-40 flex items-end justify-between">
+            <div className="pointer-events-auto absolute left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] bottom-[calc(env(safe-area-inset-bottom)+0.35rem)] z-40 flex items-end justify-between">
                 {/* 3 UI BUTTONS IN BOTTOM LEFT */}
                 <div className="flex items-center gap-2.5 sm:gap-4">
                     {/* HOW TO PLAY / GUIDE */}
                     <button
                         type="button"
                         onClick={() => setHowToPlayOpen(true)}
-                        className="group relative flex flex-col items-center gap-0.5 cursor-pointer transition-transform active:scale-90"
+                        className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
                         title="How To Play"
                     >
                         <img src="/ui-buttons/how-to-play-button.png" alt="How To Play" className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
-                        <span className="text-[8px] sm:text-[11px] font-black uppercase tracking-wider text-emerald-950 drop-shadow-xs">
+                        <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
                             Guide
                         </span>
                     </button>
@@ -814,11 +777,11 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     <button
                         type="button"
                         onClick={() => { setProfileRequired(false); setPlayerDetailsOpen(true); }}
-                        className="group relative flex flex-col items-center gap-0.5 cursor-pointer transition-transform active:scale-90"
+                        className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
                         title="Player Details"
                     >
                         <img src="/ui-buttons/character-button.png" alt="Player Details" className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
-                        <span className="text-[8px] sm:text-[11px] font-black uppercase tracking-wider text-emerald-950 drop-shadow-xs">
+                        <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
                             Player
                         </span>
                     </button>
@@ -827,18 +790,18 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     <button
                         type="button"
                         onClick={() => setCreditsOpen(true)}
-                        className="group relative flex flex-col items-center gap-0.5 cursor-pointer transition-transform active:scale-90"
+                        className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
                         title="Credits"
                     >
                         <img src="/ui-buttons/credit-button.png" alt="Credits" className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
-                        <span className="text-[8px] sm:text-[11px] font-black uppercase tracking-wider text-emerald-950 drop-shadow-xs">
+                        <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
                             Credits
                         </span>
                     </button>
                 </div>
 
                 {/* VERSION ONLY IN BOTTOM RIGHT */}
-                <div className="pb-0.5 text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-emerald-950 drop-shadow-xs">
+                <div className="pb-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-950/70 drop-shadow-xs">
                     <span>VERSION 1.0</span>
                 </div>
             </div>
@@ -891,7 +854,7 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
             <div className="absolute -top-250 right-1/4 w-1 sm:w-1.5 h-255 bg-[#3d2314] rounded-full z-0 opacity-90 shadow-sm" />
 
             {/* Cedar Wooden Board */}
-            <div className="relative z-10 bg-linear-to-b from-[#7f4f24] to-[#582f0e] border-4 sm:border-[6px] border-[#6c3a11] rounded-2xl sm:rounded-3xl shadow-[0_8px_0_0_#3d2314] px-6 py-2 sm:px-12 sm:py-4 text-center overflow-hidden">
+            <div className="wooden-title relative z-10 bg-linear-to-b from-[#7f4f24] to-[#582f0e] border-4 border-[#6c3a11] rounded-2xl shadow-[0_8px_0_0_#3d2314] px-6 py-2 text-center overflow-hidden">
                 {/* Wood Grain Pattern (CSS) */}
                 <div className="absolute inset-0 opacity-10 pointer-events-none"
                      style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(0,0,0,0.5) 20px, rgba(0,0,0,0.5) 21px)' }} />
@@ -899,7 +862,7 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
                 {/* Title Text */}
                 <h1 className="relative z-20 flex flex-col items-center justify-center">
                     <span
-                        className="text-2xl sm:text-5xl leading-none font-black text-[#ffd166] tracking-tight uppercase"
+                        className="wooden-title-main leading-none font-black text-[#ffd166] tracking-tight uppercase"
                         style={{
                             WebkitTextStroke: '1px #ffffff',
                             textShadow: '0 3px 0 #9e2a2b, 0 6px 12px rgba(0,0,0,0.5)',
@@ -908,7 +871,7 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
                         {titlePart1}
                     </span>
                     <span
-                        className="text-lg sm:text-3xl leading-none font-black text-[#90e0ef] tracking-wide uppercase mt-0.5 sm:mt-1"
+                        className="wooden-title-sub leading-none font-black text-[#90e0ef] tracking-wide uppercase mt-0.5"
                         style={{
                             WebkitTextStroke: '1px #ffffff',
                             textShadow: '0 2px 0 #1d3557, 0 4px 8px rgba(0,0,0,0.5)',
@@ -925,26 +888,26 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
 export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
     const menuIcon = '/ui-buttons/settings-button.png';
     const taskIcon = '/ui-buttons/task-list-button.png';
-    const [taskTrackerOpen, setTaskTrackerOpen] = useState(true);
+    const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
 
     return (
-        <div className="hud-top-layout pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.55rem)] z-65 px-1 sm:px-4 select-none">
+        <div className="hud-top-layout pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.55rem)] z-65 px-2 select-none">
             <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-1 sm:gap-3">
 
                 {/* Left Side: Player & Menu */}
                 <div className="pointer-events-auto flex min-w-0 items-center gap-1.5 sm:gap-3" data-ui-hud="true">
                     <button
                         onClick={onMenuClick}
-                        className="group flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center transition-all active:scale-95"
+                        className="ui-hud-button group flex items-center justify-center transition-all active:scale-95"
                         aria-label="Menu"
                         data-ui-button="true"
                     >
                         <img src={menuIcon} alt="" className="h-full w-full object-contain group-hover:scale-110 transition-transform" />
                     </button>
 
-                    <button type="button" onClick={onPlayerDetails} aria-label="Edit player details" className="hud-player-pill flex min-w-0 items-center gap-2 rounded-2xl border-2 border-white/50 bg-emerald-950/80 px-3 py-1.5 text-left backdrop-blur-md shadow-xl transition-transform active:scale-95 sm:px-4 sm:py-2">
+                    <button type="button" onClick={onPlayerDetails} aria-label="Edit player details" className="hud-player-pill flex min-h-11 min-w-0 items-center gap-2 rounded-2xl border-2 border-white/50 bg-emerald-950/80 px-3 py-1.5 text-left backdrop-blur-md shadow-xl transition-transform active:scale-95 sm:px-4 sm:py-2">
                         <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                        <p className="max-w-20 sm:max-w-50 truncate text-[10px] sm:text-xs font-black uppercase tracking-widest text-white">
+                        <p className="max-w-28 truncate text-[11px] font-black uppercase tracking-wide text-white">
                             {playerName || 'Explorer'}
                         </p>
                     </button>
@@ -963,7 +926,7 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                 <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-3" data-ui-hud="true">
                     <button
                         onClick={onTasksClick}
-                        className="group flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center transition-all active:scale-95"
+                        className="ui-hud-button group flex items-center justify-center transition-all active:scale-95"
                         aria-label="Tasks"
                         data-ui-button="true"
                         data-sfx-self="true"
@@ -973,20 +936,20 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                 </div>
             </div>
             {currentTask ? (
-                <div className="pointer-events-auto absolute left-[max(0.5rem,env(safe-area-inset-left))] top-12 flex max-w-[calc(100vw-1rem)] items-start gap-1.5 sm:top-16">
-                    <button type="button" onClick={() => setTaskTrackerOpen((open) => !open)} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-emerald-950/90 px-2 text-[9px] font-black uppercase text-white shadow-lg" aria-expanded={taskTrackerOpen} aria-label={`${taskTrackerOpen ? 'Hide' : 'Show'} current task`}>
-                        {taskTrackerOpen ? 'Hide' : 'Task'}
+                <div className="mission-tracker pointer-events-auto absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[calc(var(--ui-hud-size)+0.4rem)] flex max-w-[calc(100vw-1rem)] items-start gap-1.5">
+                    <button type="button" onClick={() => setTaskTrackerOpen((open) => !open)} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-emerald-950/90 px-2 text-[11px] font-black text-white shadow-lg" aria-expanded={taskTrackerOpen} aria-label={`${taskTrackerOpen ? 'Hide' : 'Show'} current task`}>
+                        {taskTrackerOpen ? 'Less' : `Task ${currentTask.number}`}
                     </button>
-                    {taskTrackerOpen ? <div className="flex w-[min(32rem,calc(100vw-4.25rem))] rounded-xl bg-emerald-950/90 text-white shadow-lg">
+                    {taskTrackerOpen ? <div className="mission-tracker-detail flex w-[min(60vw,30rem)] max-h-[18dvh] rounded-xl bg-emerald-950/90 text-white shadow-lg">
                       <button type="button" onClick={onTasksClick} className="min-w-0 flex-1 px-3 py-2 text-left" aria-label="Open complete task panel">
-                        <div className="flex items-center justify-between gap-2 text-[8px] font-black uppercase tracking-wider text-amber-300">
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-black uppercase tracking-wide text-amber-300">
                             <span>Task {currentTask.number}/30</span>
                             <span>{missionItem || taskProgress || (navigation?.distance != null ? `${navigation.distance} m` : '')}</span>
                         </div>
                         <p className="wrap-break-word text-[11px] font-black leading-snug">{!navigation?.onScreen ? (navigation.direction < 0 ? '< ' : '> ') : ''}{currentTask.title}</p>
-                        <p className="mt-0.5 wrap-break-word text-[9px] leading-snug text-emerald-100">{currentTask.instruction}</p>
+                        <p className="mission-tracker-instruction mt-0.5 wrap-break-word text-[11px] leading-snug text-emerald-100">{currentTask.instruction}</p>
                       </button>
-                      <button type="button" onClick={onToggleGuidance} className="min-h-11 shrink-0 border-l border-emerald-800 px-2 text-[8px] font-black uppercase text-amber-200" aria-label={`${guidanceEnabled ? 'Hide' : 'Show'} mission guidance`}>{guidanceEnabled ? 'Guide on' : 'Guide off'}</button>
+                      <button type="button" onClick={onToggleGuidance} className="min-h-11 shrink-0 border-l border-emerald-800 px-2 text-[11px] font-black text-amber-200" aria-label={`${guidanceEnabled ? 'Hide' : 'Show'} mission guidance`}>{guidanceEnabled ? 'Guide on' : 'Guide off'}</button>
                     </div> : null}
                 </div>
             ) : null}
@@ -1022,7 +985,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
     if (!mounted) return null;
 
     return (
-        <div className="fixed inset-0 z-110 flex items-start justify-end p-2 sm:p-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pr-[max(0.5rem,env(safe-area-inset-right))] pointer-events-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label="Zoo task checklist">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-[var(--ui-edge-gap)] pt-[max(var(--ui-edge-gap),env(safe-area-inset-top))] pr-[max(var(--ui-edge-gap),env(safe-area-inset-right))] pb-[max(var(--ui-edge-gap),env(safe-area-inset-bottom))] pl-[max(var(--ui-edge-gap),env(safe-area-inset-left))] pointer-events-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label="Zoo task checklist">
             {/* Backdrop Fade */}
             <button
                 type="button"
@@ -1037,8 +1000,8 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
             {/* Banner Style Top-Right Container (Fits screen bounds) */}
             <section
                 className={cx(
-                    'pointer-events-auto relative flex flex-col w-full max-w-sm sm:max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-2xl border-3 border-amber-950/80 bg-[#fffef0] text-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.45)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform origin-top-right',
-                    active ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-full opacity-0 scale-95'
+                    'pointer-events-auto relative flex w-[min(86vw,560px)] max-h-[min(78dvh,360px)] flex-col overflow-hidden rounded-2xl border-3 border-amber-950/80 bg-[#fffef0] text-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.45)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform origin-top-right',
+                    active ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
                 )}
             >
                 {/* Hanging Banner Header Plaque */}
@@ -1049,7 +1012,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                             <h2 className="text-sm sm:text-base font-black uppercase tracking-wider drop-shadow-sm text-amber-100">
                                 Adventure Tasks
                             </h2>
-                            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-amber-200/80">
+                            <p className="text-[11px] font-bold text-amber-200/90">
                                 Story and animal care
                             </p>
                         </div>
@@ -1063,7 +1026,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                             type="button"
                             onClick={onClose}
                             aria-label="Close checklist"
-                            className="inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-base sm:text-lg shadow-[0_3px_0_0_#9f1239] transition-transform active:scale-95 cursor-pointer"
+                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xl shadow-[0_3px_0_0_#9f1239] transition-transform active:scale-95 cursor-pointer"
                         >
                             &times;
                         </button>
@@ -1071,9 +1034,9 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                 </header>
 
                 {/* Banner Body Content (Scrollable if height constrained) */}
-                <div className="p-2.5 sm:p-4 overflow-y-auto flex-1 flex flex-col justify-between">
+                <div className="min-h-0 flex-1 overflow-y-auto p-2.5 sm:p-4" data-ui-scrollable="true">
                     <div>
-                        <h3 className="mb-2 text-[10px] font-black uppercase tracking-widest text-emerald-800">Story Tasks</h3>
+                        <h3 className="mb-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">Story Tasks</h3>
                         <ol className="mb-3 grid gap-1.5">
                             {storyTasks.map((task) => {
                                 const status = task.completed ? 'Done' : task.id === activeTaskId ? 'Active' : 'Locked';
@@ -1081,12 +1044,12 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                     <li key={task.id} className={cx('flex min-h-10 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs', task.completed ? 'border-emerald-200 bg-emerald-50' : task.id === activeTaskId ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-slate-50 text-slate-400')}>
                                         <span className="w-6 text-center font-black">{task.completed ? '✓' : task.number}</span>
                                         <span className="min-w-0 flex-1 font-black">{task.title}</span>
-                                        <span className="text-[9px] font-black uppercase">{status}</span>
+                                        <span className="text-[11px] font-black uppercase">{status}</span>
                                     </li>
                                 );
                             })}
                         </ol>
-                        <h3 className="mb-2 text-[10px] font-black uppercase tracking-widest text-emerald-800">Animal Feeding Tasks</h3>
+                        <h3 className="mb-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">Animal Feeding Tasks</h3>
                         {/* Progress Bar */}
                         <div className="relative h-2 shrink-0 overflow-hidden rounded-full bg-amber-200/60 border border-amber-300">
                             <div
@@ -1103,7 +1066,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                         type="button"
                                         onClick={() => onTaskClick?.(task)}
                                         className={cx(
-                                            'flex h-full min-h-10 w-full items-center gap-2.5 rounded-xl border-2 px-2.5 py-1.5 text-left transition-all hover:bg-amber-100/60 active:scale-[0.99]',
+                                            'flex h-full min-h-11 w-full items-center gap-2.5 rounded-xl border-2 px-2.5 py-1.5 text-left transition-all hover:bg-amber-100/60 active:scale-[0.99]',
                                             task.completed
                                                 ? 'border-emerald-300 bg-emerald-50/60 text-slate-400'
                                                 : 'border-amber-200/80 bg-white shadow-sm hover:border-amber-400'
@@ -1119,7 +1082,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                             {task.name}
                                         </span>
                                         <span className={cx(
-                                            'shrink-0 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border',
+                                            'shrink-0 text-[11px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border',
                                             task.completed
                                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                                 : 'bg-amber-100 text-amber-800 border-amber-300'
@@ -1131,21 +1094,20 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                             ))}
                         </ol>
                     </div>
-
-                    <div className="mt-2.5 flex flex-col gap-1.5 shrink-0 pt-2 border-t border-amber-200">
+                </div>
+                    <footer className="flex shrink-0 items-center gap-2 border-t border-amber-200 bg-[#fffef0] p-2">
                         <PaginationControls page={currentPage} pageCount={pageCount} onPageChange={setPage} />
                         {onResetTasks ? (
                             <ActionButton
                                 variant="warning"
                                 size="sm"
-                                className="w-full mt-0.5 h-8 sm:h-9 text-[11px] tracking-wider"
+                                className="shrink-0 text-[11px] tracking-wide"
                                 onClick={onResetTasks}
                             >
-                                Reset Progress
+                                Reset
                             </ActionButton>
                         ) : null}
-                    </div>
-                </div>
+                    </footer>
             </section>
 
         </div>
@@ -1156,12 +1118,11 @@ export function NPCInteractionPrompt({ visible, onInteract, npcName = 'Zoo Staff
     if (!visible) return null;
 
     return (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] z-75 flex justify-center px-3 sm:bottom-28">
-            <SurfacePanel className="pointer-events-auto w-full max-w-sm p-2.5 sm:p-3" data-ui-panel="true">
-                <p className="text-center text-[11px] sm:text-xs font-bold text-slate-600">Talk to {npcName}</p>
-                {!isTouchDevice ? <p className="mt-1 text-center text-[11px] font-black uppercase tracking-[0.12em] text-amber-700">Press T to talk</p> : null}
-                <ActionButton variant="warning" className="mt-1.5 sm:mt-2 w-full" onClick={onInteract}>
-                    {isTouchDevice ? 'Talk' : 'Talk (T)'}
+        <div className="context-prompt pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+5.3rem)] right-[max(5.5rem,calc(env(safe-area-inset-right)+5.5rem))] z-75 flex items-end">
+            <SurfacePanel className="pointer-events-auto flex max-w-44 items-center gap-2 border-amber-200 bg-[#fff8df]/95 p-1 shadow-lg" data-ui-panel="true">
+                <span className="min-w-0 flex-1 truncate pl-2 text-[11px] font-bold text-slate-600">{npcName || 'Zoo Ranger'}</span>
+                <ActionButton variant="warning" className="shrink-0" onClick={onInteract} aria-label={`Talk to ${npcName}`}>
+                    <span aria-hidden="true">●</span> Talk{!isTouchDevice ? ' (T)' : ''}
                 </ActionButton>
             </SurfacePanel>
         </div>
@@ -1171,16 +1132,16 @@ export function NPCInteractionPrompt({ visible, onInteract, npcName = 'Zoo Staff
 export function ContextActionPrompt({ visible, label, detail, onInteract, keyboardKey = 'E' }) {
     if (!visible) return null;
     return (
-        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+5.4rem)] right-[max(0.65rem,env(safe-area-inset-right))] z-75 flex flex-col items-end">
-            {detail ? <span className="mb-1 max-w-48 rounded-xl bg-emerald-950/90 px-3 py-1 text-center text-[10px] font-bold text-white">{detail}</span> : null}
+        <div className="context-prompt pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+5.3rem)] right-[max(5.5rem,calc(env(safe-area-inset-right)+5.5rem))] z-75 flex flex-col items-end">
+            {detail ? <span className="mb-1 max-w-44 rounded-xl bg-emerald-950/90 px-3 py-1 text-center text-[11px] font-bold text-white">{detail}</span> : null}
             <button
                 type="button"
                 data-ui-button="true"
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={onInteract}
-                className="pointer-events-auto min-h-12 min-w-24 rounded-2xl border-2 border-amber-200 bg-amber-400 px-4 py-2 text-sm font-black uppercase text-amber-950 shadow-[0_4px_0_0_#92400e] active:translate-y-1 active:shadow-none touch-none"
+                className="pointer-events-auto min-h-11 min-w-24 rounded-xl border-2 border-amber-200 bg-amber-400 px-3 py-2 text-sm font-black text-amber-950 shadow-[0_4px_0_0_#92400e] active:translate-y-1 active:shadow-none touch-none"
             >
-                {label} <span className="hidden sm:inline">({keyboardKey})</span>
+                {label} <span className="hidden min-[700px]:inline">({keyboardKey})</span>
             </button>
         </div>
     );
@@ -1211,230 +1172,11 @@ export function NPCDialogueModal({ isOpen, npcName, npcRole, message, dialoguePr
             aria-label={`${npcName || 'Ranger'} dialogue. Tap to continue.`}
         >
             <span className="mb-2 block w-full max-w-3xl px-3 py-2 text-white [text-shadow:0_2px_4px_rgb(0_0_0),0_0_12px_rgb(0_0_0)]">
-                <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-amber-300 sm:text-xs">{npcName || 'Zoo Ranger'}{npcRole ? ` - ${npcRole}` : ''}</span>
+                <span className="block text-[11px] font-black uppercase tracking-wide text-amber-300 sm:text-xs">{npcName || 'Zoo Ranger'}{npcRole ? ` - ${npcRole}` : ''}</span>
                 <span className="mt-1 block text-base font-black leading-snug sm:text-xl">{message}</span>
-                <span className="mt-1 block text-[9px] font-bold uppercase tracking-widest text-white/90">{dialogueProgress} | Tap anywhere to continue</span>
+                <span className="mt-1 block text-[11px] font-bold text-white/90">{dialogueProgress} | Tap to continue</span>
             </span>
         </button>
-    );
-}
-
-export function LegacyNPCDialogueModal({ isOpen, onClose, npcName, npcRole, message, choices = [], onSelectChoice, missionSteps = [], animalEntries = [], onOpenAnimalBook, dialogueProgress }) {
-    const [transitioning, setTransitioning] = useState(false);
-    const [animalPage, setAnimalPage] = useState(0);
-    const [pressedChoice, setPressedChoice] = useState(null);
-    const transitioningRef = useRef(false);
-    const lastMessage = `${message}|${choices.map((choice) => choice.id).join(',')}`;
-
-    useEffect(() => {
-        if (!isOpen) return undefined;
-        transitioningRef.current = true;
-        const timer = window.setTimeout(() => {
-            transitioningRef.current = false;
-            setTransitioning(false);
-            setAnimalPage(0);
-            setPressedChoice(null);
-        }, 260);
-        return () => window.clearTimeout(timer);
-    }, [isOpen, lastMessage]);
-
-    if (!isOpen) return null;
-    const isAnimalPage = choices.length === 1 && choices[0]?.id === 'back' && animalEntries.length > 0;
-    const selectedAnimal = animalEntries[animalPage] || null;
-    const choose = (choice) => {
-        if (transitioning || transitioningRef.current) return;
-        setPressedChoice(choice.id);
-        onSelectChoice?.(choice);
-    };
-
-    const isLina = (npcName || '').toLowerCase().includes('lina');
-    const avatarEmoji = isLina ? '👩‍🌾' : '🤠';
-    const roleBadge = npcRole || (isLina ? 'Zoo Botanist' : 'Zoo Ranger');
-
-    return (
-        <div
-            className="fixed inset-0 z-120 flex items-end justify-center bg-slate-950/20 p-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:p-5 backdrop-blur-[2px] touch-none"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Ranger Guide"
-        >
-            <div
-                className={cx(
-                    'relative flex w-full max-w-3xl max-h-[min(44dvh,18rem)] flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-2xl transition-all duration-300',
-                    transitioning && 'opacity-80 scale-98'
-                )}
-            >
-                {/* Clean Header */}
-                <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50/70 px-3.5 py-2.5 sm:px-6 sm:py-3.5">
-                    <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-200/80 bg-emerald-50 text-xl sm:text-2xl shadow-xs" aria-hidden="true">
-                            <span>{avatarEmoji}</span>
-                        </div>
-                        <div className="min-w-0">
-                            <span className="inline-block rounded-full bg-emerald-100/80 px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest text-emerald-800">
-                                {roleBadge}
-                            </span>
-                            <h2 className="text-sm font-black text-slate-900 leading-tight sm:text-lg">
-                                {npcName || 'Ranger Lino'}
-                            </h2>
-                            {dialogueProgress ? <p className="text-[9px] font-black text-slate-500">{dialogueProgress}</p> : null}
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 active:scale-95 transition-all cursor-pointer"
-                        onClick={onClose}
-                        aria-label="Close"
-                    >
-                        <span className="text-lg font-black leading-none">&times;</span>
-                    </button>
-                </header>
-
-                {/* Content Body (Scrollable on mobile landscape) */}
-                <div className="flex flex-col gap-2.5 sm:gap-3 p-3 sm:p-5 overflow-y-auto flex-1 min-h-0">
-                    {/* Speech Box */}
-                    <button type="button" className="relative w-full rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 text-left shadow-xs" onClick={() => choices[0] && choose(choices[0])}>
-                        <p className="text-xs sm:text-sm font-semibold leading-relaxed text-slate-800">
-                            {message}
-                        </p>
-                    </button>
-
-                    {/* Mission Goals View */}
-                    {choices.some((choice) => choice.id === 'back') && missionSteps.length > 0 && !isAnimalPage ? (
-                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3 sm:p-4">
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
-                                    Mission Progress
-                                </span>
-                                <span className="text-xs font-bold text-emerald-700">
-                                    {missionSteps.filter((step) => step.done).length} of {missionSteps.length} Done
-                                </span>
-                            </div>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                {missionSteps.map((step, index) => (
-                                    <div
-                                        key={step.title}
-                                        className={cx(
-                                            'flex items-center gap-2.5 rounded-xl border p-2.5 text-xs font-medium transition-all',
-                                            step.done
-                                                ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950'
-                                                : 'border-slate-200 bg-white text-slate-700'
-                                        )}
-                                    >
-                                        <span className={cx('flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', step.done ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600')}>
-                                            {step.done ? '✓' : index + 1}
-                                        </span>
-                                        <div className="min-w-0 flex-1 leading-tight">
-                                            <p className="font-bold text-slate-900">{step.title}</p>
-                                            <p className="text-[10px] text-slate-500 truncate">{step.objective}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {/* Animal Browser View */}
-                    {isAnimalPage ? (
-                        <div className="flex flex-col gap-2.5">
-                            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
-                                {selectedAnimal ? (
-                                    <>
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white border border-slate-200/80 text-2xl shadow-xs">
-                                                {selectedAnimal.emoji}
-                                            </span>
-                                            <div>
-                                                <h3 className="text-base font-bold text-slate-900 leading-tight">{selectedAnimal.name}</h3>
-                                                <p className="text-[11px] font-medium italic text-slate-500">{selectedAnimal.scientific}</p>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 text-xs font-normal leading-relaxed text-slate-700 space-y-1">
-                                            <p><span className="font-semibold text-slate-900">Habitat:</span> {selectedAnimal.habitat}</p>
-                                            <p><span className="font-semibold text-slate-900">Diet:</span> {selectedAnimal.diet}</p>
-                                            <p><span className="font-semibold text-slate-900">Fun Fact:</span> {selectedAnimal.fact}</p>
-                                        </div>
-                                        <button type="button" className="mt-2.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline" onClick={onOpenAnimalBook}>
-                                            Open in Animal Book
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-4 text-center text-slate-500">
-                                        <span className="text-3xl">🐾</span>
-                                        <p className="text-xs font-medium mt-1">No animals discovered yet.</p>
-                                    </div>
-                                )}
-                            </div>
-                            <PaginationControls page={animalPage} pageCount={animalEntries.length} onPageChange={setAnimalPage} />
-                        </div>
-                    ) : null}
-
-                    {/* 3D Styled Talk Buttons - Vertically Aligned Column */}
-                    {!isAnimalPage ? (
-                        <div className="flex flex-col gap-2.5 sm:gap-3 w-full">
-                            {choices.map((choice, index) => {
-                                const isAccent = choice.accent;
-                                return (
-                                    <button
-                                        type="button"
-                                        key={choice.id}
-                                        disabled={transitioning}
-                                        onClick={() => choose(choice)}
-                                        className={cx(
-                                            'group relative flex min-h-13 w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-xs sm:text-sm font-black transition-all cursor-pointer active:translate-y-1 active:shadow-none',
-                                            isAccent
-                                                ? 'bg-linear-to-b from-emerald-400 to-emerald-600 hover:from-emerald-300 hover:to-emerald-500 text-white border-2 border-emerald-300/80 shadow-[0_4px_0_0_#065f46]'
-                                                : 'bg-linear-to-b from-amber-100 via-amber-50 to-amber-200 hover:from-amber-200 hover:to-amber-300 text-amber-950 border-2 border-amber-300/90 shadow-[0_4px_0_0_#92400e]',
-                                            pressedChoice === choice.id && 'scale-[0.98]'
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                            <span className={cx(
-                                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border text-xs font-black shadow-xs',
-                                                isAccent
-                                                    ? 'bg-emerald-700/40 border-emerald-300/50 text-white'
-                                                    : 'bg-amber-200/80 border-amber-400/80 text-amber-900'
-                                            )}>
-                                                {choice.icon || index + 1}
-                                            </span>
-                                            <span className="min-w-0 flex-1 text-left leading-tight tracking-wide font-black">
-                                                {choice.label}
-                                            </span>
-                                        </div>
-
-                                        <span className={cx(
-                                            'shrink-0 text-base font-black transition-transform group-hover:translate-x-0.5',
-                                            isAccent ? 'text-emerald-100' : 'text-amber-800'
-                                        )}>
-                                            ➜
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    ) : null}
-                </div>
-
-                {/* 3D Styled Footer Buttons */}
-                <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/80 px-4 py-3 sm:px-6">
-                    {choices.some((choice) => choice.id === 'back') ? <button
-                        type="button"
-                        className="rounded-xl bg-linear-to-b from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 text-slate-800 border border-slate-300 px-4 py-2 text-xs font-black tracking-wider uppercase shadow-[0_3px_0_0_#64748b] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer"
-                        disabled={transitioning}
-                        onClick={() => choose({ id: 'back', nextId: 'root' })}
-                    >
-                        ← Back
-                    </button> : <span />}
-                    <button
-                        type="button"
-                        className="rounded-xl bg-linear-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white border border-rose-300 px-5 py-2 text-xs font-black tracking-wider uppercase shadow-[0_3px_0_0_#9f1239] active:shadow-none active:translate-y-0.5 transition-all cursor-pointer"
-                        onClick={onClose}
-                    >
-                        Close
-                    </button>
-                </footer>
-            </div>
-        </div>
     );
 }
 
@@ -1448,7 +1190,7 @@ export function FeedingSuccessNotification({ visible, animalName, onHide }) {
     if (!visible) return null;
 
     return (
-        <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-90 flex justify-center px-3">
+        <div className="ui-toast pointer-events-none absolute inset-x-0 z-90 flex justify-center px-3">
             <SurfacePanel className="kids-slide-up rounded-full border-emerald-200 bg-emerald-50 px-4 py-2 text-center">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">Animal fed successfully</p>
                 <p className="text-sm font-bold text-emerald-900">{animalName || 'Animal'} is happy!</p>
@@ -1459,14 +1201,15 @@ export function FeedingSuccessNotification({ visible, animalName, onHide }) {
 
 export function AllAnimalsCelebration({ visible, onClose, onViewCertificate, onReplay }) {
     return (
-        <ModalShell isOpen={visible} onClose={onClose} title="All Animals Are Fed!" size="md">
+        <ModalShell
+            isOpen={visible}
+            onClose={onClose}
+            title="All Animals Are Fed!"
+            size="md"
+            footer={<div className="grid grid-cols-2 gap-2 min-[568px]:grid-cols-3"><ActionButton variant="secondary" onClick={onClose}>Continue</ActionButton><ActionButton variant="primary" onClick={onViewCertificate}>Certificate</ActionButton><ActionButton variant="warning" onClick={onReplay}>Replay</ActionButton></div>}
+        >
             <div className="space-y-3 text-center">
                 <p className="text-sm font-semibold text-slate-700">Great work, explorer. Every animal in Bulusan Zootopia Adventure has been cared for.</p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                    <ActionButton variant="secondary" onClick={onClose}>Continue Exploring</ActionButton>
-                    <ActionButton variant="primary" onClick={onViewCertificate}>View Certificate</ActionButton>
-                    <ActionButton variant="warning" onClick={onReplay}>Replay Tasks</ActionButton>
-                </div>
             </div>
         </ModalShell>
     );
@@ -1476,8 +1219,14 @@ export function CertificateModal({ isOpen, onClose, playerName = 'Explorer', tot
     const today = useMemo(() => new Date().toLocaleDateString(), []);
 
     return (
-        <ModalShell isOpen={isOpen} onClose={onClose} title="Certificate Of Completion" size="lg">
-            <div className="rounded-2xl border-2 border-amber-300 bg-linear-to-br from-amber-50 to-orange-50 p-5 text-center shadow-inner">
+        <ModalShell
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Completion Certificate"
+            size="lg"
+            footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onClose}>Close</ActionButton><ActionButton variant="primary" onClick={() => window.print()}>Save / Print</ActionButton></div>}
+        >
+            <div className="rounded-2xl border-2 border-amber-300 bg-linear-to-br from-amber-50 to-orange-50 p-3 text-center shadow-inner">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Bulusan Zootopia Adventure</p>
                 <h3 className="mt-2 text-2xl font-black text-slate-900">Awarded To</h3>
                 <p className="mt-2 text-xl font-black text-emerald-700">{playerName}</p>
@@ -1487,10 +1236,6 @@ export function CertificateModal({ isOpen, onClose, playerName = 'Explorer', tot
                 <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Issued {today}</p>
             </div>
 
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <ActionButton variant="secondary" onClick={onClose}>Close</ActionButton>
-                <ActionButton variant="primary" onClick={() => window.print()}>Save / Print</ActionButton>
-            </div>
         </ModalShell>
     );
 }
@@ -1529,7 +1274,7 @@ export function Joystick({ baseRef, stickRef, isTouchDevice }) {
     if (!isTouch) return null;
 
     return (
-        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+0.7rem)] left-2.5 z-70 sm:left-3">
+        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+0.7rem)] left-[max(0.625rem,env(safe-area-inset-left))] z-70">
             <div
                 ref={baseRef}
                 className="pointer-events-auto grid h-28 w-28 place-items-center rounded-full border border-white/35 bg-slate-950/25 touch-none select-none backdrop-blur sm:h-28 sm:w-28"
@@ -1549,7 +1294,7 @@ export function JumpButton({ jumpRef, isTouchDevice }) {
     if (!isTouch) return null;
 
     return (
-        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+0.7rem)] right-2.5 z-70 sm:right-3">
+        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+0.7rem)] right-[max(0.625rem,env(safe-area-inset-right))] z-70">
             <button
                 ref={jumpRef}
                 type="button"
@@ -1594,15 +1339,15 @@ export function HoldToFeedControl({
     };
 
     return (
-        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+5.2rem)] right-2.5 z-70 flex flex-col items-center sm:right-4 sm:bottom-24">
+        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+4.9rem)] right-[max(5.3rem,calc(env(safe-area-inset-right)+5.3rem))] z-70 flex flex-col items-center">
             <div className="mb-1.5 flex w-auto max-w-48 flex-col items-center justify-center rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/90 px-3 py-1 text-center text-white shadow-xl backdrop-blur-md">
                 <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
                     {animalName ? `${animalName}` : 'Animal'}
                 </span>
-                <span className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-100">
+                <span className="text-[11px] font-extrabold text-emerald-100">
                     {label}
                 </span>
-                {message ? <span className="mt-0.5 text-[9px] font-medium leading-snug text-slate-200">{message}</span> : null}
+                {message ? <span className="mt-0.5 text-[11px] font-medium leading-snug text-slate-200">{message}</span> : null}
             </div>
             <button
                 type="button"
@@ -1616,7 +1361,7 @@ export function HoldToFeedControl({
                 onTouchEnd={handlePressEnd}
                 onTouchCancel={handlePressEnd}
                 className={cx(
-                    'pointer-events-auto relative grid h-20 w-20 place-items-center rounded-full border-4 border-white/80 shadow-2xl touch-none select-none transition-transform active:scale-95 sm:h-24 sm:w-24 cursor-pointer',
+                    'pointer-events-auto relative grid h-16 w-16 place-items-center rounded-full border-4 border-white/80 shadow-2xl touch-none select-none transition-transform active:scale-95 cursor-pointer',
                     completed ? 'bg-emerald-500' : disabled ? 'bg-slate-400 opacity-70' : 'bg-emerald-950/90',
                 )}
             >
@@ -1626,7 +1371,7 @@ export function HoldToFeedControl({
                     aria-hidden="true"
                 />
                 <span className="absolute inset-1 rounded-full bg-emerald-950/90" aria-hidden="true" />
-                {completed ? <span className="relative z-10 text-3xl font-black text-white">✓</span> : <img className="relative z-10 h-10 w-10 sm:h-12 sm:w-12 pointer-events-none" src="/ui-buttons/feed-button.png" alt="" />}
+                {completed ? <span className="relative z-10 text-3xl font-black text-white">✓</span> : <img className="relative z-10 h-9 w-9 pointer-events-none" src="/ui-buttons/feed-button.png" alt="" />}
             </button>
         </div>
     );
@@ -1639,146 +1384,8 @@ export function AnimalCaution({ visible }) {
         <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.2rem)] z-70 flex justify-center px-3 sm:bottom-24">
             <div className="rounded-2xl border-2 border-red-200 bg-red-950/90 px-4 py-2 text-center text-white shadow-xl">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-amber-300">Caution: Dangerous Animal</p>
-                <p className="mt-1 text-[11px] font-bold">Please avoid contact with the tiger. Do not feed it.</p>
+                <p className="mt-1 text-[11px] font-bold">Stay back. Do not feed the tiger.</p>
             </div>
         </div>
     );
-}
-
-const ANIMAL_BOOK_ENTRIES = ANIMAL_METADATA;
-
-export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAnimals = {} }) {
-    const [page, setPage] = useState(0);
-    const [turning, setTurning] = useState(false);
-    const modelHostRef = useRef(null);
-    const modelResourcesRef = useRef(null);
-    const turnTimerRef = useRef(null);
-    const moveRef = useRef(null);
-    const pageCount = ANIMAL_BOOK_ENTRIES.length + 2;
-    const entry = page > 1 ? ANIMAL_BOOK_ENTRIES[page - 2] : null;
-    const unlocked = entry ? discoveredAnimals.includes(entry.name) : true;
-
-    const move = useCallback((delta) => {
-        if (turning) return;
-        const next = Math.max(0, Math.min(pageCount - 1, page + delta));
-        if (next === page) return;
-        setTurning(true);
-        playGameButtonSfx('page-turn');
-        turnTimerRef.current = window.setTimeout(() => { setPage(next); setTurning(false); turnTimerRef.current = null; }, 420);
-    }, [page, pageCount, turning]);
-    useEffect(() => {
-        moveRef.current = move;
-    }, [move]);
-
-    useEffect(() => {
-        if (!isOpen || !entry || !unlocked || !modelHostRef.current) return undefined;
-        const host = modelHostRef.current;
-        const width = Math.max(160, host.clientWidth);
-        const height = Math.max(130, host.clientHeight);
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
-        camera.position.set(0, 0.8, 4.2);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-        renderer.setSize(width, height);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        host.replaceChildren(renderer.domElement);
-        scene.add(new THREE.HemisphereLight(0xfff3d0, 0x355c4b, 2.2));
-        const key = new THREE.DirectionalLight(0xffffff, 2.5);
-        key.position.set(3, 4, 5);
-        scene.add(key);
-        let mounted = true;
-        let animationFrame;
-        const loader = createGLTFLoader();
-        loader.load(`/models/animals/${entry.file}`, (gltf) => {
-            if (!mounted) return;
-            const model = gltf.scene;
-            model.scale.setScalar(entry.file.includes('scene.gltf') ? 1.1 : 1);
-            model.position.y = -1;
-            scene.add(model);
-            modelResourcesRef.current = { model, gltf };
-        }, undefined, () => {});
-        const animate = () => {
-            if (!mounted) return;
-            animationFrame = requestAnimationFrame(animate);
-            const model = modelResourcesRef.current?.model;
-            if (model && model.parent === scene) model.rotation.y += 0.006;
-            renderer.render(scene, camera);
-        };
-        animate();
-        return () => {
-            mounted = false;
-            cancelAnimationFrame(animationFrame);
-            const resources = modelResourcesRef.current;
-            resources?.model?.traverse((child) => {
-                if (!child.isMesh) return;
-                child.geometry?.dispose();
-                const materials = Array.isArray(child.material) ? child.material : [child.material];
-                materials.forEach((material) => { material?.map?.dispose?.(); material?.dispose?.(); });
-            });
-            modelResourcesRef.current = null;
-            scene.clear();
-            renderer.dispose();
-            renderer.forceContextLoss?.();
-            renderer.domElement.remove();
-        };
-    }, [isOpen, entry, unlocked]);
-
-    useEffect(() => {
-        if (!isOpen) return undefined;
-        const onKeyDown = (event) => {
-            if (event.key === 'ArrowLeft') moveRef.current?.(-1);
-            if (event.key === 'ArrowRight') moveRef.current?.(1);
-        };
-        const onTouchStart = (event) => { modelHostRef.current._bookTouchX = event.touches[0].clientX; };
-        const onTouchEnd = (event) => {
-            const start = modelHostRef.current?._bookTouchX;
-            const end = event.changedTouches[0].clientX;
-            if (Number.isFinite(start) && Math.abs(end - start) > 35) moveRef.current?.(end < start ? 1 : -1);
-        };
-        window.addEventListener('keydown', onKeyDown);
-        const host = modelHostRef.current;
-        host?.addEventListener('touchstart', onTouchStart, { passive: true });
-        host?.addEventListener('touchend', onTouchEnd, { passive: true });
-        return () => { window.removeEventListener('keydown', onKeyDown); host?.removeEventListener('touchstart', onTouchStart); host?.removeEventListener('touchend', onTouchEnd); if (turnTimerRef.current) window.clearTimeout(turnTimerRef.current); };
-    }, [isOpen]);
-
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-120 flex items-center justify-center bg-emerald-950/55 p-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-[calc(env(safe-area-inset-bottom)+0.5rem)]" data-ui-modal="true">
-            <div className="relative flex h-[min(92dvh,38rem)] w-full max-w-5xl flex-col rounded-3xl border-8 border-[#653b1d] bg-[#8a542b] p-2 shadow-2xl sm:p-4">
-                <button type="button" onClick={onClose} aria-label="Close Animal Book" className="absolute right-2 top-2 z-10 h-11 w-11 rounded-full bg-white text-2xl font-black text-slate-900 shadow-lg">&times;</button>
-                <div className="mb-2 flex items-center justify-between px-2 text-white sm:px-4"><h2 className="text-lg font-black uppercase tracking-wider sm:text-2xl">Animal Book</h2><span className="text-xs font-black">{page + 1} / {pageCount}</span></div>
-                <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-[#f8e8bb] p-2 shadow-inner sm:p-5">
-                    <div className="grid h-full min-h-0 grid-cols-2 gap-1 rounded-lg border-4 border-[#c89a58] bg-[#fff8df] p-2 shadow-[inset_0_0_18px_rgba(93,54,20,.22)] sm:gap-3 sm:p-5">
-                        <div className="flex min-h-0 flex-col border-r-2 border-[#d2b477] pr-2 sm:pr-4">
-                            {entry ? <><p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Explorer notes</p><h3 className="mt-1 text-base font-black text-emerald-900 sm:text-2xl">{unlocked ? entry.name : '???'}</h3><p className="text-[10px] font-bold italic text-slate-500 sm:text-xs">{unlocked ? entry.scientific : 'Unknown species'}</p><div ref={modelHostRef} className="my-2 min-h-25 flex-1 rounded-xl bg-emerald-100/60 sm:min-h-40">{!unlocked ? <div className="grid h-full place-items-center text-7xl opacity-25 grayscale">{entry.name === 'Rabbit' ? '🐇' : '🐾'}</div> : null}</div>{unlocked ? <p className="text-[11px] font-semibold leading-snug text-slate-700 sm:text-sm">{entry.description}</p> : <p className="text-center text-xs font-black text-slate-600">Discover this animal to unlock</p>}</> : <div className="flex h-full flex-col justify-center text-center"><p className="text-4xl">{page === 0 ? '🌋' : '🏅'}</p><h3 className="mt-2 text-xl font-black text-emerald-900">{page === 0 ? 'Bulusan Zoo' : 'Zoo Ranger Achievement'}</h3><p className="mt-3 text-xs font-semibold leading-relaxed text-slate-700 sm:text-sm">{page === 0 ? 'A place to explore, care for animals, and protect the living world around Bulusan.' : 'Every discovery and every gentle feeding makes you a better Zoo Ranger.'}</p></div>}
-                        </div>
-                        <div className="min-h-0 overflow-y-auto pl-2 sm:pl-4">{entry && unlocked ? <div className="space-y-2 text-[10px] text-slate-700 sm:space-y-3 sm:text-sm"><p><b>Habitat:</b> {entry.habitat}</p><p><b>Diet:</b> {entry.diet}</p><p><b>Behavior:</b> {entry.behavior}</p><p><b>Conservation:</b> {entry.status}</p><p><b>Fun fact:</b> {entry.fact}</p><div className="rounded-xl bg-emerald-100 p-2 font-black text-emerald-900">{fedAnimals[entry.name] ? 'Fed successfully' : 'Not fed yet'}</div></div> : <p className="text-xs font-semibold leading-relaxed text-slate-600">Turn the page to meet another Bulusan animal.</p>}</div>
-                    </div>
-                </div>
-                <div className="mt-2 flex justify-between gap-2"><ActionButton size="sm" variant="secondary" disabled={turning || page === 0} onClick={() => move(-1)}>Previous</ActionButton><ActionButton size="sm" variant="primary" disabled={turning || page === pageCount - 1} onClick={() => move(1)}>Next</ActionButton></div>
-            </div>
-        </div>
-    );
-}
-
-export function GameUI() {
-    return null;
-}
-
-export function BackButton() {
-    return null;
-}
-
-export function BackModal({ onConfirm, onCancel }) {
-    return <QuitModal isOpen={true} onConfirm={onConfirm} onCancel={onCancel} />;
-}
-
-export function PreGameScreen({ onStart }) {
-    return <MainMenu onStart={onStart} isVisible={true} />;
-}
-
-export function RotateDeviceOverlay() {
-    return null;
 }

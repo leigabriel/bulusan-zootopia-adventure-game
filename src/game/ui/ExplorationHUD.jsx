@@ -125,7 +125,7 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
     return (
         <div
             data-ui-touch-pass="true"
-            className="fixed inset-0 z-120 flex flex-col justify-between p-3 sm:p-6 pt-[calc(env(safe-area-inset-top)+0.85rem)] pb-[calc(env(safe-area-inset-bottom)+0.85rem)] px-[calc(env(safe-area-inset-left)+1rem)] pointer-events-none select-none touch-none"
+            className="camera-overlay fixed inset-0 z-120 flex flex-col justify-between pointer-events-none select-none touch-none"
             aria-label="Camera Mode"
         >
             {/* Top Bar: Title & Top-Right 3D 'X' Close Button */}
@@ -135,8 +135,8 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
                         Camera View
                     </span>
                     {photoCapturedToast && (
-                        <span className="ml-2 rounded-lg bg-emerald-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white animate-bounce">
-                            Photo Taken!
+                        <span className="ml-2 rounded-lg bg-emerald-500 px-2 py-0.5 text-[11px] font-black text-white animate-bounce">
+                            Photo saved!
                         </span>
                     )}
                 </div>
@@ -144,7 +144,7 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
                     type="button"
                     onClick={onClose}
                     data-ui-button="true"
-                    className="flex h-11 w-11 sm:h-13 sm:w-13 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95 pointer-events-auto cursor-pointer"
+                    className="ui-close-button flex items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95 pointer-events-auto cursor-pointer"
                     aria-label="Close Camera View"
                 >
                     &times;
@@ -169,7 +169,7 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
                     type="button"
                     onClick={handleCapture}
                     data-ui-button="true"
-                    className="group relative flex items-center justify-center gap-3 rounded-2xl bg-linear-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white font-black text-lg sm:text-xl px-8 py-3.5 sm:px-10 sm:py-4 shadow-[0_6px_0_0_#9f1239] hover:shadow-[0_4px_0_0_#9f1239] active:shadow-none active:translate-y-1.5 transition-all pointer-events-auto cursor-pointer border-2 border-rose-300/80"
+                    className="ui-button-primary group relative flex items-center justify-center gap-2 rounded-2xl bg-linear-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 px-6 text-white font-black text-base shadow-[0_6px_0_0_#9f1239] hover:shadow-[0_4px_0_0_#9f1239] active:shadow-none active:translate-y-1.5 transition-all pointer-events-auto cursor-pointer border-2 border-rose-300/80"
                     aria-label="Capture Photo"
                 >
                     <img
@@ -189,18 +189,19 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
 export function CameraPreview({ dataUrl, onSave, onRetake, onClose }) {
     if (!dataUrl) return null;
     return (
-        <ModalShell isOpen={true} onClose={onClose} title="Your Zoo Polaroid" size="md">
-            <div className="flex justify-center w-full py-2">
+        <ModalShell
+            isOpen={true}
+            onClose={onClose}
+            title="Your Zoo Photo"
+            size="md"
+            footer={<div className="grid grid-cols-3 gap-2"><ActionButton size="sm" onClick={onSave}>Save</ActionButton><ActionButton size="sm" variant="secondary" onClick={onRetake}>Retake</ActionButton><ActionButton size="sm" variant="secondary" onClick={onClose}>Close</ActionButton></div>}
+        >
+            <div className="flex justify-center w-full">
                 <img
                     src={dataUrl}
                     alt="Bulusan Zoo Polaroid Photo"
-                    className="max-h-[58dvh] w-auto max-w-full rounded-xl shadow-2xl border-2 border-amber-100/60 transform hover:scale-[1.02] transition-transform duration-300"
+                    className="max-h-[42dvh] w-auto max-w-full rounded-xl shadow-2xl border-2 border-amber-100/60 transform hover:scale-[1.02] transition-transform duration-300"
                 />
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-                <ActionButton size="sm" onClick={onSave}>Save Polaroid</ActionButton>
-                <ActionButton size="sm" variant="secondary" onClick={onRetake}>Retake</ActionButton>
-                <ActionButton size="sm" variant="secondary" onClick={onClose}>Close</ActionButton>
             </div>
         </ModalShell>
     );
@@ -615,15 +616,22 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
         const handleResize = () => {
             const w = container.clientWidth;
             const h = container.clientHeight;
+            if (!w || !h) return;
             camera.aspect = w / h;
+            camera.fov = camera.aspect < 1.65 ? 46 : 40;
             camera.updateProjectionMatrix();
             renderer.setSize(w, h);
         };
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(container);
         window.addEventListener('resize', handleResize);
+        window.visualViewport?.addEventListener('resize', handleResize);
 
         return () => {
             disposed = true;
+            resizeObserver.disconnect();
             window.removeEventListener('resize', handleResize);
+            window.visualViewport?.removeEventListener('resize', handleResize);
             cancelAnimationFrame(animationFrame);
             renderer.dispose();
             textures.forEach(t => t.dispose());
@@ -655,10 +663,10 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
         <div className="fixed inset-0 z-120 flex items-center justify-center bg-black/20 backdrop-blur-md touch-none" data-ui-modal="true">
             <div ref={containerRef} className="absolute inset-0" />
 
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-4 sm:px-12 z-50">
+            <div className="book-navigation pointer-events-none absolute inset-0 flex items-center justify-between z-50">
                 <button
                     disabled={spread === 0 || isAnimating}
-                    className={`pointer-events-auto flex items-center justify-center w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white/95 text-slate-800 text-2xl sm:text-4xl font-bold shadow-[0_6px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none ${spread === 0 || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:bg-white'}`}
+                    className={`ui-icon-button pointer-events-auto flex items-center justify-center rounded-full bg-white/95 text-slate-800 text-2xl font-bold shadow-[0_6px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none ${spread === 0 || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:bg-white'}`}
                     onClick={() => {
                         onPageTurn?.();
                         bookApiRef.current?.turnBackward();
@@ -669,7 +677,7 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
                 </button>
                 <button
                     disabled={spread >= maxSpread || isAnimating}
-                    className={`pointer-events-auto flex items-center justify-center w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white/95 text-slate-800 text-2xl sm:text-4xl font-bold shadow-[0_6px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none ${spread >= maxSpread || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:bg-white'}`}
+                    className={`ui-icon-button pointer-events-auto flex items-center justify-center rounded-full bg-white/95 text-slate-800 text-2xl font-bold shadow-[0_6px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none ${spread >= maxSpread || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:bg-white'}`}
                     onClick={() => {
                         onPageTurn?.();
                         bookApiRef.current?.turnForward();
@@ -681,11 +689,11 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
             </div>
 
             <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-50 -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-black text-white shadow-[0_4px_0_0_rgba(0,0,0,.3)]" aria-live="polite">
-                {spread + 1} / {maxSpread + 1}
+                {spread + 1} of {maxSpread + 1}
             </div>
 
             <button
-                className="absolute top-6 right-6 sm:top-8 sm:right-8 z-50 pointer-events-auto w-12 h-12 rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-lg border-2 border-white transition-transform active:scale-95 flex items-center justify-center"
+                className="ui-close-button absolute top-[max(var(--ui-edge-gap),env(safe-area-inset-top))] right-[max(var(--ui-edge-gap),env(safe-area-inset-right))] z-50 pointer-events-auto rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-lg border-2 border-white transition-transform active:scale-95 flex items-center justify-center"
                 onClick={onClose}
                 aria-label="Close Book"
             >

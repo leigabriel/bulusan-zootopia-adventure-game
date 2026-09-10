@@ -24,9 +24,9 @@ export function ActionButton({
     };
 
     const sizeClasses = {
-        sm: 'h-9 px-3 text-xs rounded-xl',
-        md: 'h-11 px-5 text-sm rounded-xl',
-        lg: 'h-13 px-8 text-base rounded-2xl',
+        sm: 'ui-button-secondary px-3 rounded-xl',
+        md: 'ui-button-primary px-5 rounded-xl',
+        lg: 'ui-button-primary px-8 rounded-2xl',
     };
 
     return (
@@ -34,7 +34,7 @@ export function ActionButton({
             type="button"
             data-ui-button="true"
             className={cx(
-                'inline-flex items-center justify-center gap-2 font-black uppercase tracking-wider transition-all active:translate-y-1 active:shadow-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+                'ui-action-button inline-flex items-center justify-center gap-2 font-black uppercase transition-all active:translate-y-1 active:shadow-none disabled:pointer-events-none disabled:opacity-50',
                 variantClasses[variant] || variantClasses.primary,
                 sizeClasses[size] || sizeClasses.md,
                 className,
@@ -55,7 +55,7 @@ export function IconButton({ children, className = '', ...props }) {
             type="button"
             data-ui-button="true"
             className={cx(
-                'inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-900 shadow-[0_4px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none focus-visible:outline-none',
+                'ui-icon-button inline-flex items-center justify-center rounded-full bg-white text-slate-900 shadow-[0_4px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none',
                 className,
             )}
             {...props}
@@ -85,9 +85,9 @@ export function GameButton({
     };
 
     const sizeClasses = {
-        sm: 'py-2 px-4 text-sm rounded-xl',
-        md: 'py-2.5 px-8 text-base sm:text-lg rounded-2xl',
-        lg: 'py-3 px-12 text-lg sm:text-2xl rounded-3xl',
+        sm: 'ui-button-secondary px-4 rounded-xl',
+        md: 'ui-button-primary px-8 rounded-2xl',
+        lg: 'ui-button-primary px-12 rounded-3xl',
     };
 
     const colorStyle = colorClasses[color] || colorClasses.slate;
@@ -97,7 +97,7 @@ export function GameButton({
         <button
             type="button"
             className={cx(
-                'font-black uppercase tracking-wider transition-all active:translate-y-1 active:shadow-none focus-visible:outline-none',
+                'ui-action-button font-black uppercase transition-all active:translate-y-1 active:shadow-none',
                 colorStyle,
                 sizeStyle,
                 className
@@ -114,7 +114,7 @@ export function SurfacePanel({ children, className = '', ...props }) {
         <div
             data-ui-panel="true"
             className={cx(
-                'rounded-3xl border-2 border-emerald-100 bg-white shadow-[0_12px_0_0_rgba(5,46,22,0.1)]',
+                'ui-surface rounded-3xl border-2 border-emerald-100 bg-white shadow-[0_12px_0_0_rgba(5,46,22,0.1)]',
                 className,
             )}
             {...props}
@@ -143,10 +143,10 @@ export function PaginationControls({
                 onClick={() => onPageChange(page - 1)}
                 aria-label="Previous page"
             >
-                <span aria-hidden="true">&lsaquo;</span> {previousLabel}
+                <span aria-hidden="true">&lsaquo;</span> {previousLabel === 'Previous' ? 'Back' : previousLabel}
             </ActionButton>
             <span className="min-w-16 rounded-full bg-emerald-950 px-3 py-1.5 text-center text-xs font-black text-white shadow-[0_3px_0_0_#022c22]" aria-live="polite">
-                {page + 1} / {pageCount}
+                {page + 1} of {pageCount}
             </span>
             <ActionButton
                 size="sm"
@@ -189,7 +189,7 @@ export function useModalTransition(isOpen, duration = 250) {
     return { mounted, active };
 }
 
-export function ModalShell({ isOpen, onClose, title, children, size = 'md', closeOnBackdrop = true, showClose = true }) {
+export function ModalShell({ isOpen, onClose, title, children, footer = null, size = 'md', closeOnBackdrop = true, showClose = true }) {
     const { mounted, active } = useModalTransition(isOpen, 250);
 
     if (!mounted) return null;
@@ -204,7 +204,7 @@ export function ModalShell({ isOpen, onClose, title, children, size = 'md', clos
     return (
         <div
             data-ui-modal="true"
-            className="fixed inset-0 z-120 flex items-center justify-center p-2 sm:p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)]"
+            className="ui-modal-layer fixed inset-0 z-120 flex items-center justify-center"
             role="dialog"
             aria-modal="true"
         >
@@ -220,18 +220,19 @@ export function ModalShell({ isOpen, onClose, title, children, size = 'md', clos
 
             <SurfacePanel
                 className={cx(
-                    'relative z-121 flex max-h-[85dvh] w-full flex-col overflow-hidden transition-all duration-250 ease-out transform',
-                    active ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4',
+                    'ui-modal relative z-121 flex flex-col overflow-hidden transition-all duration-250 ease-out transform',
+                    active ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
                     maxWidth[size] || maxWidth.md,
                 )}
             >
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b-2 border-emerald-50 p-4 sm:px-8 sm:py-5">
-                    {title ? <h2 className="text-xl sm:text-3xl font-black text-slate-900 uppercase tracking-tight">{title}</h2> : <span />}
-                    {showClose ? <button type="button" onClick={onClose} aria-label="Close" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xl shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button> : null}
+                <div className="ui-modal-header flex shrink-0 items-center justify-between gap-3 border-b-2 border-emerald-50">
+                    {title ? <h2 className="ui-modal-title truncate font-black text-slate-900 uppercase tracking-tight">{title}</h2> : <span />}
+                    {showClose ? <button type="button" onClick={onClose} aria-label="Close" className="ui-close-button inline-flex shrink-0 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button> : null}
                 </div>
-                <div className="min-h-0 overflow-y-auto p-4 sm:p-6" data-ui-scrollable="true">
+                <div className="ui-modal-body min-h-0 flex-1 overflow-y-auto" data-ui-scrollable="true">
                     {children}
                 </div>
+                {footer ? <footer className="ui-modal-footer shrink-0 border-t-2 border-emerald-50">{footer}</footer> : null}
             </SurfacePanel>
         </div>
     );
@@ -265,7 +266,7 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
                 <div className="flex h-full flex-col">
                     <div className="flex items-center justify-between border-b-2 border-emerald-50 px-4 py-3 sm:px-6 sm:py-5">
                         <h3 className="text-sm sm:text-base font-black uppercase tracking-[0.12em] text-emerald-900">{title}</h3>
-                        <button type="button" onClick={onClose} aria-label="Close panel" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xl shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button>
+                        <button type="button" onClick={onClose} aria-label="Close panel" className="ui-close-button inline-flex items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-ui-scrollable="true">
                         {children}

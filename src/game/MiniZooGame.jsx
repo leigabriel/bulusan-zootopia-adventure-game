@@ -34,7 +34,6 @@ import {
     ContextActionPrompt,
     NPCDialogueModal,
     PlayerDetailsModal,
-    RotateDeviceOverlay,
     AnimalCaution,
     playGameButtonSfx
 } from './ui/GameUI.jsx';
@@ -2719,6 +2718,7 @@ function MiniZooGame() {
     const canShowNpcPrompt = gameStarted
         && characterReady
         && nearbyStaff
+        && !interfaceOpen
         && !showNpcDialogue;
 
     return (
@@ -2745,7 +2745,7 @@ function MiniZooGame() {
             )}
             {gameStarted && (
                 <>
-                    {!isCameraModeOpen ? (
+                    {!interfaceOpen ? (
                         <GameHUD
                             playerName={playerName || 'Explorer'}
                             onMenuClick={handleMenuClick}
@@ -2827,7 +2827,7 @@ function MiniZooGame() {
                 </>
             )}
             <QuitModal isOpen={showQuitModal} onConfirm={handleConfirmQuit} onCancel={handleCancelQuit} />
-            {missionNotice ? <div className="pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+7.6rem)] z-100 -translate-x-1/2 rounded-full border-2 border-amber-200 bg-emerald-950/95 px-4 py-2 text-center text-xs font-black text-white shadow-xl" role="status">{missionNotice}</div> : null}
+            {missionNotice && (!interfaceOpen || isCameraModeOpen) ? <div className="ui-toast pointer-events-none fixed left-1/2 z-130 max-w-[min(72vw,24rem)] -translate-x-1/2 rounded-xl border-2 border-amber-200 bg-emerald-950/95 px-3 py-2 text-center text-xs font-black leading-snug text-white shadow-xl" role="status">{missionNotice}</div> : null}
             <AllAnimalsCelebration
                 visible={showAllFedCelebration}
                 onClose={() => setShowAllFedCelebration(false)}
