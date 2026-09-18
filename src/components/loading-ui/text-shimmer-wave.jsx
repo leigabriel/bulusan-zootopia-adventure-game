@@ -1,9 +1,9 @@
 "use client";
-import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export function TextShimmerWave({
   children,
+  // eslint-disable-next-line no-unused-vars
   as: Component = "p",
   className,
   duration = 1,
@@ -15,62 +15,50 @@ export function TextShimmerWave({
   spread = 1,
   scaleDistance = 1.1,
   rotateYDistance = 10,
-  transition,
   style
 }) {
-  const MotionComponent = motion.create(Component);
+  const chars = children.split("");
 
   return (
-    // eslint-disable-next-line react-hooks/static-components
-    <MotionComponent
+    <Component
       className={cn("relative inline-block perspective-normal", className)}
       style={
         {
           ...style,
-
+          "--tw-shimmer-duration": `${duration}s`,
+          "--tw-shimmer-spread": spread,
+          "--tw-z-distance": `${zDistance}px`,
+          "--tw-x-distance": `${xDistance}px`,
+          "--tw-y-distance": `${yDistance}px`,
+          "--tw-scale-distance": scaleDistance,
+          "--tw-rotate-y-distance": `${rotateYDistance}deg`,
           "--base-color":
             baseColor ?? "color-mix(in oklab, currentColor 55%, transparent)",
-
-          "--base-gradient-color": shimmerColor ?? "currentColor"
+          "--base-gradient-color": shimmerColor ?? "currentColor",
+          perspective: "800px"
         }
       }>
-      {children.split("").map((char, i) => {
-        const delay = (i * duration * (1 / spread)) / children.length;
+      {chars.map((char, i) => {
+        const delay = (i * duration * (1 / spread)) / chars.length;
 
         return (
-          <motion.span
+          <span
             key={i}
-            className={cn("inline-block whitespace-pre transform-3d")}
-            initial={{
-              translateZ: 0,
-              scale: 1,
-              rotateY: 0,
+            className={cn("inline-block whitespace-pre transform-3d tw-shimmer-char")}
+            style={{
+              animationDelay: `${delay}s`,
+              animationDuration: `${duration}s`,
+              animationIterationCount: "infinite",
+              animationTimingFunction: "ease-in-out",
               color: "var(--base-color)",
-            }}
-            animate={{
-              translateZ: [0, zDistance, 0],
-              translateX: [0, xDistance, 0],
-              translateY: [0, yDistance, 0],
-              scale: [1, scaleDistance, 1],
-              rotateY: [0, rotateYDistance, 0],
-              color: [
-                "var(--base-color)",
-                "var(--base-gradient-color)",
-                "var(--base-color)",
-              ],
-            }}
-            transition={{
-              duration: duration,
-              repeat: Infinity,
-              repeatDelay: (children.length * 0.05) / spread,
-              delay,
-              ease: "easeInOut",
-              ...transition,
+              animationName: "tw-shimmer-wave",
+              display: "inline-block",
+              transformStyle: "preserve-3d"
             }}>
             {char}
-          </motion.span>
+          </span>
         );
       })}
-    </MotionComponent>
+    </Component>
   );
 }

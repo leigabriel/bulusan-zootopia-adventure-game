@@ -341,13 +341,13 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
 
                 ctx.fillStyle = '#064e3b';
                 ctx.textAlign = 'center';
-                ctx.font = '700 40px "Dept Mono", monospace';
+                ctx.font = '700 40px "Simply Rounded", sans-serif';
                 ctx.fillText("BULUSAN ZOO", canvas.width / 2 + 10, 150);
-                ctx.font = '700 75px "Dept Mono", monospace';
+                ctx.font = '700 75px "Simply Rounded", sans-serif';
                 ctx.fillText("ANIMALS", canvas.width / 2 + 10, 240);
                 ctx.font = '180px sans-serif';
                 ctx.fillText("🦒", canvas.width / 2 + 10, 480);
-                ctx.font = '700 20px "Dept Mono", monospace';
+                ctx.font = '700 20px "Simply Rounded", sans-serif';
                 ctx.fillText("Explorer's Board Book", canvas.width / 2 + 10, 620);
 
             } else if (pageData.type === 'pattern') {
@@ -367,9 +367,9 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
             } else if (pageData.type === 'title') {
                 ctx.fillStyle = '#333';
                 ctx.textAlign = 'center';
-                ctx.font = '30px "Dept Mono", monospace';
+                ctx.font = '30px "Simply Rounded", sans-serif';
                 ctx.fillText("An Interactive Journey", canvas.width / 2, 250);
-                ctx.font = '700 50px "Dept Mono", monospace';
+                ctx.font = '700 50px "Simply Rounded", sans-serif';
                 ctx.fillText("ANIMAL GUIDE", canvas.width / 2, 330);
             } else if (pageData.type === 'animal') {
                 ctx.textAlign = 'center';
@@ -395,29 +395,29 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
                 }
 
                 ctx.fillStyle = '#1f2937';
-                ctx.font = '700 36px "Dept Mono", monospace';
+                ctx.font = '700 36px "Simply Rounded", sans-serif';
                 ctx.fillText(pageData.name.toUpperCase(), canvas.width / 2, 360);
 
                 ctx.fillStyle = '#6b7280';
-                ctx.font = '20px "Dept Mono", monospace';
+                ctx.font = '20px "Simply Rounded", sans-serif';
                 ctx.fillText(pageData.scientific, canvas.width / 2, 400);
 
                 ctx.fillStyle = '#4b5563';
-                ctx.font = '20px "Dept Mono", monospace';
+                ctx.font = '20px "Simply Rounded", sans-serif';
                 wrapText(ctx, pageData.description, canvas.width / 2, 460, canvas.width - 80, 26);
 
                 ctx.fillStyle = '#065f46';
-                ctx.font = '700 18px "Dept Mono", monospace';
+                ctx.font = '700 18px "Simply Rounded", sans-serif';
                 wrapText(ctx, `Fact: ${pageData.fact}`, canvas.width / 2, 570, canvas.width - 80, 24);
 
                 if (pageData.fed) {
                     ctx.fillStyle = '#22c55e';
-                    ctx.font = '700 22px "Dept Mono", monospace';
+                    ctx.font = '700 22px "Simply Rounded", sans-serif';
                     ctx.fillText("⭐ Fed Successfully ⭐", canvas.width / 2, 640);
                 }
 
                 ctx.fillStyle = '#9ca3af';
-                ctx.font = '20px "Dept Mono", monospace';
+                ctx.font = '20px "Simply Rounded", sans-serif';
                 ctx.textAlign = (i % 2 !== 0) ? 'left' : 'right';
                 const px = (i % 2 !== 0) ? 30 : canvas.width - 30;
                 ctx.fillText(`Page ${i - 1}`, px, canvas.height - 30);
@@ -439,10 +439,10 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
                 ctx.fillText("❓", canvas.width / 2, 220);
 
                 ctx.fillStyle = '#9ca3af';
-                ctx.font = '700 36px "Dept Mono", monospace';
+                ctx.font = '700 36px "Simply Rounded", sans-serif';
                 ctx.fillText("UNDISCOVERED", canvas.width / 2, 420);
 
-                ctx.font = '20px "Dept Mono", monospace';
+                ctx.font = '20px "Simply Rounded", sans-serif';
                 ctx.fillText("Explore the zoo to unlock.", canvas.width / 2, 480);
             }
 

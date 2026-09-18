@@ -55,6 +55,7 @@ import {
     saveMissionProgress,
     resetMissionProgress
 } from './utils/storage.js';
+import { createContactShadow } from './utils/contactShadow.js';
 import {
     completeActiveStoryTask,
     getActiveStoryTask,
@@ -162,8 +163,6 @@ const LINA_DIALOGUE_NODES = {
     favorite: { id: 'favorite', message: 'I really enjoy watching the alpacas. They are calm, curious, and always look ready for a photo!', choices: [{ id: 'back', label: 'Back', nextId: 'root' }] },
     tip: { id: 'tip', message: 'Take your time and look around. The animal book remembers every friend you discover along the way.', choices: [{ id: 'back', label: 'Back', nextId: 'root' }] },
 };
-let CONTACT_SHADOW_TEXTURE = null;
-
 function createMissionWorldObjects(scene) {
     const marker = new THREE.Group();
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffd43b, depthTest: false, toneMapped: false });
@@ -385,82 +384,6 @@ function createRunSmokeSystem(scene) {
     };
 }
 
-function getContactShadowTexture() {
-    if (CONTACT_SHADOW_TEXTURE) return CONTACT_SHADOW_TEXTURE;
-
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.08, size / 2, size / 2, size * 0.5);
-    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-
-    CONTACT_SHADOW_TEXTURE = new THREE.CanvasTexture(canvas);
-    CONTACT_SHADOW_TEXTURE.colorSpace = THREE.SRGBColorSpace;
-    CONTACT_SHADOW_TEXTURE.needsUpdate = true;
-    return CONTACT_SHADOW_TEXTURE;
-}
-
-function createContactShadow(size, opacity) {
-    const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(size, size),
-        new THREE.MeshBasicMaterial({
-            map: getContactShadowTexture(),
-            transparent: true,
-            opacity,
-            depthWrite: false,
-            polygonOffset: true,
-            polygonOffsetFactor: -1,
-            polygonOffsetUnits: -1,
-            toneMapped: false
-        })
-    );
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.renderOrder = 1;
-    return mesh;
-}
-
-function getAmbienceVolume() {
-    try {
-        const raw = localStorage.getItem('minizoo_settings');
-        if (!raw) return 1.0;
-        const parsed = JSON.parse(raw);
-        return typeof parsed?.ambienceVolume === 'number' ? parsed.ambienceVolume : 1.0;
-    } catch {
-        return 1.0;
-    }
-}
-
-function getMusicVolume() {
-    try {
-        const raw = localStorage.getItem('minizoo_settings');
-        if (!raw) return 0.5;
-        const parsed = JSON.parse(raw);
-        return typeof parsed?.musicVolume === 'number' ? parsed.musicVolume : 0.5;
-    } catch {
-        return 0.5;
-    }
-}
-
-function getSfxVolume() {
-    try {
-        const raw = localStorage.getItem('minizoo_settings');
-        if (!raw) return 1.0;
-        const parsed = JSON.parse(raw);
-        return typeof parsed?.sfxVolume === 'number' ? parsed.sfxVolume : 1.0;
-    } catch {
-        return 1.0;
-    }
-}
-
-function getStoredPlayerName() {
-    return getPlayerProfile().name;
-}
-
 function addStatueLights(scene) {
     const key = new THREE.SpotLight(0xfff3d9, 1.2, 140, Math.PI / 5, 0.35, 1.2);
     key.position.set(24, 30, 18);
@@ -644,7 +567,7 @@ function MiniZooGame() {
     const musicRef = useRef(null);
     const isNearStatueRef = useRef(false);
     const hasShownStatueEntryRef = useRef(false);
-    const soundEnabledRef = useRef(getSfxVolume() > 0);
+    const soundEnabledRef = useRef((getSettings().sfxVolume ?? 1.0) > 0);
     const gameStartedRef = useRef(false);
     const cameraModeRef = useRef('third');
     const preCameraModeRef = useRef('third');
@@ -703,7 +626,7 @@ function MiniZooGame() {
     const missionNoticeTimerRef = useRef(null);
     const [guidanceEnabled, setGuidanceEnabled] = useState(true);
     const guidanceEnabledRef = useRef(true);
-    const [playerName, setPlayerName] = useState(() => getStoredPlayerName());
+    const [playerName, setPlayerName] = useState(() => getPlayerProfile().name);
 
     const [feedingSuccess, setFeedingSuccess] = useState({ visible: false, animalName: '' });
     const [discoveredAnimals, setDiscoveredAnimals] = useState(() => [...new Set(getProgress().animalsDiscovered.map((name) => getAnimalBookEntry(name)?.name || name))]);
@@ -935,7 +858,7 @@ function MiniZooGame() {
             const audio = new Audio(fallbackPath);
             audio.loop = true;
             audio.preload = 'auto';
-            audio.volume = getSfxVolume() * 0.58;
+            audio.volume = (getSettings().sfxVolume ?? 1.0) * 0.58;
             audio.playbackRate = 1.04;
             audio.setAttribute('playsinline', 'true');
             runAudioRef.current = audio;
@@ -974,7 +897,7 @@ function MiniZooGame() {
             const audio = new Audio(fallbackPath);
             audio.loop = true;
             audio.preload = 'auto';
-            audio.volume = getAmbienceVolume() * 0.75;
+            audio.volume = (getSettings().ambienceVolume ?? 1.0) * 0.75;
             audio.setAttribute('playsinline', 'true');
             birdChirpingRef.current = audio;
 
@@ -1039,7 +962,7 @@ function MiniZooGame() {
     }, []);
 
     const playAmbience = useCallback(async () => {
-        const vol = getAmbienceVolume();
+        const vol = (getSettings().ambienceVolume ?? 1.0);
         const audio = getAmbience();
         if (audio && (audio.src || audio.currentSrc)) {
             audio.volume = vol;
@@ -1061,7 +984,7 @@ function MiniZooGame() {
     }, [getAmbience, getBirdChirping]);
 
     const playMusic = useCallback(async () => {
-        const vol = getMusicVolume();
+        const vol = (getSettings().musicVolume ?? 0.5);
         const audio = getMusic();
         if (!audio || (!audio.src && !audio.currentSrc)) return;
         audio.volume = vol;
@@ -1215,7 +1138,7 @@ function MiniZooGame() {
             feedingTimerRef.current = null;
             if (!gameStartedRef.current || feedingInProgressRef.current !== missionAnimal) return;
 
-            if (getSfxVolume() > 0) {
+            if ((getSettings().sfxVolume ?? 1.0) > 0) {
                 animal.playSound?.();
             }
             playGameButtonSfx('feed');
@@ -1453,7 +1376,7 @@ function MiniZooGame() {
             state.grass = await createGrass(scene, isMobile ? 1200 : 2500);
             setLoadProgress(55);
 
-            const initialSfxVolume = getSfxVolume();
+            const initialSfxVolume = (getSettings().sfxVolume ?? 1.0);
             // Pass the obstacles and initial volume to the animals
             state.animals = await loadGLTFAnimals(scene, state.obstacles, initialSfxVolume);
             setLoadProgress(80);
@@ -1711,7 +1634,7 @@ function MiniZooGame() {
                 }
                 }
 
-                const sfxVol = getSfxVolume();
+                const sfxVol = (getSettings().sfxVolume ?? 1.0);
                 state.animals.forEach(a => {
                     if (a.group) {
                         const dx = playerPosition.x - a.group.position.x;
@@ -1732,7 +1655,7 @@ function MiniZooGame() {
 
                 const riverAudio = getRiverAudio();
                 if (riverAudio) {
-                    const ambVol = getAmbienceVolume();
+                    const ambVol = (getSettings().ambienceVolume ?? 1.0);
                     if (ambVol > 0 && playerPosition && gameStartedRef.current) {
                         const riverMetrics = getRiverMetrics(playerPosition.x, playerPosition.z);
                         const distToRiver = riverMetrics.lateral;
@@ -1751,7 +1674,7 @@ function MiniZooGame() {
                 const runAudio = getRunAudio();
                 if (runAudio) {
                     const isRunning = state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
-                    const sfxVol = getSfxVolume();
+                    const sfxVol = (getSettings().sfxVolume ?? 1.0);
                     if (isRunning && sfxVol > 0) {
                         runAudio.volume = sfxVol * 0.58;
                         if (runAudio.paused) {
@@ -1942,7 +1865,7 @@ function MiniZooGame() {
             gameStartedRef.current = true;
             nearbyAnimalRef.current = null;
             nearbyStaffRef.current = null;
-            soundEnabledRef.current = getSfxVolume() > 0;
+            soundEnabledRef.current = (getSettings().sfxVolume ?? 1.0) > 0;
             setPlayerName(profile.name);
             setShowMenu(false);
             setGameStarted(true);
@@ -2385,7 +2308,7 @@ function MiniZooGame() {
 
     useEffect(() => {
         const syncSoundEnabled = () => {
-            soundEnabledRef.current = getSfxVolume() > 0;
+            soundEnabledRef.current = (getSettings().sfxVolume ?? 1.0) > 0;
         };
 
         const syncGraphicsAndFps = () => {
@@ -2434,7 +2357,7 @@ function MiniZooGame() {
             syncSensitivity();
 
             // Sync animal SFX volume when settings change
-            const sfxVol = getSfxVolume();
+            const sfxVol = (getSettings().sfxVolume ?? 1.0);
             if (gameStateRef.current?.animals) {
                 gameStateRef.current.animals.forEach(a => a.updateVolume?.(sfxVol));
             }
@@ -2627,8 +2550,8 @@ function MiniZooGame() {
                 return;
             }
 
-            const ambVol = getAmbienceVolume();
-            const musVol = getMusicVolume();
+            const ambVol = (getSettings().ambienceVolume ?? 1.0);
+            const musVol = (getSettings().musicVolume ?? 0.5);
 
             if (gameStarted && ambVol > 0) {
                 playAmbience();
@@ -2647,13 +2570,13 @@ function MiniZooGame() {
 
         const onSettingsChanged = () => {
             applyMusicState();
-            soundEnabledRef.current = getSfxVolume() > 0;
+            soundEnabledRef.current = (getSettings().sfxVolume ?? 1.0) > 0;
         };
 
         const onStorage = (e) => {
             if (!e || e.key === 'minizoo_settings' || e.key === null) {
                 applyMusicState();
-                soundEnabledRef.current = getSfxVolume() > 0;
+                soundEnabledRef.current = (getSettings().sfxVolume ?? 1.0) > 0;
             }
         };
 

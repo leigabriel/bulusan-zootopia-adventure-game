@@ -5,6 +5,7 @@ import { isLandAccessible } from './River.jsx';
 import { resolveAssetUrl } from '../utils/localAssets.js';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { getAnimalBookEntry } from '../data/animalMetadata.js';
+import { createContactShadow } from '../utils/contactShadow.js';
 
 const ANIMAL_CONFIGS = [
     {
@@ -173,46 +174,6 @@ const AMBIENT_SOUND_RADIUS = 55;
 const AMBIENT_SOUND_RADIUS_SQ = AMBIENT_SOUND_RADIUS * AMBIENT_SOUND_RADIUS;
 const AMBIENT_SOUND_MIN_INTERVAL = 5;
 const AMBIENT_SOUND_MAX_INTERVAL = 11;
-let CONTACT_SHADOW_TEXTURE = null;
-
-function getContactShadowTexture() {
-    if (CONTACT_SHADOW_TEXTURE) return CONTACT_SHADOW_TEXTURE;
-
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.08, size / 2, size / 2, size * 0.5);
-    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-
-    CONTACT_SHADOW_TEXTURE = new THREE.CanvasTexture(canvas);
-    CONTACT_SHADOW_TEXTURE.colorSpace = THREE.SRGBColorSpace;
-    CONTACT_SHADOW_TEXTURE.needsUpdate = true;
-    return CONTACT_SHADOW_TEXTURE;
-}
-
-function createContactShadow(size, opacity) {
-    const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(size, size),
-        new THREE.MeshBasicMaterial({
-            map: getContactShadowTexture(),
-            transparent: true,
-            opacity,
-            depthWrite: false,
-            polygonOffset: true,
-            polygonOffsetFactor: -1,
-            polygonOffsetUnits: -1,
-            toneMapped: false
-        })
-    );
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.renderOrder = 1;
-    return mesh;
-}
 
 function createAnimalSound(soundFile, initialVolume = 0.75) {
     if (!soundFile || typeof Audio === 'undefined') return null;

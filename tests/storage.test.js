@@ -1,0 +1,238 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+// Polyfill localStorage for Node.js test environment
+const storage = new Map();
+globalThis.localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => { storage.set(key, String(value)); },
+    removeItem: (key) => { storage.delete(key); },
+    clear: () => { storage.clear(); },
+};
+
+// Polyfill window.dispatchEvent for playerProfile.js
+globalThis.window = {
+    dispatchEvent: () => {},
+};
+
+import {
+    getSettings,
+    saveSettings,
+    setVolume,
+    toggleMusic,
+    setGraphicsQuality,
+    setFpsLimit,
+    getProgress,
+    saveProgress,
+    getDiscoveredAnimals,
+    markAnimalDiscovered,
+    getPlayerSession,
+    savePlayerSession,
+    getFeedingStatus,
+    feedAnimal,
+    isAnimalFed,
+    resetDailyFeeding,
+    resetAllFeedingTasks,
+    getMissionProgress,
+    saveMissionProgress,
+    resetMissionProgress,
+    getTasks,
+    getCompletedTasksCount,
+    getTotalTasks,
+    clearAllData,
+} from '../src/game/utils/storage.js';
+
+test.beforeEach(() => {
+    storage.clear();
+});
+
+test('getSettings returns defaults when empty', () => {
+    const settings = getSettings();
+    assert.equal(settings.ambienceVolume, 1.0);
+    assert.equal(settings.musicVolume, 0.5);
+    assert.equal(settings.sfxVolume, 1.0);
+    assert.equal(settings.uiVolume, 1.0);
+    assert.equal(settings.graphicsQuality, 'medium');
+    assert.equal(settings.fpsLimit, 60);
+    assert.equal(settings.sensitivity, 1.0);
+});
+
+test('saveSettings merges with defaults', () => {
+    saveSettings({ musicVolume: 0.3 });
+    const settings = getSettings();
+    assert.equal(settings.musicVolume, 0.3);
+    assert.equal(settings.ambienceVolume, 1.0); // default preserved
+});
+
+test('setVolume clamps values', () => {
+    setVolume('musicVolume', 1.5);
+    assert.equal(getSettings().musicVolume, 1);
+    setVolume('musicVolume', -0.5);
+    assert.equal(getSettings().musicVolume, 0);
+    setVolume('musicVolume', 0.7);
+    assert.equal(getSettings().musicVolume, 0.7);
+});
+
+test('toggleMusic toggles between 0 and 0.5', () => {
+    toggleMusic();
+    assert.equal(getSettings().musicVolume, 0);
+    toggleMusic();
+    assert.equal(getSettings().musicVolume, 0.5);
+});
+
+test('setGraphicsQuality only accepts valid values', () => {
+    setGraphicsQuality('low');
+    assert.equal(getSettings().graphicsQuality, 'low');
+    setGraphicsQuality('invalid');
+    assert.equal(getSettings().graphicsQuality, 'low'); // unchanged
+});
+
+test('setFpsLimit only accepts valid values', () => {
+    setFpsLimit(30);
+    assert.equal(getSettings().fpsLimit, 30);
+    setFpsLimit(90);
+    assert.equal(getSettings().fpsLimit, 30); // unchanged
+});
+
+test('getProgress returns defaults when empty', () => {
+    const progress = getProgress();
+    assert.deepEqual(progress.animalsDiscovered, []);
+    assert.equal(progress.totalAnimalsViewed, 0);
+    assert.equal(progress.lastPlayed, null);
+});
+
+test('markAnimalDiscovered adds animal and increments count', () => {
+    markAnimalDiscovered('Alpaca');
+    const progress = getProgress();
+    assert.ok(progress.animalsDiscovered.includes('Alpaca'));
+    assert.equal(progress.totalAnimalsViewed, 1);
+});
+
+test('markAnimalDiscovered does not duplicate', () => {
+    markAnimalDiscovered('Alpaca');
+    markAnimalDiscovered('Alpaca');
+    const progress = getProgress();
+    assert.equal(progress.animalsDiscovered.filter(a => a === 'Alpaca').length, 1);
+    assert.equal(progress.totalAnimalsViewed, 1);
+});
+
+test('getDiscoveredAnimals returns unique list', () => {
+    markAnimalDiscovered('Alpaca');
+    markAnimalDiscovered('Rabbit');
+    const animals = getDiscoveredAnimals();
+    assert.equal(animals.length, 2);
+    assert.ok(animals.includes('Alpaca'));
+    assert.ok(animals.includes('Rabbit'));
+});
+
+test('savePlayerSession and getPlayerSession round-trip', () => {
+    savePlayerSession({
+        position: { x: 10, y: 5, z: -3 },
+        yaw: 1.5,
+        pitch: 0.3,
+        cameraMode: 'first',
+    });
+    const session = getPlayerSession();
+    assert.equal(session.position.x, 10);
+    assert.equal(session.position.y, 5);
+    assert.equal(session.position.z, -3);
+    assert.equal(session.yaw, 1.5);
+    assert.equal(session.pitch, 0.3);
+    assert.equal(session.cameraMode, 'first');
+});
+
+test('getPlayerSession normalizes invalid data', () => {
+    savePlayerSession({ position: { x: 'bad', y: 1, z: 1 }, yaw: Infinity });
+    const session = getPlayerSession();
+    assert.equal(session.position, null);
+    assert.equal(session.yaw, 0);
+});
+
+test('feedAnimal marks animal as fed', () => {
+    feedAnimal('Horse');
+    assert.ok(isAnimalFed('Horse'));
+    const status = getFeedingStatus();
+    assert.equal(status['Horse'].fed, true);
+    assert.equal(status['Horse'].feedCount, 1);
+});
+
+test('feedAnimal increments feed count', () => {
+    feedAnimal('Horse');
+    feedAnimal('Horse');
+    const status = getFeedingStatus();
+    assert.equal(status['Horse'].feedCount, 2);
+});
+
+test('isAnimalFed handles Rabbit variants', () => {
+    feedAnimal('Rabbit (Idle)');
+    assert.ok(isAnimalFed('Rabbit'));
+    assert.ok(isAnimalFed('Rabbit (Idle)'));
+});
+
+test('resetAllFeedingTasks clears all feeding data', () => {
+    feedAnimal('Horse');
+    feedAnimal('Rabbit');
+    resetAllFeedingTasks();
+    assert.equal(Object.keys(getFeedingStatus()).length, 0);
+});
+
+test('resetDailyFeeding sets fed to false but keeps counts', () => {
+    feedAnimal('Horse');
+    resetDailyFeeding();
+    const status = getFeedingStatus();
+    assert.equal(status['Horse'].fed, false);
+    assert.equal(status['Horse'].feedCount, 1);
+});
+
+test('getMissionProgress returns defaults', () => {
+    const progress = getMissionProgress();
+    assert.equal(progress.activeTaskId, 'talk-lino');
+    assert.deepEqual(progress.completedTaskIds, []);
+    assert.equal(progress.hasHay, false);
+    assert.equal(progress.hasCarrot, false);
+});
+
+test('saveMissionProgress merges correctly', () => {
+    saveMissionProgress({ hasHay: true });
+    const progress = getMissionProgress();
+    assert.equal(progress.hasHay, true);
+    assert.equal(progress.activeTaskId, 'talk-lino'); // unchanged
+});
+
+test('resetMissionProgress clears to defaults', () => {
+    saveMissionProgress({ hasHay: true, hasCarrot: true });
+    resetMissionProgress();
+    const progress = getMissionProgress();
+    assert.equal(progress.hasHay, false);
+    assert.equal(progress.hasCarrot, false);
+    assert.deepEqual(progress.completedTaskIds, []);
+});
+
+test('getTasks returns 10 animal feeding tasks', () => {
+    const tasks = getTasks();
+    assert.equal(tasks.length, 10);
+    for (const task of tasks) {
+        assert.ok(task.id);
+        assert.ok(task.name.startsWith('Feed the '));
+        assert.ok(task.animalName);
+        assert.equal(typeof task.completed, 'boolean');
+    }
+});
+
+test('getCompletedTasksCount and getTotalTasks', () => {
+    assert.equal(getTotalTasks(), 10);
+    assert.equal(getCompletedTasksCount(), 0);
+    feedAnimal('Alpaca');
+    feedAnimal('Domestic Horse');
+    assert.equal(getCompletedTasksCount(), 2);
+});
+
+test('clearAllData removes all stored data', () => {
+    saveSettings({ musicVolume: 0.3 });
+    feedAnimal('Horse');
+    saveProgress({ animalsDiscovered: ['Alpaca'] });
+    clearAllData();
+    assert.deepEqual(Object.keys(getSettings()), Object.keys(getSettings())); // defaults restored
+    assert.equal(Object.keys(getFeedingStatus()).length, 0);
+    assert.deepEqual(getProgress().animalsDiscovered, []);
+});

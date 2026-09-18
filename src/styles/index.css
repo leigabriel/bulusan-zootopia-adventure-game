@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @font-face {
-    font-family: 'Dept Mono';
-    src: url('/fonts/dept-mono.woff') format('woff');
+    font-family: 'Simply Rounded';
+    src: url('/fonts/simply-rounded.ttf') format('truetype');
     font-style: normal;
     font-weight: 100 900;
     font-display: swap;
@@ -44,7 +44,7 @@ body,
 }
 
 body {
-    font-family: 'Dept Mono', monospace;
+    font-family: 'Simply Rounded', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
@@ -75,6 +75,38 @@ label,
 canvas {
     display: block;
     touch-action: none;
+}
+
+.app-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #4ade80;
+}
+
+.app-splash-icon {
+    width: min(52vw, 280px);
+    max-height: 52dvh;
+    object-fit: contain;
+    animation: app-splash-fade 2.2s ease-in-out both;
+}
+
+@keyframes app-splash-fade {
+    0% {
+        opacity: 0;
+        transform: scale(.96);
+    }
+    25%, 72% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(.98);
+    }
 }
 
 /* Safe area for notched devices */
@@ -402,4 +434,15 @@ select:focus-visible,
 
 .animate-rotate-phone {
     animation: rotate-phone 2s ease-in-out infinite;
+}
+
+@keyframes tw-shimmer-wave {
+    0%, 100% {
+        transform: translateZ(0) translateX(0) translateY(0) scale(1) rotateY(0deg);
+        color: var(--base-color);
+    }
+    50% {
+        transform: translateZ(var(--tw-z-distance, 10px)) translateX(var(--tw-x-distance, 2px)) translateY(var(--tw-y-distance, -2px)) scale(var(--tw-scale-distance, 1.1)) rotateY(var(--tw-rotate-y-distance, 10deg));
+        color: var(--base-gradient-color);
+    }
 }
