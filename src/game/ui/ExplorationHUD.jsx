@@ -114,10 +114,12 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
         }
         const rect = cameraImgRef.current.getBoundingClientRect();
         const lcdRect = {
-            x: rect.left + rect.width * 0.125,
-            y: rect.top + rect.height * 0.200,
-            width: rect.width * 0.420,
-            height: rect.height * 0.615
+            // Measured against camera.png: the LCD window spans roughly
+            // x 16-63% and y 30-70% of the image.
+            x: rect.left + rect.width * 0.16,
+            y: rect.top + rect.height * 0.30,
+            width: rect.width * 0.474,
+            height: rect.height * 0.40
         };
         onCapture?.(lcdRect);
     };

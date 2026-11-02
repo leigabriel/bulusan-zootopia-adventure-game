@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 
 export function cx(...tokens) {
     return tokens.filter(Boolean).join(' ');
@@ -191,6 +191,33 @@ export function useModalTransition(isOpen, duration = 250) {
 
 export function ModalShell({ isOpen, onClose, title, children, footer = null, size = 'md', closeOnBackdrop = true, showClose = true }) {
     const { mounted, active } = useModalTransition(isOpen, 250);
+    const titleId = useId();
+    const panelRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+    useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+    // Escape closes the dialog, focus moves inside it and returns afterwards.
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const previouslyFocused = document.activeElement;
+        const focusTimer = setTimeout(() => {
+            const panel = panelRef.current;
+            if (!panel) return;
+            const target = panel.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            (target || panel).focus?.();
+        }, 0);
+        const onKeyDown = (event) => {
+            if (event.key !== 'Escape') return;
+            event.stopPropagation();
+            onCloseRef.current?.();
+        };
+        document.addEventListener('keydown', onKeyDown, true);
+        return () => {
+            clearTimeout(focusTimer);
+            document.removeEventListener('keydown', onKeyDown, true);
+            if (previouslyFocused && previouslyFocused.focus && document.contains(previouslyFocused)) previouslyFocused.focus();
+        };
+    }, [isOpen]);
 
     if (!mounted) return null;
 
@@ -207,6 +234,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
             className="ui-modal-layer fixed inset-0 z-120 flex items-center justify-center"
             role="dialog"
             aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
         >
             <button
                 type="button"
@@ -219,6 +247,8 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
             />
 
             <SurfacePanel
+                ref={panelRef}
+                tabIndex={-1}
                 className={cx(
                     'ui-modal relative z-121 flex flex-col overflow-hidden transition-all duration-250 ease-out transform',
                     active ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
@@ -226,7 +256,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
                 )}
             >
                 <div className="ui-modal-header flex shrink-0 items-center justify-between gap-3 border-b-2 border-emerald-50">
-                    {title ? <h2 className="ui-modal-title truncate font-black text-slate-900 uppercase tracking-tight">{title}</h2> : <span />}
+                    {title ? <h2 id={titleId} className="ui-modal-title truncate font-black text-slate-900 uppercase tracking-tight">{title}</h2> : <span />}
                     {showClose ? <button type="button" onClick={onClose} aria-label="Close" className="ui-close-button inline-flex shrink-0 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button> : null}
                 </div>
                 <div className="ui-modal-body min-h-0 flex-1 overflow-y-auto" data-ui-scrollable="true">

@@ -236,3 +236,14 @@ test('clearAllData removes all stored data', () => {
     assert.equal(Object.keys(getFeedingStatus()).length, 0);
     assert.deepEqual(getProgress().animalsDiscovered, []);
 });
+
+test('clearAllData also clears mission progress', () => {
+    saveMissionProgress({ completedTaskIds: ['talk-lino'] });
+    clearAllData();
+    assert.deepEqual(getMissionProgress().completedTaskIds, []);
+});
+
+test('camera mode falls back to third person', () => {
+    savePlayerSession({ position: { x: 1, y: 1, z: 1 }, cameraMode: 'sideways' });
+    assert.equal(getPlayerSession().cameraMode, 'third');
+});

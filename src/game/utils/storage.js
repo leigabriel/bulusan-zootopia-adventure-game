@@ -6,13 +6,14 @@
 const STORAGE_KEYS = {
     SETTINGS: 'minizoo_settings',
     PROGRESS: 'minizoo_progress',
-    FEEDING_STATUS: 'minizoo_feeding'
+    FEEDING_STATUS: 'minizoo_feeding',
+    MISSIONS: 'minizoo_missions'
 };
 
 import { DEFAULT_STORY_PROGRESS, normalizeStoryProgress } from '../data/storyTasks.js';
 
 // Default values
-const DEFAULT_SETTINGS = {
+export const DEFAULT_SETTINGS = {
     ambienceVolume: 1.0,
     musicVolume: 0.5,
     uiVolume: 1.0,
@@ -44,7 +45,8 @@ function normalizePosition(position) {
 }
 
 function normalizeCameraMode(mode) {
-    return mode === 'third' ? 'third' : 'first';
+    // New games start in third person, so that is also the fallback.
+    return mode === 'first' ? 'first' : 'third';
 }
 
 /**
@@ -210,19 +212,19 @@ export function resetAllFeedingTasks() {
 }
 
 export function getMissionProgress() {
-    const stored = localStorage.getItem('minizoo_missions');
+    const stored = localStorage.getItem(STORAGE_KEYS.MISSIONS);
     return normalizeStoryProgress(safeParse(stored, DEFAULT_STORY_PROGRESS));
 }
 
 export function saveMissionProgress(progress) {
     const updated = normalizeStoryProgress({ ...getMissionProgress(), ...progress });
-    localStorage.setItem('minizoo_missions', JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEYS.MISSIONS, JSON.stringify(updated));
     return updated;
 }
 
 export function resetMissionProgress() {
     const reset = { ...DEFAULT_STORY_PROGRESS, completedTaskIds: [], photoAnimals: [], feedThreeBaseline: [] };
-    localStorage.setItem('minizoo_missions', JSON.stringify(reset));
+    localStorage.setItem(STORAGE_KEYS.MISSIONS, JSON.stringify(reset));
     return reset;
 }
 

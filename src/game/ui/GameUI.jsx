@@ -7,9 +7,9 @@ import { resolveAssetUrl } from '../utils/localAssets.js';
 import { ActionButton, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
+import { DEFAULT_SETTINGS, getSettings, saveSettings } from '../utils/storage.js';
 import { getPlayerProfile, isPlayerProfileComplete, PLAYER_GENDERS, savePlayerProfile } from '../utils/playerProfile.js';
 
-const SETTINGS_KEY = 'minizoo_settings';
 const SETTINGS_CHANGE_EVENT = 'minizoo-settings-changed';
 
 const SFX_FILES = {
@@ -23,29 +23,21 @@ const SFX_FILES = {
 
 const uiAudioTemplates = {};
 
-const UI_DEFAULT_SETTINGS = {
-    ambienceVolume: 1.0,
-    musicVolume: 0.5,
-    uiVolume: 1.0,
-    sfxVolume: 1.0,
-    graphicsQuality: 'medium',
-    fpsLimit: 60,
-    sensitivity: 1.0
-};
-
+// Settings live in storage.js so the HUD, menus and game loop share one source
+// of defaults and one storage key.
 function readSettings() {
     try {
-        const raw = localStorage.getItem(SETTINGS_KEY);
-        return raw ? { ...UI_DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...UI_DEFAULT_SETTINGS };
+        return getSettings();
     } catch {
-        return { ...UI_DEFAULT_SETTINGS };
+        return { ...DEFAULT_SETTINGS };
     }
 }
 function persistSettings(updated) {
     try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
+        saveSettings(updated);
         window.dispatchEvent(new Event(SETTINGS_CHANGE_EVENT));
     } catch {
+        // Storage can be unavailable (private mode); settings stay in memory.
     }
 }
 
@@ -625,6 +617,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
 
     useEffect(() => {
         let listenerHandle = null;
+        let disposed = false;
         const setupBack = async () => {
             try {
                 listenerHandle = await CapacitorApp.addListener('backButton', () => {
@@ -650,11 +643,17 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     }
                     setShowExitConfirm(true);
                 });
+                // Effect re-ran while the listener was registering: drop the stale one.
+                if (disposed) {
+                    listenerHandle.remove();
+                    listenerHandle = null;
+                }
             } catch {
             }
         };
         setupBack();
         return () => {
+            disposed = true;
             if (listenerHandle) {
                 listenerHandle.remove();
             }
@@ -970,7 +969,7 @@ export function SettingsPanel({ isOpen, onClose, onQuit, cameraMode, onCameraMod
     );
 }
 
-export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], activeTaskId, onTaskClick, onResetTasks }) {
+export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], activeTaskId, onTaskClick, onResetTasks, onViewCertificate }) {
     const { mounted, active } = useModalTransition(isOpen, 300);
     const [page, setPage] = useState(0);
 
@@ -1097,6 +1096,16 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                 </div>
                     <footer className="flex shrink-0 items-center gap-2 border-t border-amber-200 bg-[#fffef0] p-2">
                         <PaginationControls page={currentPage} pageCount={pageCount} onPageChange={setPage} />
+                        {onViewCertificate ? (
+                            <ActionButton
+                                variant="primary"
+                                size="sm"
+                                className="shrink-0 text-[11px] tracking-wide"
+                                onClick={onViewCertificate}
+                            >
+                                Certificate
+                            </ActionButton>
+                        ) : null}
                         {onResetTasks ? (
                             <ActionButton
                                 variant="warning"
@@ -1154,6 +1163,19 @@ export function NPCDialogueModal({ isOpen, npcName, npcRole, message, dialoguePr
         if (isOpen) openedAtRef.current = performance.now();
     }, [isOpen]);
 
+    // Keyboard players can advance with Enter or Space as well as a click.
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const onKeyDown = (event) => {
+            if (event.key !== 'Enter' && event.code !== 'Space') return;
+            event.preventDefault();
+            if (performance.now() - openedAtRef.current < 300) return;
+            onAdvance?.();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onAdvance]);
+
     if (!isOpen) return null;
 
     const advance = (event) => {
@@ -1174,7 +1196,7 @@ export function NPCDialogueModal({ isOpen, npcName, npcRole, message, dialoguePr
             <span className="mb-2 block w-full max-w-3xl px-3 py-2 text-white [text-shadow:0_2px_4px_rgb(0_0_0),0_0_12px_rgb(0_0_0)]">
                 <span className="block text-[11px] font-black uppercase tracking-wide text-amber-300 sm:text-xs">{npcName || 'Zoo Ranger'}{npcRole ? ` - ${npcRole}` : ''}</span>
                 <span className="mt-1 block text-base font-black leading-snug sm:text-xl">{message}</span>
-                <span className="mt-1 block text-[11px] font-bold text-white/90">{dialogueProgress} | Tap to continue</span>
+                <span className="mt-1 block text-[11px] font-bold text-white/90">{dialogueProgress} | Tap or press Enter to continue</span>
             </span>
         </button>
     );
@@ -1215,6 +1237,44 @@ export function AllAnimalsCelebration({ visible, onClose, onViewCertificate, onR
     );
 }
 
+// Draws the certificate to a canvas and downloads it as a PNG. window.print()
+// would print the whole game page including the 3D canvas.
+function downloadCertificate(playerName, totalAnimals, dateText) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1600;
+    canvas.height = 1100;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const gradient = ctx.createLinearGradient(0, 0, 1600, 1100);
+    gradient.addColorStop(0, '#fffbeb');
+    gradient.addColorStop(1, '#fff7ed');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1600, 1100);
+    ctx.strokeStyle = '#fcd34d';
+    ctx.lineWidth = 14;
+    ctx.strokeRect(40, 40, 1520, 1020);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#b45309';
+    ctx.font = '900 38px sans-serif';
+    ctx.fillText('BULUSAN ZOOTOPIA ADVENTURE', 800, 200);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '900 84px sans-serif';
+    ctx.fillText('Awarded To', 800, 380);
+    ctx.fillStyle = '#047857';
+    ctx.font = '900 100px sans-serif';
+    ctx.fillText(playerName, 800, 560, 1300);
+    ctx.fillStyle = '#334155';
+    ctx.font = '600 44px sans-serif';
+    ctx.fillText(`For feeding all ${totalAnimals} animals and completing the zoo mission.`, 800, 720, 1400);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '700 34px sans-serif';
+    ctx.fillText(`Issued ${dateText}`, 800, 900);
+    const link = document.createElement('a');
+    link.download = 'bulusan-zootopia-certificate.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
 export function CertificateModal({ isOpen, onClose, playerName = 'Explorer', totalAnimals = 0 }) {
     const today = useMemo(() => new Date().toLocaleDateString(), []);
 
@@ -1224,7 +1284,7 @@ export function CertificateModal({ isOpen, onClose, playerName = 'Explorer', tot
             onClose={onClose}
             title="Completion Certificate"
             size="lg"
-            footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onClose}>Close</ActionButton><ActionButton variant="primary" onClick={() => window.print()}>Save / Print</ActionButton></div>}
+            footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onClose}>Close</ActionButton><ActionButton variant="primary" onClick={() => downloadCertificate(playerName, totalAnimals, today)}>Save Image</ActionButton></div>}
         >
             <div className="rounded-2xl border-2 border-amber-300 bg-linear-to-br from-amber-50 to-orange-50 p-3 text-center shadow-inner">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Bulusan Zootopia Adventure</p>
