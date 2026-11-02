@@ -1,98 +1,26 @@
 import * as THREE from 'three';
+import {
+    RIVER_WIDTH,
+    BANK_BLEND,
+    SHORE_WIDTH,
+    CHANNEL_DEPTH,
+    WATER_CLEARANCE,
+    getRiverMetrics,
+    getRiverTerrainOffset,
+    isRiverArea,
+    isLandAccessible,
+    findAccessiblePosition,
+    sampleSmoothPath,
+    riverWidthAtT,
+} from '../utils/riverMath.js';
 
-// The river stays east of the statue and habitats, then bends toward the south
-// edge. Keeping the path data here makes terrain, art, and gameplay agree.
-const RIVER_POINTS = [
-    [-218, 112], [-178, 101], [-135, 108], [-92, 94], [-48, 101],
-    [-4, 87], [42, 98], [88, 82], [132, 91], [176, 73], [218, 82]
-].map(([x, z]) => new THREE.Vector2(x, z));
-const RIVER_WIDTH = 7.2;
-const BANK_BLEND = 3.8;
-const SHORE_WIDTH = 1.6;
-const CHANNEL_DEPTH = 2.2;
-const WATER_CLEARANCE = 0.04;
+export { getRiverMetrics, getRiverTerrainOffset, isRiverArea, isLandAccessible, findAccessiblePosition };
 
 const QUALITY_CONFIG = {
     low: { samples: 45, bankSegments: 2, ripples: false },
     medium: { samples: 90, bankSegments: 3, ripples: true },
     high: { samples: 160, bankSegments: 4, ripples: true }
 };
-
-let pathSamples = null;
-
-function buildPathSamples() {
-    if (pathSamples) return pathSamples;
-    pathSamples = [];
-    let distance = 0;
-    const steps = 240;
-    let previousPoint = sampleSmoothPath(0);
-    for (let step = 0; step <= steps; step += 1) {
-        const t = step / steps;
-        const point = sampleSmoothPath(t);
-        const next = t < 1 ? sampleSmoothPath(t + 0.002) : sampleSmoothPath(t - 0.002);
-        const tangent = next.clone().sub(point).normalize();
-        if (step > 0) {
-            distance += point.distanceTo(previousPoint);
-        }
-        pathSamples.push({ point, tangent, distance });
-        previousPoint = point;
-    }
-    return pathSamples;
-}
-
-function closestPathPoint(x, z) {
-    const samples = buildPathSamples();
-    let best = { distanceSq: Infinity, distance: 0, point: samples[0].point, tangent: new THREE.Vector2(1, 0) };
-    for (let i = 0; i < samples.length - 1; i += 1) {
-        const a = samples[i].point;
-        const b = samples[i + 1].point;
-        const line = b.clone().sub(a);
-        const lengthSq = Math.max(line.lengthSq(), 0.0001);
-        const t = THREE.MathUtils.clamp(new THREE.Vector2(x - a.x, z - a.y).dot(line) / lengthSq, 0, 1);
-        const point = a.clone().addScaledVector(line, t);
-        const distanceSq = point.distanceToSquared(new THREE.Vector2(x, z));
-        if (distanceSq < best.distanceSq) {
-            best = { distanceSq, distance: samples[i].distance + Math.sqrt(lengthSq) * t, point, tangent: line.normalize() };
-        }
-    }
-    return best;
-}
-
-export function getRiverMetrics(x, z) {
-    const nearest = closestPathPoint(x, z);
-    const lateral = Math.sqrt(nearest.distanceSq);
-    return { ...nearest, lateral, width: RIVER_WIDTH + Math.sin(nearest.distance * 0.035) * 0.7 };
-}
-
-export function getRiverTerrainOffset(x, z) {
-    const metrics = getRiverMetrics(x, z);
-    const edge = metrics.width + BANK_BLEND;
-    if (metrics.lateral >= edge) return 0;
-
-    const centerBlend = 1 - THREE.MathUtils.smoothstep(metrics.lateral, metrics.width, edge);
-
-    // Add natural variation to the riverbed depth
-    const bedNoise = (Math.sin(x * 0.4) * Math.cos(z * 0.4) * 0.2) +
-                     (Math.sin(x * 0.1) * 0.15);
-
-    return (-CHANNEL_DEPTH + bedNoise) * centerBlend;
-}
-
-export function isRiverArea(x, z, padding = 0) {
-    const metrics = getRiverMetrics(x, z);
-    return metrics.lateral < metrics.width + padding;
-}
-
-export function isLandAccessible(x, z, radius = 0) {
-    return !isRiverArea(x, z, radius);
-}
-
-export function findAccessiblePosition(x, z, radius = 0) {
-    if (isLandAccessible(x, z, radius)) return { x, z };
-    const metrics = getRiverMetrics(x, z);
-    const push = metrics.width + radius + 1.5;
-    return { x: metrics.point.x + metrics.tangent.y * push, z: metrics.point.y - metrics.tangent.x * push };
-}
 
 function makeRibbonGeometry(samples, width, heightFn, segments = 1) {
     const positions = [];
@@ -128,22 +56,6 @@ function makeRibbonGeometry(samples, width, heightFn, segments = 1) {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     return geometry;
-}
-
-function sampleSmoothPath(t) {
-    const scaled = THREE.MathUtils.clamp(t, 0, 1) * (RIVER_POINTS.length - 1);
-    const index = Math.min(RIVER_POINTS.length - 2, Math.floor(scaled));
-    const local = scaled - index;
-    const p0 = RIVER_POINTS[Math.max(0, index - 1)];
-    const p1 = RIVER_POINTS[index];
-    const p2 = RIVER_POINTS[index + 1];
-    const p3 = RIVER_POINTS[Math.min(RIVER_POINTS.length - 1, index + 2)];
-    const t2 = local * local;
-    const t3 = t2 * local;
-    return new THREE.Vector2(
-        0.5 * ((2 * p1.x) + (-p0.x + p2.x) * local + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-        0.5 * ((2 * p1.y) + (-p0.y + p2.y) * local + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
-    );
 }
 
 function createWaterMaterial(quality) {
@@ -202,7 +114,7 @@ function getWaterHeight(baseTerrainHeight, x, z) {
 
 export function createRiver(scene, baseTerrainHeight, quality = 'medium') {
     const config = QUALITY_CONFIG[quality] || QUALITY_CONFIG.medium;
-    const riverWidthAt = (t) => RIVER_WIDTH + Math.sin(t * buildPathSamples()[buildPathSamples().length - 1].distance * 0.035) * 0.7;
+    const riverWidthAt = riverWidthAtT;
     const root = new THREE.Group();
     root.name = 'CartoonRiver';
     const waterHeight = (x, z) => getWaterHeight(baseTerrainHeight, x, z);
@@ -237,7 +149,7 @@ export function updateRiverQuality(river, quality) {
     const old = river.water.material;
     const oldWaterGeometry = river.water.geometry;
     const oldBankGeometry = river.banks.geometry;
-    const riverWidthAt = (t) => RIVER_WIDTH + Math.sin(t * buildPathSamples()[buildPathSamples().length - 1].distance * 0.035) * 0.7;
+    const riverWidthAt = riverWidthAtT;
     const bankHeightFn = (x, z) => river.baseTerrainHeight(x, z) + 0.015;
 
     river.water.geometry = makeRibbonGeometry(next.samples, riverWidthAt, (x, z) => getWaterHeight(river.baseTerrainHeight, x, z), quality === 'high' ? 3 : 2);

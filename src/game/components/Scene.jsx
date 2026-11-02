@@ -66,13 +66,15 @@ export function createRenderer(container, graphicsQuality) {
         stencil: false,
         depth: true,
         alpha: false,
-        preserveDrawingBuffer: true,
+        // Photos render right before they are read, so the buffer need not be kept.
+        preserveDrawingBuffer: false,
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(config.pixelRatio);
 
-    renderer.shadowMap.enabled = config.shadows;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Shadows stay off: the sun's shadow frustum never covered the map, so they
+    // only cost GPU time.
+    renderer.shadowMap.enabled = false;
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = config.toneMappingExposure;
@@ -89,8 +91,7 @@ export function applyRendererQuality(renderer, quality) {
     if (!renderer) return;
     const config = getQualityConfig(quality || 'medium');
     renderer.setPixelRatio(config.pixelRatio);
-    renderer.shadowMap.enabled = config.shadows;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false;
     renderer.toneMappingExposure = config.toneMappingExposure;
 }
 
@@ -102,11 +103,7 @@ export function createLighting(scene) {
     // Natural daylight sun (not overwhelmingly bright)
     const sun = new THREE.DirectionalLight(0xfff5e6, 1.4);
     sun.position.set(100, 150, 80);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(768, 768);
-    sun.shadow.camera.near = 10;
-    sun.shadow.camera.far = 500;
-    sun.shadow.bias = -0.0002;
+    sun.castShadow = false;
     scene.add(sun);
 
     const sunDisc = new THREE.Mesh(
