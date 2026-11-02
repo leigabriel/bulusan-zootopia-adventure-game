@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 
 import { createScene, createCamera, createRenderer, createLighting, applyRendererQuality, applySceneQuality } from './components/Scene.jsx';
@@ -55,6 +54,7 @@ import {
     saveMissionProgress,
     resetMissionProgress
 } from './utils/storage.js';
+import { MISSION_POINTS, PLAYER_START_OFFSET, STAFF_START_POSITIONS, STATUE_CENTER } from './data/worldPoints.js';
 import { createContactShadow } from './utils/contactShadow.js';
 import {
     completeActiveStoryTask,
@@ -77,20 +77,12 @@ const PLAYER_CHARACTER_TARGET_HEIGHT = 1.5;
 const FIRST_PERSON_EYE_OFFSET = 4.5;
 const FIRST_PERSON_FOV = 70;
 const THIRD_PERSON_FOV = 70;
-const STATUE_CENTER = { x: 0, z: 0 };
-const MISSION_POINTS = {
-    barn: { x: 145, z: -155 },
-    hay: { x: 132, z: -142 },
-    carrot: { x: -38, z: 55 },
-    river: { x: -4, z: 73 },
-    windmill: { x: -125, z: -115 },
-    statue: STATUE_CENTER,
-    'tiger-view': { x: 145, z: 91 },
-};
-const PLAYER_START_OFFSET = { x: 14, z: 10 };
+// Alpaca and Tiger photos are already taken by earlier tasks, so the "two
+// photos" task only counts different animals.
+const EARLIER_PHOTO_ANIMALS = ['Alpaca', 'Bengal Tiger'];
 const SETTINGS_CHANGE_EVENT = 'minizoo-settings-changed';
 const STAFF_NPC_CONFIGS = [{
-    id: 'lino', name: 'Ranger Lino', role: 'Zoo Mission Guide', file: 'ranger-lino.gltf', position: { x: -20, z: 22 },
+    id: 'lino', name: 'Ranger Lino', role: 'Zoo Mission Guide', file: 'ranger-lino.gltf', position: { ...STAFF_START_POSITIONS.lino },
     interactionRadius: 6.5,
     obstacleRadius: 2.4,
     targetHeight: 1.75,
@@ -101,7 +93,7 @@ const STAFF_NPC_CONFIGS = [{
     stopDistance: 0.45,
     facingOffset: Math.PI,
 }, {
-    id: 'lina', name: 'Ranger Lina', role: 'Zoo Care Ranger', file: 'ranger-lina.gltf', position: { x: 22, z: 18 },
+    id: 'lina', name: 'Ranger Lina', role: 'Zoo Care Ranger', file: 'ranger-lina.gltf', position: { ...STAFF_START_POSITIONS.lina },
     interactionRadius: 6.5, obstacleRadius: 2.4, targetHeight: 1.75,
     patrolRadiusMin: 3.5, patrolRadiusMax: 8.5, moveSpeed: 0.75,
     turnSpeed: 4.2, stopDistance: 0.45, facingOffset: Math.PI,
@@ -588,7 +580,8 @@ function MiniZooGame() {
     });
 
     const [isLoading, setIsLoading] = useState(true);
-    const [_loadProgress, setLoadProgress] = useState(0);
+    const [initError, setInitError] = useState(false);
+    const [, setLoadProgress] = useState(0);
     const [gameStarted, setGameStarted] = useState(false);
     const [showMenu, setShowMenu] = useState(true);
 
@@ -787,9 +780,11 @@ function MiniZooGame() {
             if (targetAnimal?.group) target = targetAnimal.group.position;
         }
 
+        // `null <= n` is true in JS, so every distance test goes through within().
         const dx = target ? playerPosition.x - target.x : 0;
         const dz = target ? playerPosition.z - target.z : 0;
         const distance = target ? Math.sqrt(dx * dx + dz * dz) : null;
+        const within = (limit) => distance !== null && distance <= limit;
         const marker = state.missionObjects?.marker;
         if (marker) {
             const hideNear = distance !== null && distance < 5.5;
@@ -808,20 +803,20 @@ function MiniZooGame() {
             setMissionNavigation({ distance: null, direction: 0, onScreen: true });
         }
 
-        if (task.id === 'reach-barn' && distance <= 17) completeStoryTask(task.id, {}, 'Barn reached');
+        if (task.id === 'reach-barn' && within(17)) completeStoryTask(task.id, {}, 'Barn reached');
         if (task.id === 'find-horse' && targetAnimal === nearbyAnimalRef.current) completeStoryTask(task.id);
         if (task.id === 'find-rabbits' && (getAnimalBookEntry(nearbyAnimalRef.current?.config?.name)?.name || nearbyAnimalRef.current?.config?.name) === 'Rabbit') completeStoryTask(task.id);
-        if (task.id === 'find-alpaca' && distance <= 8) completeStoryTask(task.id);
-        if (task.id === 'find-monkey' && distance <= 8) completeStoryTask(task.id);
-        if (task.id === 'find-carrot' && distance <= 7) completeStoryTask(task.id, {}, 'Carrot patch found');
-        if (task.id === 'visit-windmill' && distance <= 18) completeStoryTask(task.id, {}, 'Windmill discovered');
-        if (task.id === 'reach-tiger-view' && distance <= 6) completeStoryTask(task.id, {}, 'Safe tiger viewing area reached');
+        if (task.id === 'find-alpaca' && within(8)) completeStoryTask(task.id);
+        if (task.id === 'find-monkey' && within(8)) completeStoryTask(task.id);
+        if (task.id === 'find-carrot' && within(7)) completeStoryTask(task.id, {}, 'Carrot patch found');
+        if (task.id === 'visit-windmill' && within(18)) completeStoryTask(task.id, {}, 'Windmill discovered');
+        if (task.id === 'reach-tiger-view' && within(6)) completeStoryTask(task.id, {}, 'Safe tiger viewing area reached');
 
         const timedTasks = {
-            'observe-alpaca': { duration: 4000, valid: distance <= 8, animal: 'Alpaca', notice: 'Alpacas communicate with gentle humming sounds.' },
-            'observe-monkey': { duration: 4000, valid: distance <= 8, animal: 'Forest Monkey', notice: 'Monkeys use many calls to communicate.' },
-            'visit-river': { duration: 3000, valid: distance <= 7 && !isRiverArea(playerPosition.x, playerPosition.z), notice: 'Clean water protects every zoo habitat.' },
-            'visit-statue': { duration: 3000, valid: distance <= 18, notice: 'The Bulusan statue celebrates the community and its natural heritage.' },
+            'observe-alpaca': { duration: 4000, valid: within(8), animal: 'Alpaca', notice: 'Alpacas communicate with gentle humming sounds.' },
+            'observe-monkey': { duration: 4000, valid: within(8), animal: 'Forest Monkey', notice: 'Monkeys use many calls to communicate.' },
+            'visit-river': { duration: 3000, valid: within(7) && !isRiverArea(playerPosition.x, playerPosition.z), notice: 'Clean water protects every zoo habitat.' },
+            'visit-statue': { duration: 3000, valid: within(18), notice: 'The Bulusan statue celebrates the community and its natural heritage.' },
             'observe-tiger': { duration: 5000, valid: Math.hypot(playerPosition.x - MISSION_POINTS['tiger-view'].x, playerPosition.z - MISSION_POINTS['tiger-view'].z) <= 7, animal: 'Bengal Tiger', notice: 'Protecting forests gives endangered Bengal Tigers a safe future.' },
         };
         const timed = timedTasks[task.id];
@@ -1842,6 +1837,7 @@ function MiniZooGame() {
             setIsLoading(false);
         } catch (err) {
             console.error('Game init failed:', err);
+            setInitError(true);
             setIsLoading(false);
         }
     }, [checkNearbyAnimals, checkNearbyStaff, clearFeedingTimer, disposePlayerCharacter, getRiverAudio, getRunAudio, playPlayerAction]);
@@ -1962,7 +1958,7 @@ function MiniZooGame() {
             const distance = Math.hypot(playerPosition.x - animal.group.position.x, playerPosition.z - animal.group.position.z);
             const projected = animal.group.position.clone().add(new THREE.Vector3(0, 1, 0)).project(state.camera);
             const visible = projected.z >= -1 && projected.z <= 1 && Math.abs(projected.x) <= 0.82 && Math.abs(projected.y) <= 0.82;
-            const maxDistance = name === 'Bengal Tiger' ? 38 : 15;
+            const maxDistance = name === 'Bengal Tiger' ? 60 : 15;
             if (visible && distance <= maxDistance && distance < photographedDistance) {
                 photographedAnimal = name;
                 photographedDistance = distance;
@@ -2137,10 +2133,10 @@ function MiniZooGame() {
 
     const handleCollectMissionItem = useCallback(() => {
         const taskId = missionProgressRef.current.activeTaskId;
-        if (taskId === 'collect-hay' && missionNavigation.distance <= 6) {
+        if (taskId === 'collect-hay' && (missionNavigation.distance !== null && missionNavigation.distance <= 6)) {
             playGameButtonSfx('confirm');
             completeStoryTask(taskId, { hasHay: true }, 'Hay collected');
-        } else if (taskId === 'collect-carrot' && missionNavigation.distance <= 6) {
+        } else if (taskId === 'collect-carrot' && (missionNavigation.distance !== null && missionNavigation.distance <= 6)) {
             playGameButtonSfx('confirm');
             completeStoryTask(taskId, { hasCarrot: true }, 'Carrot collected');
         }
@@ -2231,7 +2227,7 @@ function MiniZooGame() {
         const onKey = e => {
             const key = e.key.toLowerCase();
             if (bookOpen) return;
-            if (key === 'e' && ['collect-hay', 'collect-carrot'].includes(missionProgressRef.current.activeTaskId) && missionNavigation.distance <= 6) {
+            if (key === 'e' && ['collect-hay', 'collect-carrot'].includes(missionProgressRef.current.activeTaskId) && (missionNavigation.distance !== null && missionNavigation.distance <= 6)) {
                 handleCollectMissionItem();
                 return;
             }
@@ -2423,7 +2419,7 @@ function MiniZooGame() {
             if (newlyFed.length >= 3) completeStoryTask(taskId, {}, 'Three safe animal types fed');
         } else if (taskId === 'discover-five' && discoveredAnimals.length >= 5) {
             completeStoryTask(taskId, {}, 'Five animals discovered');
-        } else if (taskId === 'photo-two' && missionProgress.photoAnimals.length >= 2) {
+        } else if (taskId === 'photo-two' && missionProgress.photoAnimals.filter((name) => !EARLIER_PHOTO_ANIMALS.includes(name)).length >= 2) {
             completeStoryTask(taskId, {}, 'Two different animal photos captured');
         } else if (taskId === 'animal-care' && fedNames.length === SAFE_ANIMAL_NAMES.length) {
             completeStoryTask(taskId, {}, 'Animal Care Challenge complete');
@@ -2634,7 +2630,7 @@ function MiniZooGame() {
     const newlyFedCount = tasks.filter((task) => task.completed && !missionProgress.feedThreeBaseline.includes(task.animalName)).length;
     const taskProgress = activeStoryTask.id === 'feed-three' ? `${Math.min(3, newlyFedCount)} of 3 fed`
         : activeStoryTask.id === 'discover-five' ? `${Math.min(5, discoveredAnimals.length)} of 5 discovered`
-            : activeStoryTask.id === 'photo-two' ? `${Math.min(2, missionProgress.photoAnimals.length)} of 2 photos`
+            : activeStoryTask.id === 'photo-two' ? `${Math.min(2, missionProgress.photoAnimals.filter((name) => !EARLIER_PHOTO_ANIMALS.includes(name)).length)} of 2 new photos`
                 : activeStoryTask.id === 'animal-care' ? `${completedCount} of ${totalCount} fed`
                     : timedDuration ? `${Math.round(Math.min(1, missionProgress.observationMs / timedDuration) * 100)}%` : '';
     const isCollectTask = ['collect-hay', 'collect-carrot'].includes(activeStoryTask.id);
@@ -2658,7 +2654,14 @@ function MiniZooGame() {
             )}
             <div ref={containerRef} className="absolute inset-0" />
             {isLoading && <LoadingScreen />}
-            {!isLoading && showMenu && (
+            {initError && (
+                <div role="alert" className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black/85 p-6 text-center text-white">
+                    <h2 className="text-2xl font-bold">The zoo could not load</h2>
+                    <p className="max-w-md text-sm opacity-80">Your device may not support 3D graphics, or a game file failed to download. Check your connection and try again. Your saved progress is safe.</p>
+                    <button type="button" className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-white" onClick={() => window.location.reload()}>Try again</button>
+                </div>
+            )}
+            {!isLoading && !initError && showMenu && (
                 <MainMenu
                     onStart={handleStartGame}
                     onMenuInteraction={playMusic}
@@ -2733,7 +2736,7 @@ function MiniZooGame() {
                         npcName={nearbyStaff?.name}
                         isTouchDevice={isTouchDevice}
                     />
-                    <ContextActionPrompt visible={isCollectTask && missionNavigation.distance <= 6 && !interfaceOpen} label={activeStoryTask.id === 'collect-hay' ? 'Collect Hay' : 'Collect Carrot'} detail="Mission item" onInteract={handleCollectMissionItem} />
+                    <ContextActionPrompt visible={isCollectTask && (missionNavigation.distance !== null && missionNavigation.distance <= 6) && !interfaceOpen} label={activeStoryTask.id === 'collect-hay' ? 'Collect Hay' : 'Collect Carrot'} detail="Mission item" onInteract={handleCollectMissionItem} />
                     <NPCDialogueModal
                         isOpen={showNpcDialogue}
                         onClose={closeNpcDialogue}

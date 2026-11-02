@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { getTerrainHeight, PLAYABLE_BOUNDARY, TIGER_ENCLOSURE } from '../components/Terrain.jsx';
+import { getTerrainHeight, PLAYABLE_BOUNDARY } from '../components/Terrain.jsx';
+import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
 
 const MOVEMENT_SPEED = 22;
 const ACCELERATION = 12;
@@ -208,8 +209,16 @@ export function createMovementHandler(camera, state) {
     };
 }
 
+function isTypingTarget(target) {
+    if (!target || !target.tagName) return false;
+    const tag = target.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable === true;
+}
+
 export function setupKeyboardControls(state) {
     const handleKeyDown = (e) => {
+        // Never swallow keys (Space, WASD) while the player types in a form field.
+        if (isTypingTarget(e.target)) return;
         if (e.repeat) return;
         const key = e.key.toLowerCase();
         state.keys[key] = true;

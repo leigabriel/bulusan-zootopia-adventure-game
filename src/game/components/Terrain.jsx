@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { getRiverTerrainOffset, isLandAccessible, getRiverMetrics } from './River.jsx';
+import { TIGER_ENCLOSURE, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
 
 const TREE_MODELS = ['Tree1', 'Tree2', 'Tree3', 'Tree4'];
 const BUSH_MODELS = ['Bush1', 'Bush2', 'Bush3'];
@@ -12,7 +13,6 @@ const TERRAIN_SEGMENTS = 140;
 // The playable area ends before the perimeter forest begins. Keeping this in
 // the terrain module lets movement, animals, and scenery use the same map edge.
 export const PLAYABLE_BOUNDARY = 194;
-export const TIGER_ENCLOSURE = { x: 145, z: 120, halfSize: 24 };
 
 const modelCache = new Map();
 
@@ -237,6 +237,7 @@ export function loadTrees(scene, quality = 'medium') {
             const edgeDistance = 235 - Math.max(Math.abs(x), Math.abs(z));
             if (edgeDistance < 28 && Math.random() < 0.72) continue;
             if (!isLandAccessible(x, z, 3.5)) continue;
+            if (isInsideTigerEnclosure(x, z, 6) || isInKeepClearZone(x, z, 4)) continue;
             if (clearings.some((clearing) => (x - clearing.x) ** 2 + (z - clearing.z) ** 2 < clearing.radius ** 2)) continue;
             if (selected.some((tree) => (x - tree.x) ** 2 + (z - tree.z) ** 2 < 8 ** 2)) continue;
             selected.push({
@@ -369,6 +370,7 @@ export function loadBushes(scene, count = 100) {
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             if (!isLandAccessible(x, z, 2)) continue;
+            if (isInsideTigerEnclosure(x, z, 4) || isInKeepClearZone(x, z, 2)) continue;
             const h = getTerrainHeight(x, z);
 
             bush.position.set(x, h, z);
@@ -398,8 +400,13 @@ export function loadRocks(scene, count = 40) {
             { x: 30, z: -80, count: 4, radius: 8 },
         ];
 
+        // Outcrops and river rocks scale with the requested budget so phones
+        // (count 20) do not get the full desktop set.
+        const budgetScale = Math.min(1, count / 40);
+
         outcroppings.forEach(patch => {
-            for (let i = 0; i < patch.count; i++) {
+            const patchCount = Math.max(1, Math.round(patch.count * budgetScale));
+            for (let i = 0; i < patchCount; i++) {
                 const baseModel = validModels[Math.floor(Math.random() * validModels.length)];
                 const rock = baseModel.clone();
                 const scale = 1.5 + Math.random() * 2.0;
@@ -410,6 +417,7 @@ export function loadRocks(scene, count = 40) {
                 const x = patch.x + Math.cos(angle) * r;
                 const z = patch.z + Math.sin(angle) * r;
                 if (!isLandAccessible(x, z, 2)) continue;
+                if (isInsideTigerEnclosure(x, z, 4) || isInKeepClearZone(x, z, 2)) continue;
                 const h = getTerrainHeight(x, z);
 
                 rock.position.set(x, h, z);
@@ -424,7 +432,7 @@ export function loadRocks(scene, count = 40) {
         });
 
         // --- RIVER BANK ROCKS ---
-        const riverSamples = 20;
+        const riverSamples = Math.round(20 * budgetScale);
         const riverPoints = [
             [-218, 112], [-178, 101], [-135, 108], [-92, 94], [-48, 101],
             [-4, 87], [42, 98], [88, 82], [132, 91], [176, 73], [218, 82]
@@ -450,6 +458,7 @@ export function loadRocks(scene, count = 40) {
             const x = rx + metrics.tangent.y * push * side;
             const z = rz - metrics.tangent.x * push * side;
 
+            if (isInsideTigerEnclosure(x, z, 4) || isInKeepClearZone(x, z, 2)) continue;
             const h = getTerrainHeight(x, z);
             const scale = 1.2 + Math.random() * 1.8;
             rock.scale.setScalar(scale);
@@ -474,6 +483,7 @@ export function loadRocks(scene, count = 40) {
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             if (!isLandAccessible(x, z, 2)) continue;
+            if (isInsideTigerEnclosure(x, z, 4) || isInKeepClearZone(x, z, 2)) continue;
             const h = getTerrainHeight(x, z);
 
             rock.position.set(x, h, z);

@@ -25,8 +25,8 @@ export const STORY_TASKS = [
     ['observe-tiger', 'Observe the Bengal Tiger', 'Observe from the safe area for 5 seconds.', 'tiger-view'],
     ['photo-tiger', 'Photograph the Bengal Tiger', 'Take a photo from the safe viewing area.', 'tiger-view'],
     ['feed-three', 'Feed Three Safe Animals', 'Feed three safe animal types not yet fed.', 'unfed'],
-    ['discover-five', 'Discover Five Animals', 'Discover five unique zoo animals.', 'undiscovered'],
-    ['photo-two', 'Take Two Animal Photos', 'Photograph two different animal types.', 'photo'],
+    ['discover-five', 'Discover Five Animals', 'Have five different animals in your Animal Book.', 'undiscovered'],
+    ['photo-two', 'Take Two Animal Photos', 'Photograph two animals other than the Alpaca and Tiger.', 'photo'],
     ['animal-care', 'Complete the Animal Care Challenge', 'Feed all ten safe animal types.', 'unfed'],
     ['final-lino', 'Return to Ranger Lino', 'Return for your Junior Zoo Ranger award.', 'lino'],
 ].map(([id, title, instruction, target], index) => ({ id, number: index + 1, title, instruction, target }));
