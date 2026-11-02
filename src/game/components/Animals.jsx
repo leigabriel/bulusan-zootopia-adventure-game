@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { clone as cloneWithSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { alignObjectToTerrain, getTerrainHeight, PLAYABLE_BOUNDARY } from './Terrain.jsx';
 import { isLandAccessible } from './River.jsx';
+import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
 import { resolveAssetUrl } from '../utils/localAssets.js';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { getAnimalBookEntry } from '../data/animalMetadata.js';
@@ -208,7 +209,16 @@ function isBlockedByObstacle(x, z, radius, obstacles) {
     return false;
 }
 
-function findSpawnPosition(spawnIndex, totalAnimals, bounds, radius, obstacles, spawnArea = null) {
+// The tiger stays inside its fenced enclosure and every other animal stays out.
+function violatesEnclosure(config, x, z, radius) {
+    const inside = Math.abs(x - TIGER_ENCLOSURE.x) < TIGER_ENCLOSURE.halfSize - radius - 1
+        && Math.abs(z - TIGER_ENCLOSURE.z) < TIGER_ENCLOSURE.halfSize - radius - 1;
+    if (config.name === 'Bengal Tiger') return !inside;
+    return Math.abs(x - TIGER_ENCLOSURE.x) < TIGER_ENCLOSURE.halfSize + radius + 1
+        && Math.abs(z - TIGER_ENCLOSURE.z) < TIGER_ENCLOSURE.halfSize + radius + 1;
+}
+
+function findSpawnPosition(spawnIndex, totalAnimals, bounds, radius, obstacles, spawnArea = null, config = {}) {
     const hasSpawnArea = spawnArea
         && Number.isFinite(spawnArea.x)
         && Number.isFinite(spawnArea.z);
@@ -232,7 +242,7 @@ function findSpawnPosition(spawnIndex, totalAnimals, bounds, radius, obstacles, 
         }
 
         if (Math.abs(x) > bounds - radius || Math.abs(z) > bounds - radius) continue;
-        if (!isBlockedByObstacle(x, z, radius, obstacles) && isLandAccessible(x, z, radius)) {
+        if (!isBlockedByObstacle(x, z, radius, obstacles) && isLandAccessible(x, z, radius) && !violatesEnclosure(config, x, z, radius)) {
             return { x, z };
         }
     }
@@ -383,7 +393,7 @@ class GLTFAnimal {
             this.playAnimation(this.config.walkAnimation ? this.config.walkAnimation.toLowerCase() : 'walk');
         }
 
-        const spawn = findSpawnPosition(spawnIndex, ANIMAL_CONFIGS.length, this.bounds, this.radius, this.obstacles, config.spawnArea);
+        const spawn = findSpawnPosition(spawnIndex, ANIMAL_CONFIGS.length, this.bounds, this.radius, this.obstacles, config.spawnArea, config);
         this.pos.x = spawn.x;
         this.pos.z = spawn.z;
 
@@ -596,9 +606,11 @@ class GLTFAnimal {
             }
         }
 
+        const frameScale = Math.min(dt * 60, 3);
         if (this.movementStyle !== 'static') {
             const angleDiff = ((this.targetAngle - this.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-            this.angle += angleDiff * this.turnSpeed;
+            // turnSpeed is tuned per 60 fps frame; scale so 30/144 fps match.
+            this.angle += angleDiff * Math.min(1, this.turnSpeed * frameScale);
         }
 
         if (this.movementStyle !== 'static') {
@@ -607,8 +619,8 @@ class GLTFAnimal {
         }
 
         if (this.movementStyle !== 'static' && (this.state === 'walk' || this.state === 'run')) {
-            let nextX = this.pos.x + Math.sin(this.angle) * this.currentSpeed;
-            let nextZ = this.pos.z + Math.cos(this.angle) * this.currentSpeed;
+            let nextX = this.pos.x + Math.sin(this.angle) * this.currentSpeed * frameScale;
+            let nextZ = this.pos.z + Math.cos(this.angle) * this.currentSpeed * frameScale;
             let hitObstacle = false;
 
             // --- NEW: ANIMAL COLLISION DETECTION ---
@@ -624,7 +636,7 @@ class GLTFAnimal {
             }
 
             // If they hit an object or hit the world boundary, turn around.
-            if (hitObstacle || !isLandAccessible(nextX, nextZ, this.radius) || Math.abs(nextX) > this.bounds || Math.abs(nextZ) > this.bounds) {
+            if (hitObstacle || violatesEnclosure(this.config, nextX, nextZ, this.radius) || !isLandAccessible(nextX, nextZ, this.radius) || Math.abs(nextX) > this.bounds || Math.abs(nextZ) > this.bounds) {
                 this.targetAngle += Math.PI * 0.8 + Math.random() * Math.PI * 0.4;
                 this.currentSpeed *= 0.8;
             } else {
@@ -742,7 +754,9 @@ class GLTFAnimal {
     dispose() {
         this.stopSound(true);
         if (this.sound) {
-            this.sound.src = '';
+            this.sound.pause();
+            this.sound.removeAttribute('src');
+            this.sound.load();
         }
         if (this.mixer) {
             this.mixer.stopAllAction();
@@ -811,6 +825,12 @@ class AmbientBird {
         this.group.rotation.z = Math.sin(time * 0.9 + this.phase) * 0.08;
         this.group.rotation.x = Math.cos(time * 0.9 + this.phase) * 0.035;
         this.mixer?.update(dt);
+    }
+
+    dispose() {
+        this.mixer?.stopAllAction();
+        this.mixer?.uncacheRoot(this.group);
+        this.group.parent?.remove(this.group);
     }
 }
 

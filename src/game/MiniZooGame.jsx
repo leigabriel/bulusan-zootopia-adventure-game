@@ -571,6 +571,11 @@ function MiniZooGame() {
     const missionCheckRef = useRef(() => {});
     const graphicsQualityRef = useRef((getSettings().graphicsQuality || 'medium'));
     const fpsLimitRef = useRef((getSettings().fpsLimit || 60));
+    // Cached volumes so the render loop never parses localStorage each frame.
+    const volumesRef = useRef({
+        sfx: getSettings().sfxVolume ?? 1.0,
+        ambience: getSettings().ambienceVolume ?? 1.0,
+    });
 
     const [isTouchDevice, setIsTouchDevice] = useState(() => {
         if (typeof window === 'undefined') return false;
@@ -750,11 +755,17 @@ function MiniZooGame() {
         return nearest;
     }, []);
 
+    const publishNavigation = useCallback((next) => {
+        setMissionNavigation((prev) => (
+            prev.distance === next.distance && prev.direction === next.direction && prev.onScreen === next.onScreen ? prev : next
+        ));
+    }, []);
+
     const checkStoryMission = useCallback((playerPosition, state, now) => {
         const progress = missionProgressRef.current;
         if (progress.completedTaskIds.length >= STORY_TASKS.length) {
             if (state.missionObjects?.marker) state.missionObjects.marker.visible = false;
-            setMissionNavigation({ distance: null, direction: 0, onScreen: true });
+            publishNavigation({ distance: null, direction: 0, onScreen: true });
             return;
         }
         const task = getActiveStoryTask(progress);
@@ -794,13 +805,13 @@ function MiniZooGame() {
 
         if (target && state.camera) {
             const projected = new THREE.Vector3(target.x, target.y ?? getTerrainHeight(target.x, target.z) + 2, target.z).project(state.camera);
-            setMissionNavigation({
+            publishNavigation({
                 distance: Math.round(distance),
                 direction: projected.x < -0.2 ? -1 : projected.x > 0.2 ? 1 : 0,
                 onScreen: projected.z >= -1 && projected.z <= 1 && Math.abs(projected.x) <= 1 && Math.abs(projected.y) <= 1,
             });
         } else {
-            setMissionNavigation({ distance: null, direction: 0, onScreen: true });
+            publishNavigation({ distance: null, direction: 0, onScreen: true });
         }
 
         if (task.id === 'reach-barn' && within(17)) completeStoryTask(task.id, {}, 'Barn reached');
@@ -838,7 +849,7 @@ function MiniZooGame() {
                 updateMissionProgress({ observationMs: 0 });
             }
         }
-    }, [completeStoryTask, updateMissionProgress]);
+    }, [completeStoryTask, publishNavigation, updateMissionProgress]);
 
     missionCheckRef.current = checkStoryMission;
 
@@ -1199,9 +1210,18 @@ function MiniZooGame() {
 
             const loader = createGLTFLoader();
             const characterUrl = await resolveAssetUrl(`/models/characters/${characterOption.file}`);
-            const gltf = await new Promise((resolve, reject) => {
+            const loadOnce = () => new Promise((resolve, reject) => {
                 loader.load(characterUrl, resolve, undefined, reject);
             });
+            // One retry covers a flaky first download before giving up.
+            let gltf;
+            try {
+                gltf = await loadOnce();
+            } catch (firstError) {
+                console.warn('Character load failed, retrying once:', firstError);
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                gltf = await loadOnce();
+            }
 
             const model = gltf.scene;
             applyHumanSkinColor(model);
@@ -1252,8 +1272,11 @@ function MiniZooGame() {
             state.controlsEnabled = false;
         } catch (error) {
             console.error('Failed to load selected character:', error);
+            // Without a model the game is still playable in first person, so do
+            // not leave the player stuck on the menu forever.
             state.controlsEnabled = false;
-            setCharacterReady(false);
+            setPlayerGender(characterOption.id);
+            setCharacterReady(true);
         }
     }, [disposePlayerCharacter, playPlayerAction]);
 
@@ -1408,7 +1431,9 @@ function MiniZooGame() {
                 const fpsLimit = fpsLimitRef.current || 60;
                 const fpsInterval = 1000 / fpsLimit;
                 const timeSinceLastRender = now - lastRenderTime;
-                if (timeSinceLastRender < fpsInterval) {
+                // Small tolerance: on a 60 Hz display frames arrive a hair under 16.67 ms
+                // and would otherwise be skipped, halving the frame rate.
+                if (timeSinceLastRender < fpsInterval - 2) {
                     return;
                 }
 
@@ -1629,7 +1654,7 @@ function MiniZooGame() {
                 }
                 }
 
-                const sfxVol = (getSettings().sfxVolume ?? 1.0);
+                const sfxVol = volumesRef.current.sfx;
                 state.animals.forEach(a => {
                     if (a.group) {
                         const dx = playerPosition.x - a.group.position.x;
@@ -1650,7 +1675,7 @@ function MiniZooGame() {
 
                 const riverAudio = getRiverAudio();
                 if (riverAudio) {
-                    const ambVol = (getSettings().ambienceVolume ?? 1.0);
+                    const ambVol = volumesRef.current.ambience;
                     if (ambVol > 0 && playerPosition && gameStartedRef.current) {
                         const riverMetrics = getRiverMetrics(playerPosition.x, playerPosition.z);
                         const distToRiver = riverMetrics.lateral;
@@ -1669,7 +1694,7 @@ function MiniZooGame() {
                 const runAudio = getRunAudio();
                 if (runAudio) {
                     const isRunning = state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
-                    const sfxVol = (getSettings().sfxVolume ?? 1.0);
+                    const sfxVol = volumesRef.current.sfx;
                     if (isRunning && sfxVol > 0) {
                         runAudio.volume = sfxVol * 0.58;
                         if (runAudio.paused) {
@@ -1787,6 +1812,7 @@ function MiniZooGame() {
                 cleanupMouse();
                 smokeSystem.dispose();
                 state.animals.forEach(a => a.dispose?.());
+                state.ambientBirds?.forEach((bird) => bird.dispose?.());
                 disposePlayerCharacter();
                 state.staffNpcs.forEach((staffNpc) => {
                     staffNpc.shadow?.parent?.remove(staffNpc.shadow);
@@ -1827,6 +1853,7 @@ function MiniZooGame() {
                     disposeRiver(state.river);
                     state.river = null;
                     renderer.dispose();
+                    renderer.forceContextLoss?.();
                     if (containerRef.current && renderer.domElement) {
                         containerRef.current.removeChild(renderer.domElement);
                     }
@@ -1944,7 +1971,7 @@ function MiniZooGame() {
         setIsCameraModeOpen(false);
         setCameraMode(preCameraModeRef.current || 'third');
     }, []);
-    const handleCapturePhoto = useCallback(() => {
+    const handleCapturePhoto = useCallback((lcdRect = null) => {
         const state = gameStateRef.current;
         if (!state.renderer || !state.scene || !state.camera) return;
         const playerPosition = state.playerAnchor?.position;
@@ -1975,9 +2002,23 @@ function MiniZooGame() {
             const webglCanvas = renderer.domElement;
 
             // Full unzoomed 1:1 square capture centered on the WebGL scene view
-            const side = Math.min(webglCanvas.width, webglCanvas.height);
-            const cropX = Math.floor((webglCanvas.width - side) / 2);
-            const cropY = Math.floor((webglCanvas.height - side) / 2);
+            // Crop to the camera's LCD window when the overlay reports it, so the
+            // photo matches what the player framed; otherwise centre-crop.
+            let side = Math.min(webglCanvas.width, webglCanvas.height);
+            let cropX = Math.floor((webglCanvas.width - side) / 2);
+            let cropY = Math.floor((webglCanvas.height - side) / 2);
+            if (lcdRect && webglCanvas.clientWidth > 0 && webglCanvas.clientHeight > 0) {
+                const scaleX = webglCanvas.width / webglCanvas.clientWidth;
+                const scaleY = webglCanvas.height / webglCanvas.clientHeight;
+                const lcdSide = Math.min(lcdRect.width * scaleX, lcdRect.height * scaleY);
+                const centreX = (lcdRect.x + lcdRect.width / 2) * scaleX;
+                const centreY = (lcdRect.y + lcdRect.height / 2) * scaleY;
+                if (lcdSide > 8) {
+                    side = Math.floor(lcdSide);
+                    cropX = THREE.MathUtils.clamp(Math.floor(centreX - side / 2), 0, webglCanvas.width - side);
+                    cropY = THREE.MathUtils.clamp(Math.floor(centreY - side / 2), 0, webglCanvas.height - side);
+                }
+            }
 
             // 1. Crop 1:1 square scene capture with aesthetic film filter
             const cropCanvas = document.createElement('canvas');
@@ -2100,6 +2141,13 @@ function MiniZooGame() {
         // Stop sounds
         stopGameplaySounds(false);
         clearFeedingTimer();
+
+        // Freeze the player so keys held during quit cannot move the hidden scene.
+        const quitState = gameStateRef.current;
+        if (quitState) {
+            quitState.controlsEnabled = false;
+            if (quitState.keys) Object.keys(quitState.keys).forEach((key) => { quitState.keys[key] = false; });
+        }
 
         // State cleanup - This will return the user to the Main Menu
         gameStartedRef.current = false;
@@ -2304,7 +2352,12 @@ function MiniZooGame() {
 
     useEffect(() => {
         const syncSoundEnabled = () => {
-            soundEnabledRef.current = (getSettings().sfxVolume ?? 1.0) > 0;
+            const settings = getSettings();
+            volumesRef.current = {
+                sfx: settings.sfxVolume ?? 1.0,
+                ambience: settings.ambienceVolume ?? 1.0,
+            };
+            soundEnabledRef.current = volumesRef.current.sfx > 0;
         };
 
         const syncGraphicsAndFps = () => {
@@ -2450,6 +2503,7 @@ function MiniZooGame() {
 
     useEffect(() => {
         let listenerHandle = null;
+        let disposed = false;
 
         const setupBackButton = async () => {
             try {
@@ -2503,6 +2557,11 @@ function MiniZooGame() {
                         return;
                     }
                 });
+                // Effect re-ran while the listener was registering: drop the stale one.
+                if (disposed) {
+                    listenerHandle.remove();
+                    listenerHandle = null;
+                }
             } catch {
                 // Not running on native platform
             }
@@ -2511,6 +2570,7 @@ function MiniZooGame() {
         setupBackButton();
 
         return () => {
+            disposed = true;
             if (listenerHandle) {
                 listenerHandle.remove();
             }
@@ -2729,6 +2789,7 @@ function MiniZooGame() {
                         activeTaskId={activeStoryTask.id}
                         onTaskClick={() => setTasksOpen(false)}
                         onResetTasks={handleResetTasks}
+                        onViewCertificate={missionProgress.certificateUnlocked ? () => { setTasksOpen(false); setShowCertificate(true); } : undefined}
                     />
                     <NPCInteractionPrompt
                         visible={canShowNpcPrompt && !isCollectTask}
