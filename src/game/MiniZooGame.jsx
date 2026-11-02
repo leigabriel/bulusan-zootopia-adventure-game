@@ -1396,6 +1396,7 @@ function MiniZooGame() {
             const initialSfxVolume = (getSettings().sfxVolume ?? 1.0);
             // Pass the obstacles and initial volume to the animals
             state.animals = await loadGLTFAnimals(scene, state.obstacles, initialSfxVolume);
+            state.animals.forEach((animal) => { animal.dynamicObstacles = state.animalObstacles; });
             setLoadProgress(80);
 
             state.clouds = createClouds(scene, isMobile ? 12 : 18);
@@ -1455,6 +1456,7 @@ function MiniZooGame() {
                     obstacle.x = animal.group.position.x;
                     obstacle.z = animal.group.position.z;
                     obstacle.radius = Math.max(1.15, animal.radius ?? animal.config?.collisionRadius ?? ((animal.config?.scale ?? 1) * 0.7));
+                    obstacle.owner = animal;
                     animalObstacles[obstacleCount] = obstacle;
                     obstacleCount += 1;
                 });
@@ -1463,6 +1465,7 @@ function MiniZooGame() {
                     obstacle.x = staffNpc.x;
                     obstacle.z = staffNpc.z;
                     obstacle.radius = staffNpc.obstacleRadius;
+                    obstacle.owner = staffNpc;
                     animalObstacles[obstacleCount] = obstacle;
                     obstacleCount += 1;
                 });

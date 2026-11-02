@@ -401,10 +401,30 @@ class GLTFAnimal {
         this.group.position.set(this.pos.x, h, this.pos.z);
         this.group.rotation.y = this.angle;
         alignObjectToTerrain(this.group, h, this.dynamicBox, config.groundClearance ?? 0.01);
+        // alignObjectToTerrain lifts/lowers the model so its lowest point touches
+        // the ground. Remember that offset: update() used to reset y to the raw
+        // terrain height every frame, which sank or floated models whose origin
+        // is not at their feet.
+        this.groundOffset = this.group.position.y - h;
+        // Shared list of players, NPCs and other animals (set by the game).
+        this.dynamicObstacles = null;
 
         this.shadow.position.set(this.pos.x, h + 0.055, this.pos.z);
         scene.add(this.group);
         scene.add(this.shadow);
+    }
+
+    // Highest ground under the body: the centre plus four points around the
+    // collision radius, so legs do not clip into the uphill side of a slope.
+    getGroundHeight() {
+        const { x, z } = this.pos;
+        const reach = this.radius * 0.6;
+        const centre = getTerrainHeight(x, z);
+        const around = (
+            getTerrainHeight(x + reach, z) + getTerrainHeight(x - reach, z)
+            + getTerrainHeight(x, z + reach) + getTerrainHeight(x, z - reach)
+        ) / 4;
+        return Math.max(centre, (centre + around) / 2);
     }
 
     getInfo() {
@@ -635,6 +655,25 @@ class GLTFAnimal {
                 }
             }
 
+            // Other animals and NPCs: block only steps that move closer, so two
+            // animals that end up overlapping can still walk apart.
+            if (!hitObstacle && this.dynamicObstacles) {
+                for (const obs of this.dynamicObstacles) {
+                    if (obs.owner === this) continue;
+                    const limit = this.radius + obs.radius;
+                    const nextDx = nextX - obs.x;
+                    const nextDz = nextZ - obs.z;
+                    const nextSq = nextDx * nextDx + nextDz * nextDz;
+                    if (nextSq >= limit * limit) continue;
+                    const curDx = this.pos.x - obs.x;
+                    const curDz = this.pos.z - obs.z;
+                    if (nextSq < curDx * curDx + curDz * curDz) {
+                        hitObstacle = true;
+                        break;
+                    }
+                }
+            }
+
             // If they hit an object or hit the world boundary, turn around.
             if (hitObstacle || violatesEnclosure(this.config, nextX, nextZ, this.radius) || !isLandAccessible(nextX, nextZ, this.radius) || Math.abs(nextX) > this.bounds || Math.abs(nextZ) > this.bounds) {
                 this.targetAngle += Math.PI * 0.8 + Math.random() * Math.PI * 0.4;
@@ -645,8 +684,8 @@ class GLTFAnimal {
             }
         }
 
-        const h = getTerrainHeight(this.pos.x, this.pos.z);
-        this.group.position.set(this.pos.x, h, this.pos.z);
+        const h = this.getGroundHeight();
+        this.group.position.set(this.pos.x, h + this.groundOffset, this.pos.z);
         const terrainNormal = getTerrainNormalAt(this.terrainNormal, this.pos.x, this.pos.z);
         const targetPitch = THREE.MathUtils.clamp(Math.atan2(-terrainNormal.z, terrainNormal.y), -0.28, 0.28);
         const targetRoll = THREE.MathUtils.clamp(Math.atan2(terrainNormal.x, terrainNormal.y), -0.28, 0.28);
