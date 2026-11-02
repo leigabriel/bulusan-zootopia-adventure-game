@@ -1,4 +1,6 @@
-const CACHE_VERSION = '2026-09-10-v1.0';
+// Replaced with a per-build id by the vite `sw-cache-version` plugin so every
+// deploy invalidates old caches. The placeholder is used in dev only.
+const CACHE_VERSION = '__BUILD_ID__';
 const APP_SHELL_CACHE = `minizoo-app-shell-${CACHE_VERSION}`;
 const STATIC_CACHE = `minizoo-static-${CACHE_VERSION}`;
 const MEDIA_CACHE = `minizoo-media-${CACHE_VERSION}`;
@@ -82,7 +84,7 @@ async function networkFirst(request, cacheName, fallbackPath) {
   try {
     const network = await fetch(request);
     if (network.ok) {
-      cache.put(request, network.clone());
+      cache.put(request, network.clone()).catch(() => {});
     }
     return network;
   } catch {
