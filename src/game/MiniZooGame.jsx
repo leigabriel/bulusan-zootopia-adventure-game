@@ -658,7 +658,6 @@ function MiniZooGame() {
         playerAnchor: null,
         playerCharacter: null,
         playerCharacterBaseYOffset: 0,
-        playerCharacterBox: new THREE.Box3(),
         playerShadow: null,
         playerMixer: null,
         playerActions: {},
@@ -1473,19 +1472,19 @@ function MiniZooGame() {
                 const playerPosition = state.playerAnchor ? state.playerAnchor.position : camera.position;
 
                 if (state.playerCharacter) {
-                    const characterGround = getTerrainHeight(playerPosition.x, playerPosition.z);
+                    // Same ground height the camera uses, so the feet stay planted.
+                    const characterGround = state.groundHeight ?? getTerrainHeight(playerPosition.x, playerPosition.z);
                     const jumpOffset = Math.max(
                         0,
                         playerPosition.y - (characterGround + (state.playerHeight ?? PLAYER_HEIGHT))
                     );
+                    // playerCharacterBaseYOffset lifts the model's lowest point to
+                    // y = 0, so no per-frame bounding-box scan of the skinned mesh.
                     state.playerCharacter.position.set(
                         playerPosition.x,
-                        characterGround + state.playerCharacterBaseYOffset + jumpOffset,
+                        characterGround + state.playerCharacterBaseYOffset + 0.02 + jumpOffset,
                         playerPosition.z
                     );
-                    state.playerCharacterBox.setFromObject(state.playerCharacter);
-                    const characterGroundingDelta = (characterGround + 0.02 + jumpOffset) - state.playerCharacterBox.min.y;
-                    state.playerCharacter.position.y += characterGroundingDelta;
                     // Keep movement unchanged while showing the character's back in third person.
                     const desiredCharacterYaw = state.yaw + (cameraModeRef.current === 'third' ? Math.PI : 0);
                     const currentY = state.playerCharacter.rotation.y;

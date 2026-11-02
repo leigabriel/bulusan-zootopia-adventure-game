@@ -1,15 +1,14 @@
 import * as THREE from 'three';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { getRiverTerrainOffset, isLandAccessible, getRiverMetrics } from './River.jsx';
+import { isLandAccessible, getRiverMetrics } from './River.jsx';
+import { TERRAIN_SEGMENTS, TERRAIN_SIZE, getTerrainGrid, sampleTerrainHeight } from '../utils/terrainField.js';
 import { TIGER_ENCLOSURE, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
 
 const TREE_MODELS = ['Tree1', 'Tree2', 'Tree3', 'Tree4'];
 const BUSH_MODELS = ['Bush1', 'Bush2', 'Bush3'];
 const GRASS_MODELS = ['Grass1', 'Grass2', 'Grass3'];
 const ROCK_MODELS = ['Rock1', 'Rock2', 'Rock3'];
-const TERRAIN_SIZE = 500;
-const TERRAIN_SEGMENTS = 140;
 // The playable area ends before the perimeter forest begins. Keeping this in
 // the terrain module lets movement, animals, and scenery use the same map edge.
 export const PLAYABLE_BOUNDARY = 194;
@@ -36,14 +35,9 @@ export function releaseTerrainModelCache() {
     modelCache.clear();
 }
 
+// Height of the rendered ground at (x, z); see utils/terrainField.js.
 export function getTerrainHeight(x, z) {
-    // Broad, overlapping waves keep the low-poly terrain smooth while adding
-    // enough variation to distinguish hills, valleys, and flatter areas.
-    const broadHills = Math.sin(x * 0.009 + Math.cos(z * 0.007)) * 5.2;
-    const rollingHills = Math.sin(x * 0.019) * 2.4 + Math.cos(z * 0.017 + 0.8) * 2.2;
-    const softDetail = Math.sin(x * 0.032 + z * 0.021) * 0.65;
-    const baseHeight = broadHills + rollingHills + softDetail;
-    return baseHeight + getRiverTerrainOffset(x, z);
+    return sampleTerrainHeight(x, z);
 }
 
 export function alignObjectToTerrain(object, terrainY, bounds = new THREE.Box3(), clearance = 0.02) {
@@ -60,6 +54,7 @@ export function alignObjectToTerrain(object, terrainY, bounds = new THREE.Box3()
 export function createTerrain(scene) {
     const terrainGeo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEGMENTS, TERRAIN_SEGMENTS);
     const posAttr = terrainGeo.attributes.position;
+    const terrainGrid = getTerrainGrid();
 
     const colors = [];
 
@@ -74,7 +69,8 @@ export function createTerrain(scene) {
         const x = posAttr.getX(i);
         const y = posAttr.getY(i);
         // PlaneGeometry is rotated to XZ world space, so local +Y maps to world -Z.
-        const height = getTerrainHeight(x, -y);
+        // Vertex i is grid point i, so the mesh and getTerrainHeight agree exactly.
+        const height = terrainGrid[i];
         posAttr.setZ(i, height);
 
         const noise1 = Math.sin(x * 0.025) * Math.cos(y * 0.025);

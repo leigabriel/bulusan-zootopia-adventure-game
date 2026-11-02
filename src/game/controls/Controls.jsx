@@ -178,12 +178,22 @@ export function createMovementHandler(camera, state) {
         // Terrain and Platform following
         const playerHeight = state.playerHeight ?? PLAYER_HEIGHT;
         const terrainHeight = getTerrainHeight(camera.position.x, camera.position.z);
+
+        // state.groundHeight is the height the player is actually standing at.
+        // Walking over the low-poly triangles is eased so the camera and the
+        // character do not shudder; big jumps (spawn, teleport, landing) snap.
+        if (state.groundHeight === undefined || Math.abs(terrainHeight - state.groundHeight) > 1.5 || !state.isGrounded) {
+            state.groundHeight = terrainHeight;
+        } else {
+            state.groundHeight += (terrainHeight - state.groundHeight) * (1 - Math.exp(-22 * dt));
+        }
         const groundLevel = terrainHeight + playerHeight;
 
         if (state.isGrounded) {
-            camera.position.y = groundLevel;
+            camera.position.y = state.groundHeight + playerHeight;
         } else if (camera.position.y <= groundLevel) {
             camera.position.y = groundLevel;
+            state.groundHeight = terrainHeight;
             state.isGrounded = true;
             state.isJumping = false;
             state.velocityY = 0;

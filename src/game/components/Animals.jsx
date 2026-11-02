@@ -265,7 +265,7 @@ function findSpawnPosition(spawnIndex, totalAnimals, bounds, radius, obstacles, 
     return isLandAccessible(fallback.x, fallback.z, radius) ? fallback : { x: 0, z: -35 };
 }
 
-function getTerrainNormalAt(target, x, z, sample = 0.75) {
+function getTerrainNormalAt(target, x, z, sample = 1.6) {
     const hL = getTerrainHeight(x - sample, z);
     const hR = getTerrainHeight(x + sample, z);
     const hD = getTerrainHeight(x, z - sample);
