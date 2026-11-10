@@ -114,7 +114,7 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
         }
         const rect = cameraImgRef.current.getBoundingClientRect();
         const lcdRect = {
-            // Measured against camera.png: the LCD window spans roughly
+            // Measured against camera.webp: the LCD window spans roughly
             // x 16-63% and y 30-70% of the image.
             x: rect.left + rect.width * 0.16,
             y: rect.top + rect.height * 0.30,
@@ -158,7 +158,7 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
                 <div className="relative max-h-full max-w-full flex items-center justify-center p-2">
                     <img
                         ref={cameraImgRef}
-                        src="/images/camera.png"
+                        src="/images/camera.webp"
                         alt="Camera Viewfinder Frame"
                         className="max-h-[62dvh] max-w-[88vw] object-contain drop-shadow-2xl animate-bounce-subtle pointer-events-none"
                     />
