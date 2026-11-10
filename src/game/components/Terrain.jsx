@@ -3,7 +3,7 @@ import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { isLandAccessible, getRiverMetrics } from './River.jsx';
 import { TERRAIN_SEGMENTS, TERRAIN_SIZE, getTerrainGrid, sampleTerrainHeight } from '../utils/terrainField.js';
-import { TIGER_ENCLOSURE, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
+import { MISSION_POINTS, TIGER_ENCLOSURE, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
 
 const TREE_MODELS = ['Tree1', 'Tree2', 'Tree3', 'Tree4'];
 const BUSH_MODELS = ['Bush1', 'Bush2', 'Bush3'];
@@ -343,7 +343,32 @@ export function createFence(scene, quality = 'medium') {
 }
 
 export function createTigerEnclosure(scene, quality = 'medium') {
-    return createSquareFence(scene, TIGER_ENCLOSURE.x, TIGER_ENCLOSURE.z, TIGER_ENCLOSURE.halfSize, quality);
+    const fence = createSquareFence(scene, TIGER_ENCLOSURE.x, TIGER_ENCLOSURE.z, TIGER_ENCLOSURE.halfSize, quality);
+
+    // Marks the safe viewing spot: a worn dirt circle and a signpost facing the
+    // enclosure. The ground there is level (see terrainField.js), so both sit flat.
+    const view = MISSION_POINTS['tiger-view'];
+    const groundY = getTerrainHeight(view.x, view.z);
+    const area = new THREE.Group();
+    const dirt = new THREE.Mesh(
+        new THREE.CircleGeometry(5.5, 28),
+        new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+    );
+    dirt.rotation.x = -Math.PI / 2;
+    dirt.position.set(view.x, groundY + 0.04, view.z);
+    const wood = new THREE.MeshStandardMaterial({ color: 0x8b5a32, roughness: 0.9 });
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.2, 0.4), wood);
+    post.position.set(view.x + 3.2, groundY + 1.6, view.z + 1.2);
+    const board = new THREE.Mesh(
+        new THREE.BoxGeometry(3.4, 1.3, 0.2),
+        new THREE.MeshStandardMaterial({ color: 0xf2e2b8, roughness: 0.85 })
+    );
+    board.position.set(view.x + 3.2, groundY + 3.0, view.z + 1.2);
+    // Face the board towards the enclosure (north, -z) so visitors read it.
+    board.rotation.y = Math.PI;
+    area.add(dirt, post, board);
+    scene.add(area);
+    return { fence, area };
 }
 
 export function loadBushes(scene, count = 100) {
