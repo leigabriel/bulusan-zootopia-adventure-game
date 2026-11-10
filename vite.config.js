@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
+const appVersion = JSON.parse(readFileSync(new URL('./version.json', import.meta.url), 'utf8')).versionName
+
 // Stamps the service worker with a unique build id so a new deploy never keeps
 // serving the previous version's caches.
 function swCacheVersion() {
@@ -17,7 +19,7 @@ function swCacheVersion() {
             const swPath = join(outDir, 'sw.js')
             if (!existsSync(swPath)) return
             const buildId = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
-            writeFileSync(swPath, readFileSync(swPath, 'utf8').replaceAll('__BUILD_ID__', buildId))
+            writeFileSync(swPath, readFileSync(swPath, 'utf8').replaceAll('__BUILD_ID__', `${appVersion}-${buildId}`))
         },
     }
 }
@@ -27,7 +29,14 @@ export default defineConfig({
         react(),
         tailwindcss(),
         swCacheVersion(),
+        {
+            name: 'html-app-version',
+            transformIndexHtml: (html) => html.replace('__APP_VERSION__', appVersion),
+        },
     ],
+    define: {
+        __APP_VERSION__: JSON.stringify(appVersion),
+    },
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),
