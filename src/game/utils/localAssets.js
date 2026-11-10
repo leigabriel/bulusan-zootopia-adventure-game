@@ -28,18 +28,24 @@ const ANIMAL_MODELS = [
 ];
 
 const ANIMAL_MODEL_DEPENDENCIES = [
+  '/models/animals/birds/bird_1/scene.gltf',
+  '/models/animals/birds/bird_1/scene.bin',
+  '/models/animals/birds/bird_2/scene.gltf',
+  '/models/animals/birds/bird_2/scene.bin',
+  '/models/animals/birds/bird_2/textures/blinn2_baseColor.webp',
+  '/models/animals/birds/bird_2/textures/blinn2_normal.webp',
   '/models/animals/monkey/scene.bin',
-  '/models/animals/monkey/textures/material_diffuse.png',
-  '/models/animals/monkey/textures/material_specularGlossiness.png',
+  '/models/animals/monkey/textures/material_diffuse.webp',
+  '/models/animals/monkey/textures/material_specularGlossiness.webp',
   '/models/animals/ostrich/scene.bin',
-  '/models/animals/ostrich/textures/material_baseColor.png',
-  '/models/animals/ostrich/textures/defaultMat_baseColor.png',
-  '/models/animals/ostrich/textures/defaultMat_normal.png',
-  '/models/animals/ostrich/textures/defaultMat_metallicRoughness.png',
-  '/models/animals/ostrich/textures/defaultMat_specularf0.png',
+  '/models/animals/ostrich/textures/material_baseColor.webp',
+  '/models/animals/ostrich/textures/defaultMat_baseColor.webp',
+  '/models/animals/ostrich/textures/defaultMat_normal.webp',
+  '/models/animals/ostrich/textures/defaultMat_metallicRoughness.webp',
+  '/models/animals/ostrich/textures/defaultMat_specularf0.webp',
   '/models/animals/rabbit/scene.bin',
   '/models/animals/tiger/scene.bin',
-  '/models/animals/tiger/textures/Tiger_Default_baseColor.png',
+  '/models/animals/tiger/textures/Tiger_Default_baseColor.webp',
 ];
 
 const AUDIO_ASSETS = [
@@ -60,6 +66,8 @@ const AUDIO_ASSETS = [
   '/audio/ostrich.mp3',
   '/audio/redd.mp3',
   '/audio/running-effect-sound.mp3',
+  '/audio/task-list-button.mp3',
+  '/audio/tiger.mp3',
   '/audio/water-river.mp3',
 ];
 
