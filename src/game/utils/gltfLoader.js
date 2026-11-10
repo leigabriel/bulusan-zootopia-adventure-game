@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
 const SPECULAR_GLOSSINESS_EXTENSION = 'KHR_materials_pbrSpecularGlossiness';
 
@@ -7,6 +8,8 @@ const SPECULAR_GLOSSINESS_EXTENSION = 'KHR_materials_pbrSpecularGlossiness';
 // existing downloadable models still declare it as required.
 export function createGLTFLoader() {
     const loader = new GLTFLoader();
+    // Models are shipped with EXT_meshopt_compression to keep downloads small.
+    loader.setMeshoptDecoder(MeshoptDecoder);
     loader.register((parser) => ({
         name: SPECULAR_GLOSSINESS_EXTENSION,
         extendMaterialParams(materialIndex, materialParams) {
