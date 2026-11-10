@@ -801,7 +801,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
 
                 {/* VERSION ONLY IN BOTTOM RIGHT */}
                 <div className="pb-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-950/70 drop-shadow-xs">
-                    <span>VERSION 1.0</span>
+                    <span>VERSION {typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '1.0'}</span>
                 </div>
             </div>
 
