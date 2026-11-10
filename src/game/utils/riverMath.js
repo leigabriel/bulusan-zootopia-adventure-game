@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
-// Pure river geometry. The river stays east of the statue and habitats, then
-// bends toward the south edge. Keeping the math here (and free of scene
+// Pure river geometry. The river runs west to east north of the statue and
+// bends away (to lower z) past the tiger enclosure, keeping well clear of its fence. Keeping the math here (and free of scene
 // objects) makes terrain, art, gameplay and tests agree on one source.
 export const RIVER_POINTS = [
     [-218, 112], [-178, 101], [-135, 108], [-92, 94], [-48, 101],
-    [-4, 87], [42, 98], [88, 82], [132, 91], [176, 73], [218, 82],
+    [-4, 87], [42, 98], [88, 80], [132, 68], [176, 52], [218, 60],
 ].map(([x, z]) => new THREE.Vector2(x, z));
 
 export const RIVER_WIDTH = 7.2;
