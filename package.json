@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
     "android:debug": "vite build && npx cap sync android && node scripts/gradle.mjs assembleDebug",
-    "android:release": "vite build && npx cap sync android && node scripts/gradle.mjs bundleRelease"
+    "android:release": "vite build && npx cap sync android && node scripts/android-configure.mjs --require-signing && node scripts/gradle.mjs assembleRelease",
+    "version:bump": "node scripts/version.mjs bump"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
