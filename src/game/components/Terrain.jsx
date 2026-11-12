@@ -2,8 +2,13 @@ import * as THREE from 'three';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { isLandAccessible, getRiverMetrics } from './River.jsx';
+import { getRiverShoreDistance, sampleSmoothPath } from '../utils/riverMath.js';
+import { valueNoise } from '../utils/meadowScatter.js';
+import { plantedBottomY } from '../utils/groundPlacement.js';
 import { TERRAIN_SEGMENTS, TERRAIN_SIZE, getTerrainGrid, sampleTerrainHeight } from '../utils/terrainField.js';
 import { MISSION_POINTS, TIGER_ENCLOSURE, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
+
+const CELL_SIZE = TERRAIN_SIZE / TERRAIN_SEGMENTS;
 
 const TREE_MODELS = ['Tree1', 'Tree2', 'Tree3', 'Tree4'];
 const BUSH_MODELS = ['Bush1', 'Bush2', 'Bush3'];
@@ -50,6 +55,25 @@ export function alignObjectToTerrain(object, terrainY, bounds = new THREE.Box3()
     return delta;
 }
 
+// Plants a prop so its whole footprint touches the ground: rests the lowest
+// point on the lowest terrain under it, then sinks it a little. Resting on the
+// height at the centre alone leaves the downhill side floating.
+const plantBounds = new THREE.Box3();
+const plantSize = new THREE.Vector3();
+export function plantObjectOnTerrain(object, sinkFraction = 0.15) {
+    if (!object) return 0;
+    object.updateMatrixWorld(true);
+    plantBounds.setFromObject(object);
+    plantBounds.getSize(plantSize);
+    const centreX = (plantBounds.min.x + plantBounds.max.x) * 0.5;
+    const centreZ = (plantBounds.min.z + plantBounds.max.z) * 0.5;
+    const targetY = plantedBottomY(getTerrainHeight, centreX, centreZ, plantSize, sinkFraction);
+    const delta = targetY - plantBounds.min.y;
+    object.position.y += delta;
+    object.updateMatrixWorld(true);
+    return delta;
+}
+
 export function createTerrain(scene) {
     const terrainGeo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_SEGMENTS, TERRAIN_SEGMENTS);
     const posAttr = terrainGeo.attributes.position;
@@ -57,12 +81,22 @@ export function createTerrain(scene) {
 
     const colors = [];
 
-    // Natural terrain colors
-    const baseGreen = new THREE.Color(0x6a994e);
-    const darkGreen = new THREE.Color(0x386641);
-    const lightGreen = new THREE.Color(0xa7c957);
-    const dirtBrown = new THREE.Color(0xa07148);
-    const freshGrass = new THREE.Color(0x8cb369);
+    // Ground palette. The grass field covers most of it, so the base is a deep
+    // green that reads as soil-and-roots in the gaps between clumps.
+    const deepGreen = new THREE.Color(0x3f6b34);
+    const baseGreen = new THREE.Color(0x4f7f3b);
+    const lightGreen = new THREE.Color(0x77a24a);
+    const dryGrass = new THREE.Color(0x8d9a52);
+    const dirt = new THREE.Color(0x8a6b45);
+    const stoneGround = new THREE.Color(0x857d6c);
+    const wetMud = new THREE.Color(0x54452f);
+    const sand = new THREE.Color(0xcbb583);
+    const scratch = new THREE.Color();
+
+    const smooth = (edge0, edge1, v) => {
+        const t = Math.min(1, Math.max(0, (v - edge0) / (edge1 - edge0)));
+        return t * t * (3 - 2 * t);
+    };
 
     for (let i = 0; i < posAttr.count; i++) {
         const x = posAttr.getX(i);
@@ -71,26 +105,40 @@ export function createTerrain(scene) {
         // Vertex i is grid point i, so the mesh and getTerrainHeight agree exactly.
         const height = terrainGrid[i];
         posAttr.setZ(i, height);
+        const worldZ = -y;
 
-        const noise1 = Math.sin(x * 0.025) * Math.cos(y * 0.025);
-        const noise2 = Math.sin(x * 0.06 + y * 0.04) * 0.4;
-        const combinedNoise = noise1 + noise2 + (Math.random() * 0.06);
+        // Deterministic noise (no per-vertex randomness) so the ground does not
+        // shimmer or change between loads.
+        const broad = valueNoise(x * 0.02 + 5.1, worldZ * 0.02 - 2.3);
+        const mid = valueNoise(x * 0.07, worldZ * 0.07, 7);
+        const fine = valueNoise(x * 0.31, worldZ * 0.31, 13);
 
-        let color = baseGreen.clone();
+        scratch.copy(baseGreen);
+        scratch.lerp(deepGreen, smooth(0.45, 0.8, broad) * 0.8);
+        scratch.lerp(lightGreen, smooth(0.5, 0.85, mid) * 0.65);
+        scratch.lerp(dryGrass, smooth(0.7, 0.95, broad * 0.6 + mid * 0.4) * 0.5);
+        scratch.multiplyScalar(0.94 + fine * 0.12);
 
-        if (height > 5) {
-            color.lerp(lightGreen, Math.min(1, (height - 5) * 0.15));
-        } else if (height < -2.5) {
-            color.lerp(dirtBrown, Math.min(1, (-height - 2.5) * 0.15));
+        // Steeper ground shows bare dirt and stone instead of grass.
+        const slope = Math.hypot(
+            sampleTerrainHeight(x + CELL_SIZE, worldZ) - sampleTerrainHeight(x - CELL_SIZE, worldZ),
+            sampleTerrainHeight(x, worldZ + CELL_SIZE) - sampleTerrainHeight(x, worldZ - CELL_SIZE)
+        ) / (CELL_SIZE * 2);
+        const steep = smooth(0.28, 0.75, slope);
+        if (steep > 0) {
+            scratch.lerp(dirt, steep * 0.75);
+            scratch.lerp(stoneGround, smooth(0.6, 1.1, slope) * 0.6);
         }
 
-        if (combinedNoise > 0.25) {
-            color.lerp(freshGrass, (combinedNoise - 0.25) * 0.8);
-        } else if (combinedNoise < -0.2) {
-            color.lerp(darkGreen, Math.min(1, (-combinedNoise - 0.2) * 1.0));
+        // Riverbed mud, wet sand along the shore, then grass.
+        const shore = getRiverShoreDistance(x, worldZ, 8);
+        if (shore < 6) {
+            const sandMix = 1 - smooth(1.4, 4.2, shore + fine * 0.8);
+            scratch.lerp(sand, sandMix * 0.95);
+            scratch.lerp(wetMud, 1 - smooth(-0.6, 0.7, shore));
         }
 
-        colors.push(color.r, color.g, color.b);
+        colors.push(scratch.r, scratch.g, scratch.b);
     }
 
     terrainGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -395,7 +443,7 @@ export function loadBushes(scene, count = 100) {
 
             bush.position.set(x, h, z);
             bush.rotation.y = Math.random() * Math.PI * 2;
-            alignObjectToTerrain(bush, h);
+            plantObjectOnTerrain(bush, 0.08);
 
             scene.add(bush);
             bushes.push(bush);
@@ -442,9 +490,9 @@ export function loadRocks(scene, count = 40) {
 
                 rock.position.set(x, h, z);
                 rock.rotation.y = Math.random() * Math.PI * 2;
-                rock.rotation.x = (Math.random() - 0.5) * 0.5;
-                rock.rotation.z = (Math.random() - 0.5) * 0.5;
-                alignObjectToTerrain(rock, h);
+                rock.rotation.x = (Math.random() - 0.5) * 0.18;
+                rock.rotation.z = (Math.random() - 0.5) * 0.18;
+                plantObjectOnTerrain(rock, 0.18);
 
                 scene.add(rock);
                 rocks.push(rock);
@@ -452,40 +500,29 @@ export function loadRocks(scene, count = 40) {
         });
 
         // --- RIVER BANK ROCKS ---
+        // Follow the real river path (not a hand-copied approximation) and sit
+        // on the shore line, half in the sand, so none float over the water.
         const riverSamples = Math.round(20 * budgetScale);
-        const riverPoints = [
-            [-218, 112], [-178, 101], [-135, 108], [-92, 94], [-48, 101],
-            [-4, 87], [42, 98], [88, 82], [132, 91], [176, 73], [218, 82]
-        ];
-
         for (let i = 0; i < riverSamples; i++) {
             const baseModel = validModels[Math.floor(Math.random() * validModels.length)];
             const rock = baseModel.clone();
 
-            // Random point along the river path
-            const segment = Math.floor(Math.random() * (riverPoints.length - 1));
-            const t = Math.random();
-            const p1 = riverPoints[segment];
-            const p2 = riverPoints[segment + 1];
-
-            const rx = p1[0] + (p2[0] - p1[0]) * t;
-            const rz = p1[1] + (p2[1] - p1[1]) * t;
-
-            const metrics = getRiverMetrics(rx, rz);
+            const centre = sampleSmoothPath(0.02 + Math.random() * 0.96);
+            const metrics = getRiverMetrics(centre.x, centre.y);
             const side = Math.random() > 0.5 ? 1 : -1;
-            const push = metrics.width + 0.8 + Math.random() * 1.5;
+            const push = metrics.width + 0.6 + Math.random() * 2.2;
 
-            const x = rx + metrics.tangent.y * push * side;
-            const z = rz - metrics.tangent.x * push * side;
+            const x = metrics.point.x + metrics.tangent.y * push * side;
+            const z = metrics.point.y - metrics.tangent.x * push * side;
 
             if (isInsideTigerEnclosure(x, z, 4) || isInKeepClearZone(x, z, 2)) continue;
-            const h = getTerrainHeight(x, z);
-            const scale = 1.2 + Math.random() * 1.8;
+            const scale = 0.9 + Math.random() * 1.5;
             rock.scale.setScalar(scale);
-            rock.position.set(x, h - 0.2, z); // Embed slightly
+            rock.position.set(x, getTerrainHeight(x, z), z);
             rock.rotation.y = Math.random() * Math.PI * 2;
-            rock.rotation.x = (Math.random() - 0.5) * 0.8;
-            alignObjectToTerrain(rock, h);
+            rock.rotation.x = (Math.random() - 0.5) * 0.25;
+            rock.rotation.z = (Math.random() - 0.5) * 0.25;
+            plantObjectOnTerrain(rock, 0.28);
 
             scene.add(rock);
             rocks.push(rock);
@@ -508,9 +545,9 @@ export function loadRocks(scene, count = 40) {
 
             rock.position.set(x, h, z);
             rock.rotation.y = Math.random() * Math.PI * 2;
-            rock.rotation.x = (Math.random() - 0.5) * 0.5;
-            rock.rotation.z = (Math.random() - 0.5) * 0.5;
-            alignObjectToTerrain(rock, h);
+            rock.rotation.x = (Math.random() - 0.5) * 0.18;
+            rock.rotation.z = (Math.random() - 0.5) * 0.18;
+            plantObjectOnTerrain(rock, 0.18);
 
             scene.add(rock);
             rocks.push(rock);
