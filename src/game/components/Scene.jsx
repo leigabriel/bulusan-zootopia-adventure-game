@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SUN_POSITION } from '../utils/skyConfig.js';
 
 export function createScene(graphicsQuality) {
     const scene = new THREE.Scene();
@@ -102,16 +103,11 @@ export function createLighting(scene) {
 
     // Natural daylight sun (not overwhelmingly bright)
     const sun = new THREE.DirectionalLight(0xfff5e6, 1.4);
-    sun.position.set(100, 150, 80);
+    sun.position.set(SUN_POSITION.x, SUN_POSITION.y, SUN_POSITION.z);
     sun.castShadow = false;
     scene.add(sun);
 
-    const sunDisc = new THREE.Mesh(
-        new THREE.SphereGeometry(14, 12, 8),
-        new THREE.MeshBasicMaterial({ color: 0xfff3b0, fog: false })
-    );
-    sunDisc.position.set(-180, 190, -260);
-    scene.add(sunDisc);
+    // The visible sun and its god rays are drawn by Sky.jsx at this same direction.
 
     const fill = new THREE.DirectionalLight(0xaaccff, 0.4);
     fill.position.set(-50, 50, -50);
