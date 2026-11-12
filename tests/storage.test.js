@@ -88,10 +88,12 @@ test('setGraphicsQuality only accepts valid values', () => {
 });
 
 test('setFpsLimit only accepts valid values', () => {
+    setFpsLimit(120);
+    assert.equal(getSettings().fpsLimit, 120);
     setFpsLimit(30);
-    assert.equal(getSettings().fpsLimit, 30);
-    setFpsLimit(90);
-    assert.equal(getSettings().fpsLimit, 30); // unchanged
+    assert.equal(getSettings().fpsLimit, 120); // unchanged: below 60 is not offered
+    setFpsLimit(0);
+    assert.equal(getSettings().fpsLimit, 0);
 });
 
 test('getProgress returns defaults when empty', () => {
