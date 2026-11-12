@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { App as CapacitorApp } from '@capacitor/app';
 
 import { createScene, createCamera, createRenderer, createLighting, applyRendererQuality, applySceneQuality } from './components/Scene.jsx';
-import { createTerrain, createFence, createTigerEnclosure, loadTrees, loadBushes, loadRocks, createGrass, updateGrass, createClouds, getTerrainHeight, releaseTerrainModelCache, PLAYABLE_BOUNDARY } from './components/Terrain.jsx';
+import { createMeadow, disposeMeadow, updateMeadow } from './components/Meadow.jsx';
+import { createInsects, disposeInsects, updateInsects } from './components/Insects.jsx';
+import { createTerrain, createFence, createTigerEnclosure, loadTrees, loadBushes, loadRocks, createClouds, getTerrainHeight, releaseTerrainModelCache, PLAYABLE_BOUNDARY } from './components/Terrain.jsx';
 import { loadGLTFAnimals, loadAmbientBirds, releaseAnimalModelCache } from './components/Animals.jsx';
 import { createRiver, updateRiver, updateRiverQuality, disposeRiver, getRiverMetrics, isLandAccessible, findAccessiblePosition, isRiverArea } from './components/River.jsx';
 import { loadNewHouses } from './components/Structures.jsx';
@@ -1390,7 +1392,14 @@ function MiniZooGame() {
             state.currentCameraMode = cameraModeRef.current;
             state.controlsEnabled = false;
 
-            state.grass = await createGrass(scene, isMobile ? 1200 : 2500);
+            // Grass field + wildflowers, then butterflies and bees over them.
+            state.meadow = createMeadow(scene, { quality, mobile: isMobile });
+            state.insects = createInsects(scene, {
+                quality,
+                mobile: isMobile,
+                flowerSpots: state.meadow.flowerSpots,
+                start: { x: camera.position.x, z: camera.position.z },
+            });
             setLoadProgress(55);
 
             const initialSfxVolume = (getSettings().sfxVolume ?? 1.0);
@@ -1673,7 +1682,8 @@ function MiniZooGame() {
 
                 // World animation continues while input is locked by the book overlay.
                 updateRiver(state.river, dt, gameStartedRef.current);
-                updateGrass(state.grass, now * 0.001);
+                updateMeadow(state.meadow, now * 0.001, camera.position);
+                updateInsects(state.insects, now * 0.001, dt, camera.position);
 
                 const riverAudio = getRiverAudio();
                 if (riverAudio) {
@@ -1815,6 +1825,8 @@ function MiniZooGame() {
                 smokeSystem.dispose();
                 state.animals.forEach(a => a.dispose?.());
                 state.ambientBirds?.forEach((bird) => bird.dispose?.());
+                disposeMeadow(scene, state.meadow);
+                disposeInsects(scene, state.insects);
                 disposePlayerCharacter();
                 state.staffNpcs.forEach((staffNpc) => {
                     staffNpc.shadow?.parent?.remove(staffNpc.shadow);
