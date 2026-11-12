@@ -91,8 +91,10 @@ export function setGraphicsQuality(quality) {
     return saveSettings({ graphicsQuality: quality });
 }
 
+// 0 means unlimited (follow the display). Nothing below 60: the game targets a
+// steady 60 fps or better, and quality is changed only from the settings.
 export function setFpsLimit(fps) {
-    const valid = [24, 30, 60, 120];
+    const valid = [0, 60, 90, 120];
     if (!valid.includes(fps)) return getSettings();
     return saveSettings({ fpsLimit: fps });
 }

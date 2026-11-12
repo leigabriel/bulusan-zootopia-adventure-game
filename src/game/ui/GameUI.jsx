@@ -451,9 +451,10 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                             <SelectRow
                                 label="FPS Limit"
                                 options={[
-                                    { label: '30', value: 30 },
                                     { label: '60', value: 60 },
+                                    { label: '90', value: 90 },
                                     { label: '120', value: 120 },
+                                    { label: 'Unlimited', value: 0 },
                                 ]}
                                 value={settings.fpsLimit ?? 60}
                                 onChange={(value) => updateSetting('fpsLimit', value)}

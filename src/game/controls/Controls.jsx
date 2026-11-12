@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { getTerrainHeight, PLAYABLE_BOUNDARY } from '../components/Terrain.jsx';
 import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
+import { getWaterDepth } from '../components/River.jsx';
+import { wadeSpeedScale } from '../utils/riverMath.js';
 
 const MOVEMENT_SPEED = 22;
 const ACCELERATION = 12;
@@ -85,8 +87,14 @@ export function createMovementHandler(camera, state) {
             targetVZ /= inputMag;
         }
 
-        targetVX *= MOVEMENT_SPEED;
-        targetVZ *= MOVEMENT_SPEED;
+        // Wading through water slows the player; the factor eases in and out so
+        // stepping into the river does not jerk the camera.
+        const wadeTarget = wadeSpeedScale(getWaterDepth(state.river, camera.position.x, camera.position.z));
+        const wade = state.wadeScale ?? 1;
+        state.wadeScale = wade + (wadeTarget - wade) * (1 - Math.exp(-9 * dt));
+
+        targetVX *= MOVEMENT_SPEED * state.wadeScale;
+        targetVZ *= MOVEMENT_SPEED * state.wadeScale;
 
         // Smooth acceleration/deceleration
         const hasInput = inputMag > 0.1;

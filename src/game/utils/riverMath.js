@@ -176,6 +176,32 @@ export function getRiverShoreDistance(x, z, margin = 12) {
     return Math.sqrt(nearest.distanceSq) - widthAtDistance(nearest.distance);
 }
 
+// Position along the river and distance from its centre line, without
+// allocating, for per-frame use. Returns null away from the river.
+const sampleOut = { along: 0, lateral: 0, width: 0 };
+export function sampleRiver(x, z, margin = 0) {
+    if (isOutsideRiverBounds(x, z, RIVER_WIDTH + WIDTH_VARIATION + margin)) return null;
+    const nearest = findClosest(x, z);
+    sampleOut.along = nearest.distance;
+    sampleOut.lateral = Math.sqrt(nearest.distanceSq);
+    sampleOut.width = widthAtDistance(nearest.distance);
+    if (sampleOut.lateral > sampleOut.width + margin) return null;
+    return sampleOut;
+}
+
+// Wading: water slows the player. Below WADE_START_DEPTH the ground is just
+// wet; by WADE_FULL_DEPTH the player moves at WADE_MIN_SPEED of normal speed.
+export const WADE_START_DEPTH = 0.12;
+export const WADE_FULL_DEPTH = 0.5;
+export const WADE_MIN_SPEED = 0.5;
+
+export function wadeSpeedScale(depth) {
+    if (!(depth > WADE_START_DEPTH)) return 1;
+    const t = Math.min(1, (depth - WADE_START_DEPTH) / (WADE_FULL_DEPTH - WADE_START_DEPTH));
+    const eased = t * t * (3 - 2 * t);
+    return 1 - (1 - WADE_MIN_SPEED) * eased;
+}
+
 export function isRiverArea(x, z, padding = 0) {
     if (isOutsideRiverBounds(x, z, RIVER_WIDTH + WIDTH_VARIATION + Math.max(0, padding))) return false;
     const nearest = findClosest(x, z);
