@@ -128,6 +128,32 @@ export function getRiverMetrics(x, z) {
     };
 }
 
+// Natural variation in the riverbed depth.
+function bedNoiseAt(x, z) {
+    return (Math.sin(x * 0.4) * Math.cos(z * 0.4) * 0.2) + (Math.sin(x * 0.1) * 0.15);
+}
+
+// Describes how strongly the channel shapes the ground at (x, z): `blend` is 1
+// across the riverbed and eases to 0 over BANK_BLEND of bank, `px`/`pz` is the
+// nearest point on the river's centre line, and `depth` the (negative) bed
+// offset there. The terrain levels the bed across the channel to the height of
+// the centre line, so the water sits evenly in it instead of tilting with the
+// hillside. Returns null away from the river.
+export function getRiverBed(x, z) {
+    if (isOutsideRiverBounds(x, z, RIVER_WIDTH + WIDTH_VARIATION + BANK_BLEND)) return null;
+    const nearest = findClosest(x, z);
+    const lateral = Math.sqrt(nearest.distanceSq);
+    const width = widthAtDistance(nearest.distance);
+    const edge = width + BANK_BLEND;
+    if (lateral >= edge) return null;
+    return {
+        blend: 1 - THREE.MathUtils.smoothstep(lateral, width, edge),
+        px: nearest.px,
+        pz: nearest.pz,
+        depth: -CHANNEL_DEPTH + bedNoiseAt(x, z),
+    };
+}
+
 export function getRiverTerrainOffset(x, z) {
     if (isOutsideRiverBounds(x, z, RIVER_WIDTH + WIDTH_VARIATION + BANK_BLEND)) return 0;
 
@@ -139,11 +165,15 @@ export function getRiverTerrainOffset(x, z) {
 
     const centerBlend = 1 - THREE.MathUtils.smoothstep(lateral, width, edge);
 
-    // Natural variation in the riverbed depth.
-    const bedNoise = (Math.sin(x * 0.4) * Math.cos(z * 0.4) * 0.2)
-        + (Math.sin(x * 0.1) * 0.15);
+    return (-CHANNEL_DEPTH + bedNoiseAt(x, z)) * centerBlend;
+}
 
-    return (-CHANNEL_DEPTH + bedNoise) * centerBlend;
+// Signed distance from the water's edge: negative inside the channel, positive
+// on land. Returns Infinity beyond `margin` so callers can skip far-off points.
+export function getRiverShoreDistance(x, z, margin = 12) {
+    if (isOutsideRiverBounds(x, z, RIVER_WIDTH + WIDTH_VARIATION + margin)) return Infinity;
+    const nearest = findClosest(x, z);
+    return Math.sqrt(nearest.distanceSq) - widthAtDistance(nearest.distance);
 }
 
 export function isRiverArea(x, z, padding = 0) {
