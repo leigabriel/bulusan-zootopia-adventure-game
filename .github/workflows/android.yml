@@ -118,14 +118,14 @@ jobs:
           fi
           apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
           "$apksigner" verify --print-certs "$apk"
-          final="bulusan-zootopia-v${{ steps.version.outputs.name }}.apk"
+          final="Bulusan Zootopia Adventure Game.apk"
           cp "$apk" "$final"
           echo "file=$final" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.apk.outputs.file }}
+          name: Bulusan Zootopia Adventure Game ${{ steps.version.outputs.name }}
           path: ${{ steps.apk.outputs.file }}
           if-no-files-found: error
 
