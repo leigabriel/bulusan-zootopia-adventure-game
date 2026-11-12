@@ -5,8 +5,10 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { createScene, createCamera, createRenderer, createLighting, applyRendererQuality, applySceneQuality } from './components/Scene.jsx';
 import { createMeadow, disposeMeadow, updateMeadow } from './components/Meadow.jsx';
 import { createInsects, disposeInsects, updateInsects } from './components/Insects.jsx';
-import { createTerrain, createFence, createTigerEnclosure, loadTrees, loadBushes, loadRocks, createClouds, getTerrainHeight, releaseTerrainModelCache, PLAYABLE_BOUNDARY } from './components/Terrain.jsx';
+import { createTerrain, createFence, createTigerEnclosure, loadTrees, loadBushes, loadRocks, getTerrainHeight, releaseTerrainModelCache, PLAYABLE_BOUNDARY } from './components/Terrain.jsx';
 import { loadGLTFAnimals, loadAmbientBirds, releaseAnimalModelCache } from './components/Animals.jsx';
+import { createSky, updateSky, disposeSky } from './components/Sky.jsx';
+import { createWaterTrail } from './components/WaterTrail.jsx';
 import { createRiver, updateRiver, updateRiverQuality, disposeRiver, getRiverMetrics, isLandAccessible, findAccessiblePosition, isRiverArea } from './components/River.jsx';
 import { loadNewHouses } from './components/Structures.jsx';
 import { createGLTFLoader } from './utils/gltfLoader.js';
@@ -291,6 +293,12 @@ function getSmokePuffTexture() {
     return SMOKE_PUFF_TEXTURE;
 }
 
+// Saved values below 60 (older versions offered 30) are raised to 60; 0 = unlimited.
+function normalizeFpsLimit(value) {
+    if (value === 0) return 0;
+    return Math.max(60, Number(value) || 60);
+}
+
 function createRunSmokeSystem(scene) {
     const poolSize = 20;
     const puffs = [];
@@ -572,7 +580,7 @@ function MiniZooGame() {
     const observationStartedAtRef = useRef(0);
     const missionCheckRef = useRef(() => {});
     const graphicsQualityRef = useRef((getSettings().graphicsQuality || 'medium'));
-    const fpsLimitRef = useRef((getSettings().fpsLimit || 60));
+    const fpsLimitRef = useRef(normalizeFpsLimit(getSettings().fpsLimit));
     // Cached volumes so the render loop never parses localStorage each frame.
     const volumesRef = useRef({
         sfx: getSettings().sfxVolume ?? 1.0,
@@ -655,7 +663,7 @@ function MiniZooGame() {
         controlsEnabled: false,
         cameraControlLockedUntil: 0,
         animationId: null, scene: null, camera: null, renderer: null,
-        animals: [], ambientBirds: [], clouds: [], river: null, obstacles: [], animalObstacles: [], animalObstaclePool: [], cleanup: null, initialized: false,
+        animals: [], ambientBirds: [], sky: null, river: null, isMobile: false, obstacles: [], animalObstacles: [], animalObstaclePool: [], cleanup: null, initialized: false,
         isLandAccessible,
         playerAnchor: null,
         playerCharacter: null,
@@ -1408,11 +1416,13 @@ function MiniZooGame() {
             state.animals.forEach((animal) => { animal.dynamicObstacles = state.animalObstacles; });
             setLoadProgress(80);
 
-            state.clouds = createClouds(scene, isMobile ? 12 : 18);
+            state.isMobile = isMobile;
+            state.sky = createSky(scene, { quality, mobile: isMobile });
             setLoadProgress(95);
 
             const handleMovement = createMovementHandler(state.playerAnchor, state);
             const smokeSystem = createRunSmokeSystem(scene);
+            const waterTrail = createWaterTrail(scene);
             const desiredCameraPosition = new THREE.Vector3();
             const firstPersonCameraPosition = new THREE.Vector3();
             const lookTarget = new THREE.Vector3();
@@ -1437,17 +1447,22 @@ function MiniZooGame() {
                 const now = performance.now();
 
                 // FPS limiting
-                const fpsLimit = fpsLimitRef.current || 60;
-                const fpsInterval = 1000 / fpsLimit;
+                // 0 = unlimited: render on every display refresh.
+                const fpsLimit = fpsLimitRef.current;
                 const timeSinceLastRender = now - lastRenderTime;
-                // Small tolerance: on a 60 Hz display frames arrive a hair under 16.67 ms
-                // and would otherwise be skipped, halving the frame rate.
-                if (timeSinceLastRender < fpsInterval - 2) {
-                    return;
+                if (fpsLimit > 0) {
+                    const fpsInterval = 1000 / fpsLimit;
+                    // Small tolerance: on a 60 Hz display frames arrive a hair under 16.67 ms
+                    // and would otherwise be skipped, halving the frame rate.
+                    if (timeSinceLastRender < fpsInterval - 2) {
+                        return;
+                    }
+                    lastRenderTime = now - (timeSinceLastRender % fpsInterval);
+                } else {
+                    lastRenderTime = now;
                 }
 
                 const dt = Math.min(timeSinceLastRender * 0.001, 0.1);
-                lastRenderTime = now - (timeSinceLastRender % fpsInterval);
 
                 // Reduce CPU usage while hidden.
                 if (document.hidden) {
@@ -1524,7 +1539,10 @@ function MiniZooGame() {
                 }
 
                 if (state.playerCharacter) {
-                    smokeSystem.update(dt, state.playerCharacter.position, state.playerIsMoving && state.isGrounded, camera);
+                    const moving = state.playerIsMoving && state.isGrounded;
+                    // The trail returns the water depth; dust puffs only appear on dry land.
+                    const waterDepth = waterTrail.update(dt, state.river, state.playerCharacter.position, moving, state.playerMoveSpeed || 0);
+                    smokeSystem.update(dt, state.playerCharacter.position, moving && waterDepth < 0.12, camera);
                 }
 
                 state.staffNpcs.forEach((npc) => {
@@ -1719,10 +1737,7 @@ function MiniZooGame() {
                     }
                 }
 
-                state.clouds.forEach(c => {
-                    c.position.x += 0.02 * dt * 60;
-                    if (c.position.x > 400) c.position.x = -400;
-                });
+                updateSky(state.sky, now * 0.001, camera);
                 if (state.missionObjects?.marker?.visible) {
                     state.missionObjects.marker.position.y += Math.sin(now * 0.004) * 0.015;
                     state.missionObjects.marker.rotation.y += dt * 1.8;
@@ -1823,6 +1838,9 @@ function MiniZooGame() {
                 cleanupTouch();
                 cleanupMouse();
                 smokeSystem.dispose();
+                waterTrail.dispose();
+                disposeSky(scene, state.sky);
+                state.sky = null;
                 state.animals.forEach(a => a.dispose?.());
                 state.ambientBirds?.forEach((bird) => bird.dispose?.());
                 disposeMeadow(scene, state.meadow);
@@ -2377,7 +2395,7 @@ function MiniZooGame() {
         const syncGraphicsAndFps = () => {
             const settings = getSettings();
             const newQuality = settings.graphicsQuality || 'medium';
-            const newFpsLimit = settings.fpsLimit || 60;
+            const newFpsLimit = normalizeFpsLimit(settings.fpsLimit);
 
             const prevQuality = graphicsQualityRef.current;
             graphicsQualityRef.current = newQuality;
@@ -2392,6 +2410,22 @@ function MiniZooGame() {
                     applySceneQuality(state.scene, newQuality);
                 }
                 updateRiverQuality(state.river, newQuality);
+                // Cloud, grass and insect counts depend on the setting too, so rebuild them.
+                if (state.scene && state.initialized) {
+                    disposeSky(state.scene, state.sky);
+                    state.sky = createSky(state.scene, { quality: newQuality, mobile: state.isMobile });
+                    const flowerSpots = state.meadow?.flowerSpots;
+                    const start = state.insects?.start;
+                    disposeMeadow(state.scene, state.meadow);
+                    disposeInsects(state.scene, state.insects);
+                    state.meadow = createMeadow(state.scene, { quality: newQuality, mobile: state.isMobile });
+                    state.insects = createInsects(state.scene, {
+                        quality: newQuality,
+                        mobile: state.isMobile,
+                        flowerSpots: state.meadow.flowerSpots || flowerSpots,
+                        start: start || { x: state.camera.position.x, z: state.camera.position.z },
+                    });
+                }
             }
         };
 
