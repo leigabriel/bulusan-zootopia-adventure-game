@@ -12,129 +12,276 @@ import {
     findAccessiblePosition,
     sampleSmoothPath,
     riverWidthAtT,
+    getRiverPathLength,
 } from '../utils/riverMath.js';
 
 export { getRiverMetrics, getRiverTerrainOffset, isRiverArea, isLandAccessible, findAccessiblePosition };
 
+// Water is a ribbon that follows the river path. Unlike a flat plane (the
+// three.js `Water` example mirrors a planar surface), this river bends and
+// descends, so it uses a ribbon with a per-vertex water depth. The shader then
+// takes the same ingredients as the three.js water examples (animated normals,
+// fresnel sky reflection, sun glint, fog) and adds depth tint and shore foam.
 const QUALITY_CONFIG = {
-    low: { samples: 45, bankSegments: 2, ripples: false },
-    medium: { samples: 90, bankSegments: 3, ripples: true },
-    high: { samples: 160, bankSegments: 4, ripples: true }
+    low: { samples: 60, rows: 6 },
+    medium: { samples: 110, rows: 10 },
+    high: { samples: 170, rows: 16 }
 };
 
-function makeRibbonGeometry(samples, width, heightFn, segments = 1) {
-    const positions = [];
-    const uvs = [];
+// The terrain levels the riverbed across the channel, so the surface only has
+// to follow the centre line: a little above the bed, smoothed along the river.
+const SURFACE_ABOVE_BED = 0.85;
+const SIDE_EXTENT = BANK_BLEND;
+const LEVEL_SMOOTHING_PASSES = 3;
+const LEVEL_SMOOTHING_RADIUS = 5;
+
+// The sun direction used by the scene's main light (see Scene.jsx).
+const SUN_DIRECTION = new THREE.Vector3(100, 150, 80).normalize();
+
+function computeSurfaceLevels(samples, baseTerrainHeight) {
+    let levels = new Float64Array(samples + 1);
+    for (let i = 0; i <= samples; i += 1) {
+        const point = sampleSmoothPath(i / samples);
+        levels[i] = baseTerrainHeight(point.x, point.y) + SURFACE_ABOVE_BED;
+    }
+    // A moving average removes the bed's ripple so the surface stays smooth.
+    for (let pass = 0; pass < LEVEL_SMOOTHING_PASSES; pass += 1) {
+        const smoothed = new Float64Array(samples + 1);
+        for (let i = 0; i <= samples; i += 1) {
+            let sum = 0;
+            let count = 0;
+            for (let k = -LEVEL_SMOOTHING_RADIUS; k <= LEVEL_SMOOTHING_RADIUS; k += 1) {
+                const j = i + k;
+                if (j < 0 || j > samples) continue;
+                sum += levels[j];
+                count += 1;
+            }
+            smoothed[i] = sum / count;
+        }
+        levels = smoothed;
+    }
+    return levels;
+}
+
+function makeWaterGeometry(samples, rows, baseTerrainHeight) {
+    const levels = computeSurfaceLevels(samples, baseTerrainHeight);
+    const pathLength = getRiverPathLength();
+    const rowCount = rows + 1;
+    const positions = new Float32Array((samples + 1) * rowCount * 3);
+    const depths = new Float32Array((samples + 1) * rowCount);
+    const flows = new Float32Array((samples + 1) * rowCount * 2);
+    const tangents = new Float32Array((samples + 1) * rowCount * 2);
+    const uvs = new Float32Array((samples + 1) * rowCount * 2);
     const indices = [];
+
     for (let i = 0; i <= samples; i += 1) {
         const t = i / samples;
         const point = sampleSmoothPath(t);
         const next = t < 1 ? sampleSmoothPath(t + 0.002) : sampleSmoothPath(t - 0.002);
         const tangent = next.clone().sub(point).normalize();
-        const side = new THREE.Vector2(-tangent.y, tangent.x);
-        const rowWidth = typeof width === 'function' ? width(t, point) : width;
-        for (let row = 0; row <= segments; row += 1) {
-            const across = row / segments * 2 - 1;
-            const p = point.clone().addScaledVector(side, across * rowWidth);
-            positions.push(p.x, heightFn(p.x, p.y, across, t), p.y);
-            uvs.push(t * 8, row / segments);
+        if (t >= 1) tangent.negate();
+        const sideX = -tangent.y;
+        const sideZ = tangent.x;
+        const extent = riverWidthAtT(t) + SIDE_EXTENT;
+        const level = levels[i];
+        for (let row = 0; row < rowCount; row += 1) {
+            const across = (row / rows) * 2 - 1;
+            const lateral = across * extent;
+            const x = point.x + sideX * lateral;
+            const z = point.y + sideZ * lateral;
+            const v = i * rowCount + row;
+            positions[v * 3] = x;
+            positions[v * 3 + 1] = level;
+            positions[v * 3 + 2] = z;
+            depths[v] = level - baseTerrainHeight(x, z);
+            flows[v * 2] = t * pathLength;
+            flows[v * 2 + 1] = lateral;
+            tangents[v * 2] = tangent.x;
+            tangents[v * 2 + 1] = tangent.y;
+            uvs[v * 2] = t * 8;
+            uvs[v * 2 + 1] = row / rows;
         }
     }
-    const rowSize = segments + 1;
     for (let i = 0; i < samples; i += 1) {
-        for (let row = 0; row < segments; row += 1) {
-            const a = i * rowSize + row;
+        for (let row = 0; row < rows; row += 1) {
+            const a = i * rowCount + row;
             const b = a + 1;
-            const c = a + rowSize;
+            const c = a + rowCount;
             const d = c + 1;
             indices.push(a, c, b, b, c, d);
         }
     }
+
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    geometry.setAttribute('aDepth', new THREE.BufferAttribute(depths, 1));
+    geometry.setAttribute('aFlow', new THREE.BufferAttribute(flows, 2));
+    geometry.setAttribute('aTangent', new THREE.BufferAttribute(tangents, 2));
     geometry.setIndex(indices);
-    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
     return geometry;
 }
 
+const WATER_VERTEX = `
+    attribute float aDepth;
+    attribute vec2 aFlow;
+    attribute vec2 aTangent;
+    varying float vDepth;
+    varying vec2 vFlow;
+    varying vec2 vTangent;
+    varying vec3 vWorld;
+    #include <fog_pars_vertex>
+    void main() {
+        vDepth = aDepth;
+        vFlow = aFlow;
+        vTangent = aTangent;
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vWorld = world.xyz;
+        vec4 mvPosition = viewMatrix * world;
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+    }
+`;
+
+const WATER_FRAGMENT = `
+    uniform float uTime;
+    uniform float uStrength;
+    uniform vec3 uSunDir;
+    uniform vec3 uShallow;
+    uniform vec3 uDeep;
+    uniform vec3 uSky;
+    uniform vec3 uHorizon;
+    uniform vec3 uFoam;
+    varying float vDepth;
+    varying vec2 vFlow;
+    varying vec2 vTangent;
+    varying vec3 vWorld;
+    #include <fog_pars_fragment>
+
+    float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    }
+    float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                   mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+    }
+
+    // Gradient of a sum of travelling sine waves, in (along, across) space.
+    vec2 waveGradient(vec2 p, float t) {
+        vec2 g = vec2(0.0);
+        vec2 k;
+        float f;
+        float phase;
+        k = normalize(vec2(1.0, 0.25)); f = 0.9;  phase = dot(k, p) * f - t * 1.5;  g += k * f * 0.50 * cos(phase);
+        k = normalize(vec2(0.9, -0.55)); f = 1.7; phase = dot(k, p) * f - t * 1.9;  g += k * f * 0.30 * cos(phase);
+        k = normalize(vec2(1.0, 0.8)); f = 2.9;   phase = dot(k, p) * f - t * 2.6;  g += k * f * 0.17 * cos(phase);
+        k = normalize(vec2(0.7, -1.0)); f = 4.6;  phase = dot(k, p) * f - t * 3.1;  g += k * f * 0.10 * cos(phase);
+        k = normalize(vec2(1.0, 0.1)); f = 7.3;   phase = dot(k, p) * f - t * 3.9;  g += k * f * 0.05 * cos(phase);
+        return g;
+    }
+
+    void main() {
+        float depth = vDepth;
+        // Water only exists where it is above the ground.
+        float coverage = smoothstep(0.0, 0.1, depth);
+        if (coverage <= 0.002) discard;
+
+        vec2 flowUv = vFlow;
+        vec2 warp = vec2(noise(flowUv * 0.35 + uTime * 0.08), noise(flowUv * 0.35 - uTime * 0.06 + 9.0)) - 0.5;
+        vec2 grad = waveGradient(flowUv + warp * 1.4, uTime) * uStrength;
+        // Calmer right at the shore, livelier in the open channel.
+        grad *= mix(0.45, 1.0, smoothstep(0.0, 0.6, depth));
+        vec2 sideDir = vec2(-vTangent.y, vTangent.x);
+        vec2 worldGrad = vTangent * grad.x + sideDir * grad.y;
+        vec3 normal = normalize(vec3(-worldGrad.x, 1.0, -worldGrad.y));
+
+        vec3 viewDir = normalize(cameraPosition - vWorld);
+        float nDotV = clamp(dot(normal, viewDir), 0.0, 1.0);
+        float fresnel = mix(0.07, 1.0, pow(1.0 - nDotV, 4.0));
+
+        // Body colour: clear and bright in the shallows, deeper blue mid-channel.
+        float deepMix = smoothstep(0.05, 1.1, depth);
+        vec3 body = mix(uShallow, uDeep, deepMix);
+
+        // Caustic light lines drifting over the bed in shallow water.
+        float c1 = sin(flowUv.x * 2.1 + sin(flowUv.y * 2.7 + uTime * 0.9) * 1.6 - uTime * 0.7);
+        float c2 = sin(flowUv.y * 2.4 + sin(flowUv.x * 1.9 - uTime * 0.8) * 1.5 + uTime * 0.5);
+        float caustic = pow(clamp(0.5 + 0.5 * c1 * c2, 0.0, 1.0), 5.0) * (1.0 - smoothstep(0.1, 0.9, depth));
+        body += caustic * 0.35;
+
+        // Sky reflection (cheap stand-in for the mirror render of the three.js Water).
+        vec3 reflected = reflect(-viewDir, normal);
+        vec3 skyColour = mix(uHorizon, uSky, pow(clamp(reflected.y, 0.0, 1.0), 0.6));
+
+        vec3 colour = mix(body, skyColour, fresnel * 0.8);
+
+        // Sun glint.
+        vec3 halfway = normalize(normalize(uSunDir) + viewDir);
+        float specular = pow(max(dot(normal, halfway), 0.0), 220.0) * 1.8 + pow(max(dot(normal, halfway), 0.0), 40.0) * 0.12;
+        colour += vec3(1.0, 0.96, 0.85) * specular * uStrength;
+
+        // Foam: soft rim at the shoreline plus a few animated bands.
+        float wobble = noise(flowUv * 1.6 + vec2(uTime * 0.25, 0.0));
+        float rim = 1.0 - smoothstep(0.03, 0.2 + wobble * 0.14, depth);
+        float bands = smoothstep(0.55, 0.95, sin(depth * 26.0 - uTime * 1.4 + wobble * 5.0))
+            * (1.0 - smoothstep(0.08, 0.5, depth)) * smoothstep(0.1, 0.2, depth);
+        float streak = smoothstep(0.78, 0.95, noise(flowUv * vec2(0.9, 2.4) - vec2(uTime * 0.7, 0.0))) * 0.25;
+        float foam = clamp(rim * 0.9 + bands * 0.45 + streak * (1.0 - deepMix * 0.5), 0.0, 1.0);
+        colour = mix(colour, uFoam, foam);
+
+        float alpha = coverage * mix(0.62, 0.95, smoothstep(0.1, 1.0, depth));
+        alpha = max(alpha, foam * coverage * 0.9);
+        gl_FragColor = vec4(colour, alpha);
+
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        #include <fog_fragment>
+    }
+`;
+
 function createWaterMaterial(quality) {
-    if (quality === 'low') return new THREE.MeshBasicMaterial({ color: 0x20b9d0, side: THREE.DoubleSide });
+    if (quality === 'low') {
+        return new THREE.MeshBasicMaterial({ color: 0x2aa8c4, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
+    }
     return new THREE.ShaderMaterial({
-        uniforms: {
-            uTime: { value: 0 },
-            uStrength: { value: quality === 'high' ? 1 : 0.65 },
-            uColorBlue: { value: new THREE.Color(0x0a6b9e) },
-            uColorTurquoise: { value: new THREE.Color(0x20b9d0) }
-        },
-        vertexShader: `
-            uniform float uTime;
-            uniform float uStrength;
-            varying vec2 vUv;
-            varying float vDepth;
-            void main(){
-                vUv = uv;
-                vec3 p = position;
-                float wave = sin(uv.x * 18.0 + uTime * 1.8) * 0.04 * uStrength;
-                p.y += wave;
-                vDepth = wave;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-            }`,
-        fragmentShader: `
-            uniform float uTime;
-            uniform vec3 uColorBlue;
-            uniform vec3 uColorTurquoise;
-            varying vec2 vUv;
-            varying float vDepth;
-            void main(){
-                float ripple = sin(vUv.x * 35.0 + uTime * 2.5) + sin(vUv.x * 18.0 - vUv.y * 12.0 + uTime * 1.5);
-                float edgeMask = smoothstep(0.0, 0.15, vUv.y) * smoothstep(1.0, 0.85, vUv.y);
-
-                vec3 color = mix(uColorBlue, uColorTurquoise, 0.5 + 0.2 * sin(vUv.x * 10.0 + uTime));
-                color += ripple * 0.02 * edgeMask;
-
-                // Foam highlights at edges
-                float foam = (1.0 - edgeMask) * 0.12 * (0.5 + 0.5 * sin(uTime * 3.0 + vUv.x * 50.0));
-                color += foam;
-
-                 gl_FragColor = vec4(color, 1.0);
-             }`,
-        transparent: false,
-        side: THREE.DoubleSide,
-        depthWrite: true
+        uniforms: THREE.UniformsUtils.merge([
+            THREE.UniformsLib.fog,
+            {
+                uTime: { value: 0 },
+                uStrength: { value: quality === 'high' ? 1 : 0.8 },
+                uSunDir: { value: SUN_DIRECTION.clone() },
+                uShallow: { value: new THREE.Color(0x58d6c9) },
+                uDeep: { value: new THREE.Color(0x0b5d8c) },
+                uSky: { value: new THREE.Color(0x87ceeb) },
+                uHorizon: { value: new THREE.Color(0xd4ecf4) },
+                uFoam: { value: new THREE.Color(0xf4fbff) }
+            }
+        ]),
+        vertexShader: WATER_VERTEX,
+        fragmentShader: WATER_FRAGMENT,
+        fog: true,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide
     });
-}
-
-function getWaterHeight(baseTerrainHeight, x, z) {
-    // The player stands on the riverbed returned by getTerrainHeight. Keep the
-    // water just above that same surface so it cannot float above or submerge
-    // the character while crossing the river.
-    return baseTerrainHeight(x, z) + WATER_CLEARANCE;
 }
 
 export function createRiver(scene, baseTerrainHeight, quality = 'medium') {
     const config = QUALITY_CONFIG[quality] || QUALITY_CONFIG.medium;
-    const riverWidthAt = riverWidthAtT;
     const root = new THREE.Group();
     root.name = 'CartoonRiver';
-    const waterHeight = (x, z) => getWaterHeight(baseTerrainHeight, x, z);
-    const water = new THREE.Mesh(makeRibbonGeometry(config.samples, riverWidthAt, waterHeight, quality === 'high' ? 3 : 2), createWaterMaterial(quality));
+    const water = new THREE.Mesh(makeWaterGeometry(config.samples, config.rows, baseTerrainHeight), createWaterMaterial(quality));
     water.renderOrder = 2;
+    water.frustumCulled = true;
     root.add(water);
 
-    const bankMaterial = new THREE.MeshStandardMaterial({ color: 0xba945d, roughness: 0.9, side: THREE.DoubleSide });
-
-    const bankHeightFn = (x, z) => baseTerrainHeight(x, z) + 0.015;
-
-    const banks = new THREE.Mesh(
-        makeRibbonGeometry(config.samples, (t) => riverWidthAt(t) + SHORE_WIDTH, bankHeightFn, config.bankSegments + 1),
-        bankMaterial
-    );
-    banks.renderOrder = 1;
-    root.add(banks);
-
     scene.add(root);
-    return { root, water, banks, quality, time: 0, baseTerrainHeight };
+    return { root, water, quality, time: 0, baseTerrainHeight };
 }
 
 export function updateRiver(river, dt, active = true) {
@@ -148,21 +295,16 @@ export function updateRiverQuality(river, quality) {
     const next = QUALITY_CONFIG[quality] || QUALITY_CONFIG.medium;
     const old = river.water.material;
     const oldWaterGeometry = river.water.geometry;
-    const oldBankGeometry = river.banks.geometry;
-    const riverWidthAt = riverWidthAtT;
-    const bankHeightFn = (x, z) => river.baseTerrainHeight(x, z) + 0.015;
 
-    river.water.geometry = makeRibbonGeometry(next.samples, riverWidthAt, (x, z) => getWaterHeight(river.baseTerrainHeight, x, z), quality === 'high' ? 3 : 2);
-    river.banks.geometry = makeRibbonGeometry(next.samples, (t) => riverWidthAt(t) + SHORE_WIDTH, bankHeightFn, next.bankSegments + 1);
+    river.water.geometry = makeWaterGeometry(next.samples, next.rows, river.baseTerrainHeight);
     oldWaterGeometry.dispose();
-    oldBankGeometry.dispose();
     if (quality === 'low' && old.isShaderMaterial) {
         river.water.material = createWaterMaterial('low');
         old.dispose();
     } else if (quality !== 'low' && !old.isShaderMaterial) {
         river.water.material = createWaterMaterial(quality);
         old.dispose();
-    } else if (old.uniforms?.uStrength) old.uniforms.uStrength.value = quality === 'high' ? 1 : 0.65;
+    } else if (old.uniforms?.uStrength) old.uniforms.uStrength.value = quality === 'high' ? 1 : 0.8;
     river.quality = quality;
 }
 
