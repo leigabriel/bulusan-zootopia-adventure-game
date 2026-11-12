@@ -1,4 +1,4 @@
-import { isRiverArea } from './riverMath.js';
+import { isRiverArea, getRiverShoreDistance } from './riverMath.js';
 import { MISSION_POINTS } from '../data/worldPoints.js';
 
 // Pure placement logic for the grass field, flowers and insects. Kept free of
@@ -60,11 +60,15 @@ function onBareGround(x, z) {
 // thin, worn patches and no grass in the river or on bare ground.
 export function meadowDensity(x, z) {
     if (isRiverArea(x, z, 0.7) || onBareGround(x, z)) return 0;
+    // The shore is bare sand, with grass thinning out as it nears the water.
+    const shore = getRiverShoreDistance(x, z, 6);
+    const shoreFade = shore >= 5.2 ? 1 : Math.max(0, (shore - 2.6) / 2.6);
+    if (shoreFade <= 0) return 0;
     const broad = valueNoise(x * 0.045 + 11.3, z * 0.045 - 4.7);
     const fine = valueNoise(x * 0.13, z * 0.13, 3);
     const density = 0.72 + 0.9 * (broad - 0.5) + 0.3 * (fine - 0.5);
     if (density <= 0.2) return 0;
-    return density > 1 ? 1 : density;
+    return (density > 1 ? 1 : density) * shoreFade;
 }
 
 function chunkIndexFor(x, z) {
