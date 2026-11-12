@@ -1,4 +1,4 @@
-import { getRiverTerrainOffset } from './riverMath.js';
+import { getRiverBed } from './riverMath.js';
 import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
 
 // Pure terrain height field. The rendered mesh and every "stand on the ground"
@@ -24,13 +24,24 @@ function smooth01(t) {
     return c * c * (3 - 2 * c);
 }
 
-function rawTerrainHeight(x, z) {
+function hillHeight(x, z) {
     // Broad, overlapping waves keep the low-poly terrain smooth while adding
     // enough variation to distinguish hills, valleys, and flatter areas.
     const broadHills = Math.sin(x * 0.009 + Math.cos(z * 0.007)) * 5.2;
     const rollingHills = Math.sin(x * 0.019) * 2.4 + Math.cos(z * 0.017 + 0.8) * 2.2;
     const softDetail = Math.sin(x * 0.032 + z * 0.021) * 0.65;
-    return broadHills + rollingHills + softDetail + getRiverTerrainOffset(x, z);
+    return broadHills + rollingHills + softDetail;
+}
+
+function rawTerrainHeight(x, z) {
+    const hills = hillHeight(x, z);
+    const bed = getRiverBed(x, z);
+    if (!bed) return hills;
+    // Level the riverbed across the channel to the centre line's height, then
+    // dig it. The hillside's own cross-slope would otherwise tilt the bed and
+    // leave one half of the river dry.
+    const centre = hillHeight(bed.px, bed.pz);
+    return hills + (centre - hills + bed.depth) * bed.blend;
 }
 
 let padHeight = null;
