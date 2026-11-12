@@ -13,7 +13,9 @@ import {
     sampleSmoothPath,
     riverWidthAtT,
     getRiverPathLength,
+    sampleRiver,
 } from '../utils/riverMath.js';
+import { SUN_DIRECTION } from '../utils/skyConfig.js';
 
 export { getRiverMetrics, getRiverTerrainOffset, isRiverArea, isLandAccessible, findAccessiblePosition };
 
@@ -30,13 +32,11 @@ const QUALITY_CONFIG = {
 
 // The terrain levels the riverbed across the channel, so the surface only has
 // to follow the centre line: a little above the bed, smoothed along the river.
-const SURFACE_ABOVE_BED = 0.85;
+const SURFACE_ABOVE_BED = 1.15;
 const SIDE_EXTENT = BANK_BLEND;
 const LEVEL_SMOOTHING_PASSES = 3;
 const LEVEL_SMOOTHING_RADIUS = 5;
 
-// The sun direction used by the scene's main light (see Scene.jsx).
-const SUN_DIRECTION = new THREE.Vector3(100, 150, 80).normalize();
 
 function computeSurfaceLevels(samples, baseTerrainHeight) {
     let levels = new Float64Array(samples + 1);
@@ -121,6 +121,9 @@ function makeWaterGeometry(samples, rows, baseTerrainHeight) {
     geometry.setIndex(indices);
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
+    // Kept so gameplay can ask how deep the water is at any point.
+    geometry.userData.levels = levels;
+    geometry.userData.pathLength = pathLength;
     return geometry;
 }
 
@@ -254,7 +257,7 @@ function createWaterMaterial(quality) {
             {
                 uTime: { value: 0 },
                 uStrength: { value: quality === 'high' ? 1 : 0.8 },
-                uSunDir: { value: SUN_DIRECTION.clone() },
+                uSunDir: { value: new THREE.Vector3(SUN_DIRECTION.x, SUN_DIRECTION.y, SUN_DIRECTION.z) },
                 uShallow: { value: new THREE.Color(0x58d6c9) },
                 uDeep: { value: new THREE.Color(0x0b5d8c) },
                 uSky: { value: new THREE.Color(0x87ceeb) },
@@ -282,6 +285,25 @@ export function createRiver(scene, baseTerrainHeight, quality = 'medium') {
 
     scene.add(root);
     return { root, water, quality, time: 0, baseTerrainHeight };
+}
+
+// Depth of the water at (x, z): surface height minus ground height, or 0 on
+// land. Used for wading speed and the water trail.
+export function getWaterDepth(river, x, z) {
+    if (!river) return 0;
+    const sample = sampleRiver(x, z, BANK_BLEND);
+    if (!sample) return 0;
+    const { levels, pathLength } = river.water.geometry.userData;
+    const position = Math.min(1, Math.max(0, sample.along / pathLength)) * (levels.length - 1);
+    const index = Math.min(levels.length - 2, Math.floor(position));
+    const level = levels[index] + (levels[index + 1] - levels[index]) * (position - index);
+    const depth = level - river.baseTerrainHeight(x, z);
+    return depth > 0 ? depth : 0;
+}
+
+// Height of the water surface near (x, z); only meaningful where the depth is above 0.
+export function getWaterSurfaceHeight(river, x, z) {
+    return river.baseTerrainHeight(x, z) + getWaterDepth(river, x, z);
 }
 
 export function updateRiver(river, dt, active = true) {
