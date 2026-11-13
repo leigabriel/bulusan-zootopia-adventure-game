@@ -16,27 +16,23 @@ export function ActionButton({
     ...props
 }) {
     const variantClasses = {
-        primary: 'bg-emerald-500 text-white shadow-[0_4px_0_0_#065f46]',
-        secondary: 'bg-white text-slate-900 shadow-[0_4px_0_0_#cbd5e1]',
-        danger: 'bg-rose-500 text-white shadow-[0_4px_0_0_#9f1239]',
-        warning: 'bg-amber-400 text-amber-950 shadow-[0_4px_0_0_#92400e]',
-        ghost: 'bg-emerald-950/70 text-white shadow-[0_4px_0_0_rgba(0,0,0,0.3)]',
+        primary: 'sz-btn--primary',
+        secondary: '',
+        danger: 'sz-btn--danger',
+        warning: 'sz-btn--sun',
+        ghost: 'sz-btn--ghost',
     };
 
-    const sizeClasses = {
-        sm: 'ui-button-secondary px-3 rounded-xl',
-        md: 'ui-button-primary px-5 rounded-xl',
-        lg: 'ui-button-primary px-8 rounded-2xl',
-    };
+    const sizeClasses = { sm: 'sz-btn--sm', md: '', lg: 'sz-btn--lg' };
 
     return (
         <button
             type="button"
             data-ui-button="true"
             className={cx(
-                'ui-action-button inline-flex items-center justify-center gap-2 font-black uppercase transition-all active:translate-y-1 active:shadow-none disabled:pointer-events-none disabled:opacity-50',
-                variantClasses[variant] || variantClasses.primary,
-                sizeClasses[size] || sizeClasses.md,
+                'sz-btn uppercase',
+                variantClasses[variant] ?? variantClasses.primary,
+                sizeClasses[size] ?? '',
                 className,
             )}
             {...props}
@@ -55,7 +51,7 @@ export function IconButton({ children, className = '', ...props }) {
             type="button"
             data-ui-button="true"
             className={cx(
-                'ui-icon-button inline-flex items-center justify-center rounded-full bg-white text-slate-900 shadow-[0_4px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none',
+                'sz-icon-btn sz-icon-btn--round',
                 className,
             )}
             {...props}
@@ -76,32 +72,21 @@ export function GameButton({
     ...props
 }) {
     const colorClasses = {
-        slate: 'bg-white text-slate-900 shadow-[0_6px_0_0_#cbd5e1]',
-        dark: 'bg-slate-900 text-white shadow-[0_6px_0_0_#0f172a]',
-        emerald: 'bg-emerald-500 text-white shadow-[0_6px_0_0_#065f46]',
-        rose: 'bg-rose-500 text-white shadow-[0_6px_0_0_#9f1239]',
-        amber: 'bg-amber-500 text-white shadow-[0_6px_0_0_#92400e]',
-        sky: 'bg-sky-500 text-white shadow-[0_6px_0_0_#075985]',
+        slate: '',
+        dark: 'sz-btn--ghost',
+        emerald: 'sz-btn--primary',
+        rose: 'sz-btn--danger',
+        amber: 'sz-btn--sun',
+        sky: 'sz-btn--sky',
     };
 
-    const sizeClasses = {
-        sm: 'ui-button-secondary px-4 rounded-xl',
-        md: 'ui-button-primary px-8 rounded-2xl',
-        lg: 'ui-button-primary px-12 rounded-3xl',
-    };
-
-    const colorStyle = colorClasses[color] || colorClasses.slate;
-    const sizeStyle = sizeClasses[size] || sizeClasses.md;
+    const sizeClasses = { sm: 'sz-btn--sm', md: '', lg: 'sz-btn--lg' };
 
     return (
         <button
             type="button"
-            className={cx(
-                'ui-action-button font-black uppercase transition-all active:translate-y-1 active:shadow-none',
-                colorStyle,
-                sizeStyle,
-                className
-            )}
+            data-ui-button="true"
+            className={cx('sz-btn uppercase', colorClasses[color] ?? '', sizeClasses[size] ?? '', className)}
             {...props}
         >
             {children}
@@ -114,7 +99,7 @@ export function SurfacePanel({ children, className = '', ...props }) {
         <div
             data-ui-panel="true"
             className={cx(
-                'ui-surface rounded-3xl border-2 border-emerald-100 bg-white shadow-[0_12px_0_0_rgba(5,46,22,0.1)]',
+                'ui-surface sz-card',
                 className,
             )}
             {...props}
@@ -145,7 +130,7 @@ export function PaginationControls({
             >
                 <span aria-hidden="true">&lsaquo;</span> {previousLabel === 'Previous' ? 'Back' : previousLabel}
             </ActionButton>
-            <span className="min-w-16 rounded-full bg-emerald-950 px-3 py-1.5 text-center text-xs font-black text-white shadow-[0_3px_0_0_#022c22]" aria-live="polite">
+            <span className="sz-chip sz-chip--sun min-w-16 justify-center" aria-live="polite">
                 {page + 1} of {pageCount}
             </span>
             <ActionButton
@@ -241,7 +226,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
                 aria-label="Close modal"
                 onClick={closeOnBackdrop ? onClose : undefined}
                 className={cx(
-                    'absolute inset-0 bg-emerald-950/40 backdrop-blur-xs transition-opacity duration-250 ease-out',
+                    'absolute inset-0 bg-[#3b2a1a]/45 backdrop-blur-xs transition-opacity duration-250 ease-out',
                     active ? 'opacity-100' : 'opacity-0'
                 )}
             />
@@ -255,14 +240,14 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
                     maxWidth[size] || maxWidth.md,
                 )}
             >
-                <div className="ui-modal-header flex shrink-0 items-center justify-between gap-3 border-b-2 border-emerald-50">
-                    {title ? <h2 id={titleId} className="ui-modal-title truncate font-black text-slate-900 uppercase tracking-tight">{title}</h2> : <span />}
-                    {showClose ? <button type="button" onClick={onClose} aria-label="Close" className="ui-close-button inline-flex shrink-0 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button> : null}
+                <div className="ui-modal-header sz-card-header shrink-0">
+                    {title ? <h2 id={titleId} className="ui-modal-title sz-title truncate uppercase">{title}</h2> : <span />}
+                    {showClose ? <button type="button" data-ui-button="true" onClick={onClose} aria-label="Close" className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button> : null}
                 </div>
                 <div className="ui-modal-body min-h-0 flex-1 overflow-y-auto" data-ui-scrollable="true">
                     {children}
                 </div>
-                {footer ? <footer className="ui-modal-footer shrink-0 border-t-2 border-emerald-50">{footer}</footer> : null}
+                {footer ? <footer className="ui-modal-footer shrink-0 border-t-[3px] border-(--sz-line)">{footer}</footer> : null}
             </SurfacePanel>
         </div>
     );
@@ -279,7 +264,7 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
                 aria-label="Close panel"
                 onClick={onClose}
                 className={cx(
-                    'fixed inset-0 z-90 bg-emerald-950/40 backdrop-blur-xs transition-opacity',
+                    'fixed inset-0 z-90 bg-[#3b2a1a]/45 backdrop-blur-xs transition-opacity',
                     isOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
                 )}
             />
@@ -287,16 +272,15 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
             <aside
                 data-ui-panel="true"
                 className={cx(
-                    'fixed top-0 z-95 h-dvh w-[min(28rem,92vw)] border-r border-emerald-100 bg-white transition-transform duration-300',
-                    'shadow-[12px_0_0_0_rgba(5,46,22,0.05)]',
+                    'sz-card fixed top-0 z-95 h-dvh w-[min(28rem,92vw)] rounded-none transition-transform duration-300',
                     sidePosition,
                     isOpen ? 'translate-x-0' : hiddenPosition,
                 )}
             >
                 <div className="flex h-full flex-col">
-                    <div className="flex items-center justify-between border-b-2 border-emerald-50 px-4 py-3 sm:px-6 sm:py-5">
-                        <h3 className="text-sm sm:text-base font-black uppercase tracking-[0.12em] text-emerald-900">{title}</h3>
-                        <button type="button" onClick={onClose} aria-label="Close panel" className="ui-close-button inline-flex items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95">&times;</button>
+                    <div className="sz-card-header">
+                        <h3 className="sz-title uppercase">{title}</h3>
+                        <button type="button" data-ui-button="true" onClick={onClose} aria-label="Close panel" className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close">&times;</button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-ui-scrollable="true">
                         {children}
