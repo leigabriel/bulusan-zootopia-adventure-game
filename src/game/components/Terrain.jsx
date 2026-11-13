@@ -389,6 +389,77 @@ export function createFence(scene, quality = 'medium') {
     return createSquareFence(scene, 0, 0, PLAYABLE_BOUNDARY, quality);
 }
 
+// Painted face for the tiger signpost: a red warning header and short rules.
+function createTigerWarningTexture() {
+    const width = 1360;
+    const height = 520;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const family = '"Simply Rounded", "Trebuchet MS", sans-serif';
+    // Shrink each line until it fits so nothing runs off the board.
+    const fitText = (text, x, y, size, maxWidth, weight = 800) => {
+        let px = size;
+        ctx.font = `${weight} ${px}px ${family}`;
+        while (ctx.measureText(text).width > maxWidth && px > 20) {
+            px -= 2;
+            ctx.font = `${weight} ${px}px ${family}`;
+        }
+        ctx.fillText(text, x, y);
+    };
+
+    ctx.fillStyle = '#fff4d8';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#d63a30';
+    ctx.fillRect(0, 0, width, 150);
+    ctx.fillStyle = '#ffd23f';
+    for (let x = -40; x < width; x += 80) {
+        ctx.beginPath();
+        ctx.moveTo(x, 150);
+        ctx.lineTo(x + 40, 150);
+        ctx.lineTo(x + 70, 170);
+        ctx.lineTo(x + 30, 170);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    fitText('\u26A0 WARNING \u26A0', width / 2, 62, 96, width - 80, 900);
+    fitText('DANGEROUS ANIMAL: BENGAL TIGER', width / 2, 122, 48, width - 80);
+
+    ctx.fillStyle = '#3b2a1a';
+    ctx.textAlign = 'left';
+    const rules = [
+        'Stay outside the fence at all times.',
+        'Never climb, enter or reach through it.',
+        'Do not feed, call or throw things at the tiger.',
+        'Keep your voice low and walk, do not run.',
+    ];
+    rules.forEach((text, index) => {
+        const y = 226 + index * 66;
+        ctx.fillStyle = '#d63a30';
+        ctx.beginPath();
+        ctx.arc(70, y, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        fitText('!', 70, y + 2, 34, 30, 900);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#3b2a1a';
+        fitText(text, 112, y + 2, 46, width - 150);
+    });
+    ctx.fillStyle = '#d63a30';
+    ctx.textAlign = 'center';
+    fitText('Watch from the viewing area only. Ask a ranger for help.', width / 2, height - 36, 40, width - 80, 800);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
+}
+
 export function createTigerEnclosure(scene, quality = 'medium') {
     const fence = createSquareFence(scene, TIGER_ENCLOSURE.x, TIGER_ENCLOSURE.z, TIGER_ENCLOSURE.halfSize, quality);
 
@@ -411,8 +482,17 @@ export function createTigerEnclosure(scene, quality = 'medium') {
         new THREE.MeshStandardMaterial({ color: 0xf2e2b8, roughness: 0.85 })
     );
     board.position.set(view.x + 3.2, groundY + 3.0, view.z + 1.2);
-    // Face the board towards the enclosure (north, -z) so visitors read it.
-    board.rotation.y = Math.PI;
+    // The board faces the viewing point (+z), so visitors looking at the
+    // enclosure from the dirt circle read it from the front.
+    board.rotation.y = 0;
+    // The warning text, painted just in front of the board face.
+    const warningTexture = createTigerWarningTexture();
+    const warning = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.3, 1.26),
+        new THREE.MeshBasicMaterial({ map: warningTexture, toneMapped: false })
+    );
+    warning.position.z = 0.105;
+    board.add(warning);
     area.add(dirt, post, board);
     scene.add(area);
     return { fence, area };
