@@ -11,6 +11,9 @@ import { createSky, updateSky, disposeSky } from './components/Sky.jsx';
 import { createWaterTrail } from './components/WaterTrail.jsx';
 import { createRiver, updateRiver, updateRiverQuality, disposeRiver, getRiverMetrics, isLandAccessible, findAccessiblePosition, isRiverArea } from './components/River.jsx';
 import { loadNewHouses } from './components/Structures.jsx';
+import { loadWorldProps } from './components/WorldProps.jsx';
+import { loadRiverAnimals } from './components/RiverAnimals.jsx';
+import { releaseGLBCache } from './utils/glbCache.js';
 import { createGLTFLoader } from './utils/gltfLoader.js';
 import { applyHumanSkinColor } from './utils/characterMaterials.js';
 import {
@@ -60,6 +63,9 @@ import {
 } from './utils/storage.js';
 import { MISSION_POINTS, PLAYER_START_OFFSET, STAFF_START_POSITIONS, STATUE_CENTER } from './data/worldPoints.js';
 import { createContactShadow } from './utils/contactShadow.js';
+import {
+    ZOOM_DEFAULT, clampZoom, easeCollisionFraction, easeZoom, freeCameraFraction,
+} from './utils/cameraZoom.js';
 import {
     completeActiveStoryTask,
     getActiveStoryTask,
@@ -1131,7 +1137,7 @@ function MiniZooGame() {
     const beginFeed = useCallback((animal, info) => {
         const missionAnimal = getAnimalBookEntry(info?.name)?.name || info?.name;
         if (!animal || !missionAnimal || feedingInProgressRef.current || !gameStartedRef.current || isAnimalFed(missionAnimal)) return;
-        if (info.dangerous || missionAnimal === 'Bengal Tiger') return;
+        if (info.dangerous || info.observeOnly || missionAnimal === 'Bengal Tiger') return;
         const story = missionProgressRef.current;
         if (missionAnimal === 'Domestic Horse' && (story.activeTaskId !== 'feed-horse' || !story.hasHay)) return;
         if (missionAnimal === 'Rabbit' && (story.activeTaskId !== 'feed-rabbit' || !story.hasCarrot)) return;
@@ -1336,6 +1342,8 @@ function MiniZooGame() {
                 birdsPromise
             ]);
             state.ambientBirds = loadedBirds;
+            const worldProps = await loadWorldProps(scene, isMobile ? 'mobile' : quality, { existingTrees: loadedTrees });
+            state.worldProps = worldProps;
 
             // Create collision obstacles based on the loaded meshes
             state.obstacles = [];
@@ -1344,6 +1352,7 @@ function MiniZooGame() {
             loadedTrees.filter(tree => !tree.outer).forEach(t => state.obstacles.push({ x: t.x, z: t.z, radius: t.radius }));
             loadedRocks.forEach(r => state.obstacles.push({ x: r.position.x, z: r.position.z, radius: r.scale.x * 1.1 }));
             loadedBushes.forEach(b => state.obstacles.push({ x: b.position.x, z: b.position.z, radius: b.scale.x * 0.6 }));
+            worldProps.obstacles.forEach((obstacle) => state.obstacles.push(obstacle));
 
             if (housesResult) {
                 housesResult.forEach(house => {
@@ -1414,6 +1423,8 @@ function MiniZooGame() {
             // Pass the obstacles and initial volume to the animals
             state.animals = await loadGLTFAnimals(scene, state.obstacles, initialSfxVolume);
             state.animals.forEach((animal) => { animal.dynamicObstacles = state.animalObstacles; });
+            // Koi and frogs in the river: watch-only, never block the player.
+            state.animals.push(...await loadRiverAnimals(scene, state.river));
             setLoadProgress(80);
 
             state.isMobile = isMobile;
@@ -1433,6 +1444,9 @@ function MiniZooGame() {
             const dialogueLookTarget = new THREE.Vector3();
             const dialogueDirection = new THREE.Vector3();
             let smoothedFollowY = camera.position.y;
+            let zoomCurrent = ZOOM_DEFAULT;
+            let collisionFraction = 1;
+            const cameraFocus = new THREE.Vector3();
 
             let lastRenderTime = performance.now();
             let nearbyTimer = 0;
@@ -1475,7 +1489,7 @@ function MiniZooGame() {
                 const obstaclePool = state.animalObstaclePool;
                 let obstacleCount = 0;
                 state.animals.forEach((animal) => {
-                    if (!animal?.group) return;
+                    if (!animal?.group || animal.noCollision) return;
                     const obstacle = obstaclePool[obstacleCount] || (obstaclePool[obstacleCount] = {});
                     obstacle.x = animal.group.position.x;
                     obstacle.z = animal.group.position.z;
@@ -1634,17 +1648,28 @@ function MiniZooGame() {
                     : 1 - ((-2 * cameraTransitionProgress + 2) ** 3) / 2;
 
                 if (cameraModeRef.current === 'third' && state.playerAnchor) {
-                    const followDistance = isMobile ? 5.6 : 7.0;
-                    const followHeight = isMobile ? 3.0 : 3.5;
+                    state.cameraZoomTarget = clampZoom(state.cameraZoomTarget ?? ZOOM_DEFAULT);
+                    zoomCurrent = easeZoom(zoomCurrent, state.cameraZoomTarget, dt);
+
+                    const followDistance = (isMobile ? 5.6 : 7.0) * zoomCurrent;
+                    const followHeight = (isMobile ? 3.0 : 3.5) * zoomCurrent;
                     const pitchLift = Math.sin(-state.pitch) * 1.3;
                     const followYBlend = 1 - Math.exp(-10 * dt);
                     smoothedFollowY += (playerPosition.y - smoothedFollowY) * followYBlend;
 
+                    cameraFocus.set(playerPosition.x, smoothedFollowY + 1.85, playerPosition.z);
                     desiredCameraPosition.set(
                         playerPosition.x + Math.sin(state.yaw) * followDistance,
                         smoothedFollowY + followHeight + pitchLift,
                         playerPosition.z + Math.cos(state.yaw) * followDistance
                     );
+
+                    // Keep the camera out of terrain and obstacles: pull in fast, ease back out slowly.
+                    const freeFraction = freeCameraFraction(cameraFocus, desiredCameraPosition, getTerrainHeight, state.obstacles);
+                    collisionFraction = easeCollisionFraction(collisionFraction, freeFraction, dt);
+                    if (collisionFraction < 0.999) {
+                        desiredCameraPosition.lerpVectors(cameraFocus, desiredCameraPosition, collisionFraction);
+                    }
 
                     const minCameraY = getTerrainHeight(desiredCameraPosition.x, desiredCameraPosition.z) + 1.4;
                     desiredCameraPosition.y = Math.max(desiredCameraPosition.y, minCameraY);
@@ -1880,7 +1905,10 @@ function MiniZooGame() {
                             material.dispose();
                         });
                     });
+                    state.worldProps?.dispose();
+                    state.worldProps = null;
                     releaseAnimalModelCache();
+                    releaseGLBCache();
                     releaseTerrainModelCache();
                     disposeRiver(state.river);
                     state.river = null;
@@ -2722,6 +2750,7 @@ function MiniZooGame() {
     const nearbyAnimalInfo = nearbyAnimal ? (nearbyAnimal.getInfo ? nearbyAnimal.getInfo() : nearbyAnimal.config) : null;
     const nearbyAnimalFed = nearbyAnimalInfo ? isAnimalFed(nearbyAnimalInfo.name) : false;
     const isDangerousAnimalNearby = Boolean(nearbyAnimalInfo?.dangerous);
+    const isObserveOnlyAnimalNearby = Boolean(nearbyAnimalInfo?.observeOnly);
     const nearbyAnimalName = getAnimalBookEntry(nearbyAnimalInfo?.name)?.name || nearbyAnimalInfo?.name;
     const horseBlocked = nearbyAnimalName === 'Domestic Horse' && (missionProgress.activeTaskId !== 'feed-horse' || !missionProgress.hasHay);
     const rabbitBlocked = nearbyAnimalName === 'Rabbit' && (missionProgress.activeTaskId !== 'feed-rabbit' || !missionProgress.hasCarrot);
@@ -2801,7 +2830,7 @@ function MiniZooGame() {
                      {!interfaceOpen ? <Joystick baseRef={baseRef} stickRef={stickRef} isTouchDevice={isTouchDevice} /> : null}
                       {!interfaceOpen ? <JumpButton jumpRef={jumpRef} isTouchDevice={isTouchDevice} /> : null}
                      <HoldToFeedControl
-                         visible={Boolean(nearbyAnimal && !nearbyStaff && !isDangerousAnimalNearby && gameStarted && characterReady && !interfaceOpen)}
+                         visible={Boolean(nearbyAnimal && !nearbyStaff && !isDangerousAnimalNearby && !isObserveOnlyAnimalNearby && gameStarted && characterReady && !interfaceOpen)}
                          animalName={nearbyAnimalInfo?.name}
                          progress={nearbyAnimalFed ? 1 : feedingProgress}
                          isHolding={isFeeding}
@@ -2835,6 +2864,7 @@ function MiniZooGame() {
                         tasks={tasks}
                         storyTasks={storyTasks}
                         activeTaskId={activeStoryTask.id}
+                        taskProgress={taskProgress}
                         onTaskClick={() => setTasksOpen(false)}
                         onResetTasks={handleResetTasks}
                         onViewCertificate={missionProgress.certificateUnlocked ? () => { setTasksOpen(false); setShowCertificate(true); } : undefined}

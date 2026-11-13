@@ -25,6 +25,13 @@ const ANIMAL_MODELS = [
   'rabbit/scene.gltf',
   'Stag.gltf',
   'tiger/scene.gltf',
+  'forest-rabbit.glb',
+  'frog.glb',
+  'goat.glb',
+  'koi.glb',
+  'owl.glb',
+  'parrot.glb',
+  'pigeon.glb',
 ];
 
 const ANIMAL_MODEL_DEPENDENCIES = [
@@ -46,6 +53,17 @@ const ANIMAL_MODEL_DEPENDENCIES = [
   '/models/animals/rabbit/scene.bin',
   '/models/animals/tiger/scene.bin',
   '/models/animals/tiger/textures/Tiger_Default_baseColor.webp',
+];
+
+const WORLD_PROP_MODELS = [
+  '/models/natures/oak.glb',
+  '/models/natures/shade-tree.glb',
+  '/models/natures/cherry-tree.glb',
+  '/models/natures/fallen-log.glb',
+  '/models/natures/haystack.glb',
+  '/models/structures/livery-stable.glb',
+  '/models/structures/parrot-run.glb',
+  '/models/structures/safety-sign.glb',
 ];
 
 const AUDIO_ASSETS = [
@@ -77,6 +95,7 @@ export const ESSENTIAL_ASSET_PATHS = [
   ...CHARACTER_MODELS.map((file) => `/models/characters/${file}`),
   ...ANIMAL_MODELS.map((file) => `/models/animals/${file}`),
   ...ANIMAL_MODEL_DEPENDENCIES,
+  ...WORLD_PROP_MODELS,
 ];
 
 function normalizeAssetPath(path) {

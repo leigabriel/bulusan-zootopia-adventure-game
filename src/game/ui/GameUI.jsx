@@ -885,74 +885,136 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
     );
 };
 
+function DirectionArrow({ direction }) {
+    return (
+        <svg viewBox="0 0 24 24" className={cx('sz-nudge h-6 w-6 shrink-0', direction < 0 ? '-scale-x-100' : '')} aria-hidden="true">
+            <path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+/**
+ * MissionCard: the one way a story task is shown. The HUD indicator (compact)
+ * and the task panel (full) use this same card, so a child sees the same
+ * number badge, title, progress chip and arrow in both places.
+ */
+export function MissionCard({ task, status = '', navigation, variant = 'compact', expanded = false, onToggle, guidanceEnabled, onToggleGuidance, onOpenTasks }) {
+    if (!task) return null;
+    const full = variant === 'full';
+    const showArrow = navigation && navigation.onScreen === false && navigation.direction;
+    const distance = navigation?.distance != null ? `${navigation.distance} m` : '';
+    const chipText = status || distance;
+    const open = full || expanded;
+
+    const header = (
+        <>
+            <span className="sz-badge h-10! w-10! text-base!">{task.number}</span>
+            <span className="min-w-0 flex-1 text-left">
+                <span className="sz-label block text-[14px]! leading-none">Task {task.number} of 30</span>
+                <span className={cx('block font-black leading-tight text-(--sz-ink)', full ? 'text-[18px]' : 'truncate text-[16px]')}>{task.title}</span>
+            </span>
+            {chipText ? <span className="sz-chip sz-chip--sun shrink-0">{chipText}</span> : null}
+            {showArrow ? <span className="shrink-0 text-(--sz-green-deep)"><DirectionArrow direction={navigation.direction} /></span> : null}
+            {!full ? <span className="shrink-0 text-(--sz-ink-soft) text-lg font-black" aria-hidden="true">{expanded ? '▴' : '▾'}</span> : null}
+        </>
+    );
+
+    return (
+        <div className={cx('sz-mission overflow-hidden', full ? '' : 'w-[min(62vw,26rem)]')} data-ui-panel="true">
+            {full ? (
+                <div className="flex items-center gap-2 px-3 py-2">{header}</div>
+            ) : (
+                <button type="button" onClick={onToggle} aria-expanded={expanded} aria-label={`${expanded ? 'Hide' : 'Show'} current task`} className="flex min-h-14 w-full items-center gap-2 px-3 py-1.5">{header}</button>
+            )}
+            {open ? (
+                <div className="border-t-2 border-(--sz-sun)/60 bg-(--sz-sun-tint) px-3 py-2">
+                    <p className="sz-text text-[15px]! leading-snug">{task.instruction}</p>
+                    {!full ? (
+                        <div className="mt-2 flex gap-2">
+                            <button type="button" data-ui-button="true" onClick={onToggleGuidance} className="sz-btn sz-btn--sm sz-btn--ghost flex-1" aria-pressed={guidanceEnabled}>{guidanceEnabled ? 'Guide: On' : 'Guide: Off'}</button>
+                            <button type="button" data-ui-button="true" onClick={onOpenTasks} className="sz-btn sz-btn--sm sz-btn--sun flex-1">All Tasks</button>
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
     const menuIcon = '/ui-buttons/settings-button.png';
     const taskIcon = '/ui-buttons/task-list-button.png';
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
+    const [taskCardVisible, setTaskCardVisible] = useState(() => {
+        try { return localStorage.getItem('zoo-task-card-visible') !== '0'; } catch { return true; }
+    });
+    const setCardVisible = (visible) => {
+        setTaskCardVisible(visible);
+        if (!visible) setTaskTrackerOpen(false);
+        try { localStorage.setItem('zoo-task-card-visible', visible ? '1' : '0'); } catch { /* storage unavailable */ }
+    };
 
     return (
-        <div className="hud-top-layout pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.55rem)] z-65 px-2 select-none">
-            <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-1 sm:gap-3">
+        <div className="hud-top-layout pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.5rem)] z-65 select-none">
+            <div className="flex w-full items-start justify-between gap-2">
 
-                {/* Left Side: Player & Menu */}
-                <div className="pointer-events-auto flex min-w-0 items-center gap-1.5 sm:gap-3" data-ui-hud="true">
-                    <button
-                        onClick={onMenuClick}
-                        className="ui-hud-button group flex items-center justify-center transition-all active:scale-95"
-                        aria-label="Menu"
-                        data-ui-button="true"
-                    >
-                        <img src={menuIcon} alt="" className="h-full w-full object-contain group-hover:scale-110 transition-transform" />
-                    </button>
-
-                    <button type="button" onClick={onPlayerDetails} aria-label="Edit player details" className="hud-player-pill flex min-h-11 min-w-0 items-center gap-2 rounded-2xl border-2 border-white/50 bg-emerald-950/80 px-3 py-1.5 text-left backdrop-blur-md shadow-xl transition-transform active:scale-95 sm:px-4 sm:py-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                        <p className="max-w-28 truncate text-[11px] font-black uppercase tracking-wide text-white">
-                            {playerName || 'Explorer'}
-                        </p>
-                    </button>
+                {/* Left: menu + player, with the current task right underneath */}
+                <div className="flex min-w-0 flex-col items-start gap-2">
+                    <div className="pointer-events-auto flex min-w-0 items-center gap-2" data-ui-hud="true">
+                        <button type="button" onClick={onMenuClick} className="sz-icon-btn" aria-label="Menu" data-ui-button="true">
+                            <img src={menuIcon} alt="" />
+                        </button>
+                        <button type="button" onClick={onPlayerDetails} aria-label="Edit player details" className="hud-player-pill sz-card flex min-h-12 min-w-0 items-center gap-2 rounded-2xl! px-3 shadow-none! active:scale-95" data-ui-button="true">
+                            <span className="h-3 w-3 shrink-0 rounded-full bg-(--sz-green)" />
+                            <span className="max-w-32 truncate text-[16px] font-black">{playerName || 'Explorer'}</span>
+                        </button>
+                    </div>
+                    {currentTask ? (
+                        <div className="mission-tracker pointer-events-auto flex items-start gap-1.5" data-ui-hud="true">
+                            {taskCardVisible ? (
+                                <>
+                                    <MissionCard
+                                        task={currentTask}
+                                        status={missionItem || taskProgress}
+                                        navigation={navigation}
+                                        expanded={taskTrackerOpen}
+                                        onToggle={() => setTaskTrackerOpen((open) => !open)}
+                                        guidanceEnabled={guidanceEnabled}
+                                        onToggleGuidance={onToggleGuidance}
+                                        onOpenTasks={onTasksClick}
+                                    />
+                                    <button type="button" data-ui-button="true" onClick={() => setCardVisible(false)} aria-label="Hide current task" className="sz-icon-btn sz-icon-btn--round h-9! w-9! min-h-0! text-base!">&times;</button>
+                                </>
+                            ) : (
+                                <button type="button" data-ui-button="true" onClick={() => setCardVisible(true)} aria-label="Show current task" className="sz-mission flex min-h-12 items-center gap-2 px-2.5 py-1">
+                                    <span className="sz-badge h-8! w-8! text-sm!">{currentTask.number}</span>
+                                    <span className="sz-label text-[14px]!">Task</span>
+                                    <span className="text-lg font-black text-(--sz-ink-soft)" aria-hidden="true">▾</span>
+                                </button>
+                            )}
+                        </div>
+                    ) : null}
                 </div>
 
-                <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+0.55rem)] left-1/2 z-65 flex -translate-x-1/2 items-center gap-0.5 rounded-2xl border-2 border-amber-200 bg-[#fff8df]/95 p-0.5 shadow-lg backdrop-blur-sm sm:gap-1 sm:p-1" data-ui-hud="true" aria-label="Exploration tools">
-                    <button type="button" onClick={onBook} className="group flex h-11 w-11 items-center justify-center rounded-xl hover:bg-amber-100 active:scale-95" aria-label="Open Animal Book" data-ui-button="true">
-                        <img src="/ui-buttons/book-button.png" alt="" className="h-10 w-10 object-contain" />
-                    </button>
-                    <button type="button" onClick={onCamera} className="group flex h-11 w-11 items-center justify-center rounded-xl hover:bg-amber-100 active:scale-95" aria-label="Take a photo" data-ui-button="true">
-                        <img src="/ui-buttons/camera-button.png" alt="" className="h-10 w-10 object-contain" />
-                    </button>
-                </div>
-
-                {/* Right Side: Tasks */}
-                <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-3" data-ui-hud="true">
-                    <button
-                        onClick={onTasksClick}
-                        className="ui-hud-button group flex items-center justify-center transition-all active:scale-95"
-                        aria-label="Tasks"
-                        data-ui-button="true"
-                        data-sfx-self="true"
-                    >
-                        <img src={taskIcon} alt="" className="h-full w-full object-contain group-hover:scale-110 transition-transform" />
+                {/* Right: tasks */}
+                <div className="pointer-events-auto flex flex-col items-end gap-2" data-ui-hud="true">
+                    <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label="Tasks" data-ui-button="true" data-sfx-self="true">
+                        <img src={taskIcon} alt="" />
                     </button>
                 </div>
             </div>
-            {currentTask ? (
-                <div className="mission-tracker pointer-events-auto absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[calc(var(--ui-hud-size)+0.4rem)] flex max-w-[calc(100vw-1rem)] items-start gap-1.5">
-                    <button type="button" onClick={() => setTaskTrackerOpen((open) => !open)} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-emerald-950/90 px-2 text-[11px] font-black text-white shadow-lg" aria-expanded={taskTrackerOpen} aria-label={`${taskTrackerOpen ? 'Hide' : 'Show'} current task`}>
-                        {taskTrackerOpen ? 'Less' : `Task ${currentTask.number}`}
-                    </button>
-                    {taskTrackerOpen ? <div className="mission-tracker-detail flex w-[min(60vw,30rem)] max-h-[18dvh] rounded-xl bg-emerald-950/90 text-white shadow-lg">
-                      <button type="button" onClick={onTasksClick} className="min-w-0 flex-1 px-3 py-2 text-left" aria-label="Open complete task panel">
-                        <div className="flex items-center justify-between gap-2 text-[11px] font-black uppercase tracking-wide text-amber-300">
-                            <span>Task {currentTask.number}/30</span>
-                            <span>{missionItem || taskProgress || (navigation?.distance != null ? `${navigation.distance} m` : '')}</span>
-                        </div>
-                        <p className="wrap-break-word text-[11px] font-black leading-snug">{!navigation?.onScreen ? (navigation.direction < 0 ? '< ' : '> ') : ''}{currentTask.title}</p>
-                        <p className="mission-tracker-instruction mt-0.5 wrap-break-word text-[11px] leading-snug text-emerald-100">{currentTask.instruction}</p>
-                      </button>
-                      <button type="button" onClick={onToggleGuidance} className="min-h-11 shrink-0 border-l border-emerald-800 px-2 text-[11px] font-black text-amber-200" aria-label={`${guidanceEnabled ? 'Hide' : 'Show'} mission guidance`}>{guidanceEnabled ? 'Guide on' : 'Guide off'}</button>
-                    </div> : null}
-                </div>
-            ) : null}
+
+            {/* Bottom centre: exploration tools, icon + word so they read without guessing */}
+            <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] left-1/2 z-65 flex -translate-x-1/2 items-center gap-2" data-ui-hud="true" aria-label="Exploration tools">
+                <button type="button" onClick={onBook} className="sz-icon-btn w-[72px]!" aria-label="Open Animal Book" data-ui-button="true">
+                    <img src="/ui-buttons/book-button.png" alt="" />
+                    <span className="text-[14px] leading-none">Book</span>
+                </button>
+                <button type="button" onClick={onCamera} className="sz-icon-btn w-[72px]!" aria-label="Take a photo" data-ui-button="true">
+                    <img src="/ui-buttons/camera-button.png" alt="" />
+                    <span className="text-[14px] leading-none">Photo</span>
+                </button>
+            </div>
         </div>
     );
 }
@@ -970,156 +1032,96 @@ export function SettingsPanel({ isOpen, onClose, onQuit, cameraMode, onCameraMod
     );
 }
 
-export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], activeTaskId, onTaskClick, onResetTasks, onViewCertificate }) {
+export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], activeTaskId, taskProgress = '', onTaskClick, onResetTasks, onViewCertificate }) {
     const { mounted, active } = useModalTransition(isOpen, 300);
-    const [page, setPage] = useState(0);
+    const [tab, setTab] = useState('story');
 
-    // 3 items per page for clean mobile android visibility
-    const pageSize = 3;
-    const completedCount = tasks.filter((task) => task.completed).length;
-    const progressPercent = (completedCount / (tasks.length || 1)) * 100;
-    const pageCount = Math.max(1, Math.ceil(tasks.length / pageSize));
-    const currentPage = Math.min(page, pageCount - 1);
-    const visibleTasks = tasks.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
+    const fedCount = tasks.filter((task) => task.completed).length;
+    const storyDone = storyTasks.filter((task) => task.completed).length;
+    const activeTask = storyTasks.find((task) => task.id === activeTaskId) || null;
+    const showingStory = tab === 'story';
+    const done = showingStory ? storyDone : fedCount;
+    const total = showingStory ? storyTasks.length : tasks.length;
+    const percent = (done / (total || 1)) * 100;
 
     if (!mounted) return null;
 
     return (
-        <div className="fixed inset-0 z-110 flex items-center justify-center p-[var(--ui-edge-gap)] pt-[max(var(--ui-edge-gap),env(safe-area-inset-top))] pr-[max(var(--ui-edge-gap),env(safe-area-inset-right))] pb-[max(var(--ui-edge-gap),env(safe-area-inset-bottom))] pl-[max(var(--ui-edge-gap),env(safe-area-inset-left))] pointer-events-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label="Zoo task checklist">
-            {/* Backdrop Fade */}
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-[var(--ui-edge-gap)] pt-[max(var(--ui-edge-gap),env(safe-area-inset-top))] pr-[max(var(--ui-edge-gap),env(safe-area-inset-right))] pb-[max(var(--ui-edge-gap),env(safe-area-inset-bottom))] pl-[max(var(--ui-edge-gap),env(safe-area-inset-left))] pointer-events-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label="Adventure tasks">
             <button
                 type="button"
-                className={cx(
-                    'pointer-events-auto fixed inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity duration-300 ease-out',
-                    active ? 'opacity-100' : 'opacity-0'
-                )}
+                className={cx('pointer-events-auto fixed inset-0 bg-[#3b2a1a]/45 backdrop-blur-sm transition-opacity duration-300 ease-out', active ? 'opacity-100' : 'opacity-0')}
                 onClick={onClose}
-                aria-label="Close task checklist"
+                aria-label="Close tasks"
             />
 
-            {/* Banner Style Top-Right Container (Fits screen bounds) */}
-            <section
-                className={cx(
-                    'pointer-events-auto relative flex w-[min(86vw,560px)] max-h-[min(78dvh,360px)] flex-col overflow-hidden rounded-2xl border-3 border-amber-950/80 bg-[#fffef0] text-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.45)] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform origin-top-right',
-                    active ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-                )}
-            >
-                {/* Hanging Banner Header Plaque */}
-                <header className="relative shrink-0 bg-linear-to-r from-amber-800 via-amber-700 to-amber-800 text-amber-50 p-2.5 sm:p-3.5 border-b-2 border-amber-950 flex items-center justify-between shadow-md">
-                    <div className="flex items-center gap-2">
-                        <img src="/ui-buttons/task-list-button.png" alt="Tasks" className="h-7 w-7 sm:h-8 sm:w-8 object-contain shrink-0" />
-                        <div>
-                            <h2 className="text-sm sm:text-base font-black uppercase tracking-wider drop-shadow-sm text-amber-100">
-                                Adventure Tasks
-                            </h2>
-                            <p className="text-[11px] font-bold text-amber-200/90">
-                                Story and animal care
-                            </p>
-                        </div>
+            <section className={cx(
+                'sz-card pointer-events-auto relative flex w-[min(94vw,640px)] max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden transition-all duration-300 ease-out',
+                active ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+            )}>
+                <header className="sz-card-header shrink-0">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <img src="/ui-buttons/task-list-button.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
+                        <h2 className="sz-title truncate uppercase">Adventure Tasks</h2>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <span className="rounded-xl border border-amber-400/50 bg-amber-950/70 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[11px] sm:text-xs font-black text-amber-300 shadow-inner">
-                            {storyTasks.filter((task) => task.completed).length}/30 story | {completedCount}/{tasks.length} fed
-                        </span>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            aria-label="Close checklist"
-                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xl shadow-[0_3px_0_0_#9f1239] transition-transform active:scale-95 cursor-pointer"
-                        >
-                            &times;
-                        </button>
-                    </div>
+                    <button type="button" data-ui-button="true" onClick={onClose} aria-label="Close tasks" className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button>
                 </header>
 
-                {/* Banner Body Content (Scrollable if height constrained) */}
-                <div className="min-h-0 flex-1 overflow-y-auto p-2.5 sm:p-4" data-ui-scrollable="true">
-                    <div>
-                        <h3 className="mb-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">Story Tasks</h3>
-                        <ol className="mb-3 grid gap-1.5">
-                            {storyTasks.map((task) => {
-                                const status = task.completed ? 'Done' : task.id === activeTaskId ? 'Active' : 'Locked';
-                                return (
-                                    <li key={task.id} className={cx('flex min-h-10 items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs', task.completed ? 'border-emerald-200 bg-emerald-50' : task.id === activeTaskId ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-slate-50 text-slate-400')}>
-                                        <span className="w-6 text-center font-black">{task.completed ? '✓' : task.number}</span>
-                                        <span className="min-w-0 flex-1 font-black">{task.title}</span>
-                                        <span className="text-[11px] font-black uppercase">{status}</span>
-                                    </li>
-                                );
-                            })}
-                        </ol>
-                        <h3 className="mb-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">Animal Feeding Tasks</h3>
-                        {/* Progress Bar */}
-                        <div className="relative h-2 shrink-0 overflow-hidden rounded-full bg-amber-200/60 border border-amber-300">
-                            <div
-                                className="h-full rounded-full bg-linear-to-r from-emerald-500 to-teal-400 transition-[width] duration-500 shadow-sm"
-                                style={{ width: `${progressPercent}%` }}
-                            />
-                        </div>
+                <div className="sz-tabs shrink-0" role="tablist" aria-label="Task type">
+                    <button type="button" role="tab" aria-selected={showingStory} onClick={() => setTab('story')} className="sz-tab" data-ui-button="true">Story {storyDone}/{storyTasks.length}</button>
+                    <button type="button" role="tab" aria-selected={!showingStory} onClick={() => setTab('animals')} className="sz-tab" data-ui-button="true">Feeding {fedCount}/{tasks.length}</button>
+                </div>
 
-                        {/* Task Items List (3 items max per page) */}
-                        <ol className="mt-2.5 grid auto-rows-fr gap-2">
-                            {visibleTasks.map((task, index) => (
+                <div className="shrink-0 px-3 pb-2">
+                    <div className="sz-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}><span style={{ width: `${percent}%` }} /></div>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3" data-ui-scrollable="true">
+                    {showingStory ? (
+                        <>
+                            {activeTask ? (
+                                <div className="mb-3">
+                                    <MissionCard task={activeTask} status={taskProgress} variant="full" />
+                                </div>
+                            ) : (
+                                <p className="sz-row sz-row--done mb-3 justify-center">All story tasks done!</p>
+                            )}
+                            <ol className="grid gap-2">
+                                {storyTasks.filter((task) => task.id !== activeTaskId).map((task) => {
+                                    const isActive = task.id === activeTaskId;
+                                    const state = task.completed ? 'done' : isActive ? 'active' : 'locked';
+                                    return (
+                                        <li key={task.id} className={cx('sz-row', `sz-row--${state}`)}>
+                                            <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : isActive ? '' : 'sz-badge--locked')}>{task.completed ? '✓' : task.number}</span>
+                                            <span className="min-w-0 flex-1">{task.title}</span>
+                                            <span className="sz-label shrink-0">{task.completed ? 'Done' : isActive ? 'Now' : ''}</span>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                        </>
+                    ) : (
+                        <ol className="grid gap-2">
+                            {tasks.map((task, index) => (
                                 <li key={task.id}>
-                                    <button
-                                        type="button"
-                                        onClick={() => onTaskClick?.(task)}
-                                        className={cx(
-                                            'flex h-full min-h-11 w-full items-center gap-2.5 rounded-xl border-2 px-2.5 py-1.5 text-left transition-all hover:bg-amber-100/60 active:scale-[0.99]',
-                                            task.completed
-                                                ? 'border-emerald-300 bg-emerald-50/60 text-slate-400'
-                                                : 'border-amber-200/80 bg-white shadow-sm hover:border-amber-400'
-                                        )}
-                                    >
-                                        <span className={cx(
-                                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 text-[11px] font-black transition-colors',
-                                            task.completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-amber-400 bg-amber-50 text-amber-900'
-                                        )}>
-                                            {task.completed ? '✓' : currentPage * pageSize + index + 1}
-                                        </span>
-                                        <span className={cx('min-w-0 flex-1 text-xs font-black leading-tight sm:text-sm text-slate-800', task.completed && 'line-through opacity-60')}>
-                                            {task.name}
-                                        </span>
-                                        <span className={cx(
-                                            'shrink-0 text-[11px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border',
-                                            task.completed
-                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                                : 'bg-amber-100 text-amber-800 border-amber-300'
-                                        )}>
-                                            {task.completed ? 'Done' : 'Feed'}
-                                        </span>
+                                    <button type="button" data-ui-button="true" onClick={() => onTaskClick?.(task)} className={cx('sz-row w-full text-left', task.completed ? 'sz-row--done' : '')}>
+                                        <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : '')}>{task.completed ? '✓' : index + 1}</span>
+                                        <span className={cx('min-w-0 flex-1', task.completed && 'opacity-70')}>{task.name}</span>
+                                        <span className="sz-label shrink-0">{task.completed ? 'Fed' : 'Feed'}</span>
                                     </button>
                                 </li>
                             ))}
                         </ol>
-                    </div>
+                    )}
                 </div>
-                    <footer className="flex shrink-0 items-center gap-2 border-t border-amber-200 bg-[#fffef0] p-2">
-                        <PaginationControls page={currentPage} pageCount={pageCount} onPageChange={setPage} />
-                        {onViewCertificate ? (
-                            <ActionButton
-                                variant="primary"
-                                size="sm"
-                                className="shrink-0 text-[11px] tracking-wide"
-                                onClick={onViewCertificate}
-                            >
-                                Certificate
-                            </ActionButton>
-                        ) : null}
-                        {onResetTasks ? (
-                            <ActionButton
-                                variant="warning"
-                                size="sm"
-                                className="shrink-0 text-[11px] tracking-wide"
-                                onClick={onResetTasks}
-                            >
-                                Reset
-                            </ActionButton>
-                        ) : null}
-                    </footer>
-            </section>
 
+                {(onViewCertificate || onResetTasks) ? (
+                    <footer className="flex shrink-0 items-center justify-end gap-2 border-t-[3px] border-(--sz-line) bg-(--sz-cream-2) p-2">
+                        {onResetTasks ? <ActionButton variant="ghost" size="sm" onClick={onResetTasks}>Reset</ActionButton> : null}
+                        {onViewCertificate ? <ActionButton variant="warning" size="sm" onClick={onViewCertificate}>Certificate</ActionButton> : null}
+                    </footer>
+                ) : null}
+            </section>
         </div>
     );
 }
