@@ -10,7 +10,7 @@ const STORAGE_KEYS = {
     MISSIONS: 'minizoo_missions'
 };
 
-import { DEFAULT_STORY_PROGRESS, normalizeStoryProgress } from '../data/storyTasks.js';
+import { DEFAULT_STORY_PROGRESS, SAFE_ANIMAL_NAMES, normalizeStoryProgress } from '../data/storyTasks.js';
 
 // Default values
 export const DEFAULT_SETTINGS = {
@@ -236,13 +236,8 @@ export function resetMissionProgress() {
 export function getTasks() {
     const feedingStatus = getFeedingStatus();
     
-    // Define all animal feeding tasks
-    const animalNames = [
-        'White-tailed Deer', 'Domestic Horse',
-        'Donkey', 'Domestic Cow', 'Alpaca', 'Ostrich',
-        'Red Deer Stag', 'Bull', 'Forest Monkey',
-        'Rabbit'
-    ];
+    // One feeding task per safe animal type.
+    const animalNames = SAFE_ANIMAL_NAMES;
     
     return animalNames.map(name => ({
         id: name.toLowerCase().replace(/\s+/g, '_'),

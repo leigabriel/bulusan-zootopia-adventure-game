@@ -1,6 +1,8 @@
 // Shared world coordinates. Terrain scatter, mission logic and tests all read
 // from here so a mission point can never end up in the river or under a tree.
 
+import { isNearPath } from './pathways.js';
+
 export const STATUE_CENTER = { x: 0, z: 0 };
 
 export const TIGER_ENCLOSURE = { x: 145, z: 120, halfSize: 24 };
@@ -70,6 +72,8 @@ const KEEP_CLEAR_ZONES = [
 ];
 
 export function isInKeepClearZone(x, z, pad = 0) {
+    // Walkways and the plaza stay clear of trees, bushes and rocks too.
+    if (isNearPath(x, z, pad)) return true;
     return KEEP_CLEAR_ZONES.some((zone) => {
         const radius = zone.radius + pad;
         return (x - zone.x) ** 2 + (z - zone.z) ** 2 < radius * radius;

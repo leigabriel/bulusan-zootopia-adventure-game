@@ -5,6 +5,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { createScene, createCamera, createRenderer, createLighting, applyRendererQuality, applySceneQuality } from './components/Scene.jsx';
 import { createMeadow, disposeMeadow, updateMeadow } from './components/Meadow.jsx';
 import { createInsects, disposeInsects, updateInsects } from './components/Insects.jsx';
+import { createPathways } from './components/Pathways.jsx';
 import { createTerrain, createFence, createTigerEnclosure, loadTrees, loadBushes, loadRocks, getTerrainHeight, releaseTerrainModelCache, PLAYABLE_BOUNDARY } from './components/Terrain.jsx';
 import { loadGLTFAnimals, loadAmbientBirds, releaseAnimalModelCache } from './components/Animals.jsx';
 import { createSky, updateSky, disposeSky } from './components/Sky.jsx';
@@ -1312,6 +1313,7 @@ function MiniZooGame() {
 
             createLighting(scene);
             createTerrain(scene);
+            createPathways(scene);
             createFence(scene, quality);
             createTigerEnclosure(scene, quality);
             state.river = createRiver(scene, getTerrainHeight, quality);

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { SAFE_ANIMAL_NAMES } from '../src/game/data/storyTasks.js';
 
 // Polyfill localStorage for Node.js test environment
 const storage = new Map();
@@ -210,9 +211,11 @@ test('resetMissionProgress clears to defaults', () => {
     assert.deepEqual(progress.completedTaskIds, []);
 });
 
-test('getTasks returns 10 animal feeding tasks', () => {
+test('getTasks returns one feeding task per safe animal type', () => {
     const tasks = getTasks();
-    assert.equal(tasks.length, 10);
+    assert.equal(tasks.length, SAFE_ANIMAL_NAMES.length);
+    assert.ok(['Goat', 'Forest Rabbit', 'Parrot', 'Pigeon'].every((name) => tasks.some((task) => task.animalName === name)));
+    assert.ok(!tasks.some((task) => ['Owl', 'Frog', 'Koi Fish'].includes(task.animalName)));
     for (const task of tasks) {
         assert.ok(task.id);
         assert.ok(task.name.startsWith('Feed the '));
@@ -222,7 +225,7 @@ test('getTasks returns 10 animal feeding tasks', () => {
 });
 
 test('getCompletedTasksCount and getTotalTasks', () => {
-    assert.equal(getTotalTasks(), 10);
+    assert.equal(getTotalTasks(), SAFE_ANIMAL_NAMES.length);
     assert.equal(getCompletedTasksCount(), 0);
     feedAnimal('Alpaca');
     feedAnimal('Domestic Horse');
