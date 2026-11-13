@@ -126,7 +126,8 @@ const ANIMAL_CONFIGS = [
         description: 'A powerful and muscular male bovine, respected for its strength and presence.'
     },
     {
-        file: 'monkey/scene.gltf',
+        file: 'monkey.glb',
+        trackFeet: true,
         soundFile: 'monkey.mp3',
         soundGain: 0.80,
         targetHeight: 1.5,
@@ -136,6 +137,7 @@ const ANIMAL_CONFIGS = [
         collisionRadius: 1.15,
         count: 1,
         movementStyle: 'static',
+        idleAnimation: 'Idle',
         spawnArea: { x: -100, z: -70, radius: 24 },
         name: 'Forest Monkey',
         species: 'Macaca fascicularis',
@@ -175,7 +177,7 @@ const ANIMAL_CONFIGS = [
         emoji: '🐅',
         description: 'A majestic big cat in a natural standing idle pose.'
     },
-    // Visitors can watch and photograph these, but they are not feeding tasks.
+    // Parrot, pigeon, goat and forest rabbit are fed in the feeding tasks only; the owl is watch-only.
     {
         file: 'parrot.glb',
         soundFile: 'bird-chirping.mp3',
@@ -189,7 +191,6 @@ const ANIMAL_CONFIGS = [
         movementStyle: 'static',
         idleAnimation: 'Idle',
         spawnPositions: parrotRunSpots('parrot'),
-        observeOnly: true,
         name: 'Parrot',
         species: 'Psittacidae',
         emoji: '🦜',
@@ -208,7 +209,6 @@ const ANIMAL_CONFIGS = [
         movementStyle: 'static',
         idleAnimation: 'Idle',
         spawnPositions: parrotRunSpots('pigeon'),
-        observeOnly: true,
         name: 'Pigeon',
         species: 'Columba livia',
         emoji: '🐦',
@@ -233,6 +233,7 @@ const ANIMAL_CONFIGS = [
     },
     {
         file: 'goat.glb',
+        trackFeet: true,
         targetHeight: 2.0,
         scale: 1,
         speed: 0.05,
@@ -240,7 +241,6 @@ const ANIMAL_CONFIGS = [
         collisionRadius: 1.3,
         count: 2,
         spawnArea: { x: 100, z: -116, radius: 10 },
-        observeOnly: true,
         name: 'Goat',
         species: 'Capra hircus',
         emoji: '🐐',
@@ -248,6 +248,7 @@ const ANIMAL_CONFIGS = [
     },
     {
         file: 'forest-rabbit.glb',
+        trackFeet: true,
         targetHeight: 1.0,
         scale: 1,
         speed: 0.03,
@@ -257,7 +258,6 @@ const ANIMAL_CONFIGS = [
         movementStyle: 'walkOnly',
         walkAnimation: 'Walk',
         spawnArea: { x: 70, z: -52, radius: 8 },
-        observeOnly: true,
         name: 'Forest Rabbit',
         species: 'Sylvilagus floridanus',
         emoji: '🐰',
@@ -503,8 +503,9 @@ class GLTFAnimal {
         const h = getTerrainHeight(this.pos.x, this.pos.z);
         this.group.position.set(this.pos.x, h, this.pos.z);
         this.group.rotation.y = this.angle;
-        alignObjectToTerrain(this.group, h, this.dynamicBox, config.groundClearance ?? 0.01);
-        // alignObjectToTerrain lifts/lowers the model so its lowest point touches
+        this.setupFootTracking();
+        this.alignToGround(h, config.groundClearance ?? 0.01);
+        // alignToGround lifts/lowers the model so its lowest point touches
         // the ground. Remember that offset: update() used to reset y to the raw
         // terrain height every frame, which sank or floated models whose origin
         // is not at their feet.
@@ -515,6 +516,49 @@ class GLTFAnimal {
         this.shadow.position.set(this.pos.x, h + 0.055, this.pos.z);
         scene.add(this.group);
         scene.add(this.shadow);
+    }
+
+    // A skinned mesh's bounding box is computed once and never follows the
+    // skeleton, so bounds-based grounding can leave a rigged model hovering. For
+    // animals flagged `trackFeet`, measure the real sole offset once (from the
+    // posed mesh) and then keep the lowest foot bone on the ground every frame.
+    setupFootTracking() {
+        this.footBones = null;
+        if (!this.config.trackFeet) return;
+        const bones = [];
+        const skinned = [];
+        this.group.traverse((child) => {
+            if (child.isBone && /foot|hoof|paw|toe|hand/i.test(child.name)) bones.push(child);
+            if (child.isSkinnedMesh) skinned.push(child);
+        });
+        if (bones.length === 0 || skinned.length === 0) return;
+        this.group.updateMatrixWorld(true);
+        let trueMin = Infinity;
+        const box = new THREE.Box3();
+        for (const mesh of skinned) {
+            mesh.skeleton.update();
+            mesh.computeBoundingBox();
+            box.copy(mesh.boundingBox).applyMatrix4(mesh.matrixWorld);
+            trueMin = Math.min(trueMin, box.min.y);
+        }
+        this.footBones = bones;
+        this.soleOffset = Math.max(0, this.lowestFootY() - trueMin);
+    }
+
+    lowestFootY() {
+        let lowest = Infinity;
+        for (const bone of this.footBones) lowest = Math.min(lowest, bone.matrixWorld.elements[13]);
+        return lowest;
+    }
+
+    // Puts the lowest point of the animal on the ground; returns how far it moved.
+    alignToGround(terrainY, clearance) {
+        if (!this.footBones) return alignObjectToTerrain(this.group, terrainY, this.dynamicBox, clearance);
+        this.group.updateMatrixWorld(true);
+        const delta = terrainY + clearance + this.soleOffset - this.lowestFootY();
+        this.group.position.y += delta;
+        this.group.updateMatrixWorld(true);
+        return delta;
     }
 
     // Highest ground under the body: the centre plus four points around the
@@ -822,7 +866,7 @@ class GLTFAnimal {
 
         // Re-align after animation and slope rotation so animated pivots cannot sink.
         const groundClearance = this.config.groundClearance ?? 0.01;
-        const groundingDelta = alignObjectToTerrain(this.group, h, this.dynamicBox, groundClearance);
+        const groundingDelta = this.alignToGround(h, groundClearance);
 
         if (this.shadow) {
             const airHeight = Math.max(0, groundingDelta);
