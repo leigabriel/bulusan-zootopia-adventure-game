@@ -24,6 +24,32 @@ export const STAFF_START_POSITIONS = {
 
 export const PLAYER_START_OFFSET = { x: 14, z: 10 };
 
+// Hand-placed props. The stable and haystacks sit by the barn farm, the parrot
+// run in the open meadow west of the statue, and the safety board beside the
+// path from the start point, turned to face it.
+export const WORLD_PROPS = {
+    stable: { x: 100, z: -138, rotation: 0.12, scale: 1.7 },
+    parrotRun: { x: -55, z: -42, rotation: 0, scale: 3.2 },
+    signBoard: { x: 30, z: -8, scale: 3 },
+    haystacks: [
+        { x: 160, z: -138, rotation: 0.4, scale: 1.8 },
+        { x: 126, z: -168, rotation: 2.1, scale: 1.8 },
+        { x: 114, z: -121, rotation: 1.1, scale: 1.6 },
+    ],
+};
+
+// Birds that live under the parrot run, as offsets from its centre (world units).
+export const PARROT_RUN_RESIDENTS = {
+    parrot: [{ x: -2.2, z: 1.0, angle: 0.7 }],
+    pigeon: [{ x: 2.6, z: -1.6, angle: -0.8 }, { x: 1.4, z: 2.4, angle: 2.5 }],
+    owl: [{ x: 0.2, z: -2.6, angle: 0.3 }],
+};
+
+export function getSignBoardRotation(start = { x: STATUE_CENTER.x + PLAYER_START_OFFSET.x, z: STATUE_CENTER.z + PLAYER_START_OFFSET.z }) {
+    const { x, z } = WORLD_PROPS.signBoard;
+    return Math.atan2(start.x - x, start.z - z);
+}
+
 // Areas where random scenery (trees, bushes, rocks) must not spawn.
 const KEEP_CLEAR_ZONES = [
     { ...MISSION_POINTS.hay, radius: 6 },
@@ -37,6 +63,10 @@ const KEEP_CLEAR_ZONES = [
         z: STATUE_CENTER.z + PLAYER_START_OFFSET.z,
         radius: 6,
     },
+    { ...WORLD_PROPS.stable, radius: 14 },
+    { ...WORLD_PROPS.parrotRun, radius: 10 },
+    { ...WORLD_PROPS.signBoard, radius: 7 },
+    ...WORLD_PROPS.haystacks.map((hay) => ({ x: hay.x, z: hay.z, radius: 4 })),
 ];
 
 export function isInKeepClearZone(x, z, pad = 0) {
