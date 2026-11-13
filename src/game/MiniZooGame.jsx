@@ -61,6 +61,9 @@ import {
 import { MISSION_POINTS, PLAYER_START_OFFSET, STAFF_START_POSITIONS, STATUE_CENTER } from './data/worldPoints.js';
 import { createContactShadow } from './utils/contactShadow.js';
 import {
+    ZOOM_DEFAULT, clampZoom, easeCollisionFraction, easeZoom, freeCameraFraction, isAtZoomLimit, zoomFromButton,
+} from './utils/cameraZoom.js';
+import {
     completeActiveStoryTask,
     getActiveStoryTask,
     SAFE_ANIMAL_NAMES,
@@ -624,6 +627,12 @@ function MiniZooGame() {
     const [bookOpen, setBookOpen] = useState(false);
     const bookOpenRef = useRef(false);
     const cameraTransitionRef = useRef({ active: false, startedAt: 0 });
+    // Which zoom limit (if any) the camera is at, for the on-screen zoom buttons.
+    const [zoomEdge, setZoomEdge] = useState(null);
+    const handleZoom = useCallback((direction) => {
+        const state = gameStateRef.current;
+        state.cameraZoomTarget = zoomFromButton(state.cameraZoomTarget ?? ZOOM_DEFAULT, direction);
+    }, []);
 
     const [nearbyAnimal, setNearbyAnimal] = useState(null);
     const [tasks, setTasks] = useState(getTasks());
@@ -1433,6 +1442,10 @@ function MiniZooGame() {
             const dialogueLookTarget = new THREE.Vector3();
             const dialogueDirection = new THREE.Vector3();
             let smoothedFollowY = camera.position.y;
+            let zoomCurrent = ZOOM_DEFAULT;
+            let collisionFraction = 1;
+            let reportedZoomEdge = null;
+            const cameraFocus = new THREE.Vector3();
 
             let lastRenderTime = performance.now();
             let nearbyTimer = 0;
@@ -1634,17 +1647,34 @@ function MiniZooGame() {
                     : 1 - ((-2 * cameraTransitionProgress + 2) ** 3) / 2;
 
                 if (cameraModeRef.current === 'third' && state.playerAnchor) {
-                    const followDistance = isMobile ? 5.6 : 7.0;
-                    const followHeight = isMobile ? 3.0 : 3.5;
+                    state.cameraZoomTarget = clampZoom(state.cameraZoomTarget ?? ZOOM_DEFAULT);
+                    zoomCurrent = easeZoom(zoomCurrent, state.cameraZoomTarget, dt);
+                    const zoomEdgeNow = isAtZoomLimit(state.cameraZoomTarget, 1) ? 'min'
+                        : isAtZoomLimit(state.cameraZoomTarget, -1) ? 'max' : null;
+                    if (zoomEdgeNow !== reportedZoomEdge) {
+                        reportedZoomEdge = zoomEdgeNow;
+                        setZoomEdge(zoomEdgeNow);
+                    }
+
+                    const followDistance = (isMobile ? 5.6 : 7.0) * zoomCurrent;
+                    const followHeight = (isMobile ? 3.0 : 3.5) * zoomCurrent;
                     const pitchLift = Math.sin(-state.pitch) * 1.3;
                     const followYBlend = 1 - Math.exp(-10 * dt);
                     smoothedFollowY += (playerPosition.y - smoothedFollowY) * followYBlend;
 
+                    cameraFocus.set(playerPosition.x, smoothedFollowY + 1.85, playerPosition.z);
                     desiredCameraPosition.set(
                         playerPosition.x + Math.sin(state.yaw) * followDistance,
                         smoothedFollowY + followHeight + pitchLift,
                         playerPosition.z + Math.cos(state.yaw) * followDistance
                     );
+
+                    // Keep the camera out of terrain and obstacles: pull in fast, ease back out slowly.
+                    const freeFraction = freeCameraFraction(cameraFocus, desiredCameraPosition, getTerrainHeight, state.obstacles);
+                    collisionFraction = easeCollisionFraction(collisionFraction, freeFraction, dt);
+                    if (collisionFraction < 0.999) {
+                        desiredCameraPosition.lerpVectors(cameraFocus, desiredCameraPosition, collisionFraction);
+                    }
 
                     const minCameraY = getTerrainHeight(desiredCameraPosition.x, desiredCameraPosition.z) + 1.4;
                     desiredCameraPosition.y = Math.max(desiredCameraPosition.y, minCameraY);
@@ -2787,6 +2817,9 @@ function MiniZooGame() {
                             onTasksClick={handleTasksClick}
                             onBook={openBook}
                             onCamera={handleOpenCameraView}
+                            onZoom={handleZoom}
+                            zoomEdge={zoomEdge}
+                            showZoom={cameraMode === 'third'}
                             completedTasks={completedCount}
                             totalTasks={totalCount}
                             isTouchDevice={isTouchDevice}
@@ -2835,6 +2868,7 @@ function MiniZooGame() {
                         tasks={tasks}
                         storyTasks={storyTasks}
                         activeTaskId={activeStoryTask.id}
+                        taskProgress={taskProgress}
                         onTaskClick={() => setTasksOpen(false)}
                         onResetTasks={handleResetTasks}
                         onViewCertificate={missionProgress.certificateUnlocked ? () => { setTasksOpen(false); setShowCertificate(true); } : undefined}
