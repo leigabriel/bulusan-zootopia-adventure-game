@@ -945,6 +945,14 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
     const menuIcon = '/ui-buttons/settings-button.png';
     const taskIcon = '/ui-buttons/task-list-button.png';
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
+    const [taskCardVisible, setTaskCardVisible] = useState(() => {
+        try { return localStorage.getItem('zoo-task-card-visible') !== '0'; } catch { return true; }
+    });
+    const setCardVisible = (visible) => {
+        setTaskCardVisible(visible);
+        if (!visible) setTaskTrackerOpen(false);
+        try { localStorage.setItem('zoo-task-card-visible', visible ? '1' : '0'); } catch { /* storage unavailable */ }
+    };
 
     return (
         <div className="hud-top-layout pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.5rem)] z-65 select-none">
@@ -962,17 +970,28 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                         </button>
                     </div>
                     {currentTask ? (
-                        <div className="mission-tracker pointer-events-auto" data-ui-hud="true">
-                            <MissionCard
-                                task={currentTask}
-                                status={missionItem || taskProgress}
-                                navigation={navigation}
-                                expanded={taskTrackerOpen}
-                                onToggle={() => setTaskTrackerOpen((open) => !open)}
-                                guidanceEnabled={guidanceEnabled}
-                                onToggleGuidance={onToggleGuidance}
-                                onOpenTasks={onTasksClick}
-                            />
+                        <div className="mission-tracker pointer-events-auto flex items-start gap-1.5" data-ui-hud="true">
+                            {taskCardVisible ? (
+                                <>
+                                    <MissionCard
+                                        task={currentTask}
+                                        status={missionItem || taskProgress}
+                                        navigation={navigation}
+                                        expanded={taskTrackerOpen}
+                                        onToggle={() => setTaskTrackerOpen((open) => !open)}
+                                        guidanceEnabled={guidanceEnabled}
+                                        onToggleGuidance={onToggleGuidance}
+                                        onOpenTasks={onTasksClick}
+                                    />
+                                    <button type="button" data-ui-button="true" onClick={() => setCardVisible(false)} aria-label="Hide current task" className="sz-icon-btn sz-icon-btn--round h-9! w-9! min-h-0! text-base!">&times;</button>
+                                </>
+                            ) : (
+                                <button type="button" data-ui-button="true" onClick={() => setCardVisible(true)} aria-label="Show current task" className="sz-mission flex min-h-12 items-center gap-2 px-2.5 py-1">
+                                    <span className="sz-badge h-8! w-8! text-sm!">{currentTask.number}</span>
+                                    <span className="sz-label text-[14px]!">Task</span>
+                                    <span className="text-lg font-black text-(--sz-ink-soft)" aria-hidden="true">▾</span>
+                                </button>
+                            )}
                         </div>
                     ) : null}
                 </div>
