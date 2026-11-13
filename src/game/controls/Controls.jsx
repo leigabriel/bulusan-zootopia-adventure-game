@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { getTerrainHeight, PLAYABLE_BOUNDARY } from '../components/Terrain.jsx';
 import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
 import { getWaterDepth } from '../components/River.jsx';
+import { zoomFromPinch, zoomFromWheel, ZOOM_DEFAULT } from '../utils/cameraZoom.js';
 import { wadeSpeedScale } from '../utils/riverMath.js';
 
 const MOVEMENT_SPEED = 22;
@@ -366,9 +367,23 @@ export function setupTouchControls(state, baseRef, stickRef, jumpBtnRef) {
         }
     };
 
+    // A second finger on the free part of the screen turns the look drag into a
+    // pinch that zooms the third-person camera.
+    let pinchTouchId = null;
+    let pinchDistance = 0;
+    const findTouch = (list, id) => {
+        for (const t of list) if (t.identifier === id) return t;
+        return null;
+    };
+    const resetPinch = () => {
+        pinchTouchId = null;
+        pinchDistance = 0;
+    };
+
     const resetLook = () => {
         state.lActive = false;
         lookTouchId = null;
+        resetPinch();
     };
 
     const handleTouchStart = (e) => {
@@ -425,6 +440,13 @@ export function setupTouchControls(state, baseRef, stickRef, jumpBtnRef) {
                 state.lx = touch.clientX;
                 state.ly = touch.clientY;
                 e.preventDefault();
+            } else if (pinchTouchId === null && touch.identifier !== lookTouchId) {
+                const first = findTouch(e.touches, lookTouchId);
+                if (first) {
+                    pinchTouchId = touch.identifier;
+                    pinchDistance = Math.hypot(first.clientX - touch.clientX, first.clientY - touch.clientY);
+                    e.preventDefault();
+                }
             }
         }
     };
@@ -432,6 +454,21 @@ export function setupTouchControls(state, baseRef, stickRef, jumpBtnRef) {
     const handleTouchMove = (e) => {
         if (state.controlsEnabled === false) return;
         let shouldPreventDefault = false;
+
+        if (pinchTouchId !== null) {
+            const a = findTouch(e.touches, lookTouchId);
+            const b = findTouch(e.touches, pinchTouchId);
+            if (a && b) {
+                const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+                state.cameraZoomTarget = zoomFromPinch(state.cameraZoomTarget ?? ZOOM_DEFAULT, pinchDistance, distance);
+                pinchDistance = distance;
+                // Keep the look anchor in place so lifting one finger does not jolt the view.
+                state.lx = a.clientX;
+                state.ly = a.clientY;
+                e.preventDefault();
+                return;
+            }
+        }
 
         for (const touch of e.changedTouches) {
             if (touch.identifier === joystickTouchId && state.sActive) {
@@ -460,6 +497,10 @@ export function setupTouchControls(state, baseRef, stickRef, jumpBtnRef) {
 
     const handleTouchEnd = (e) => {
         for (const touch of e.changedTouches) {
+            if (touch.identifier === pinchTouchId) {
+                resetPinch();
+                continue;
+            }
             if (touch.identifier === joystickTouchId) {
                 resetJoystick();
                 continue;
@@ -571,12 +612,21 @@ export function setupMouseControls(state) {
         e.preventDefault();
     };
 
+    const handleWheel = (e) => {
+        if (state.controlsEnabled === false) return;
+        if (isUIInteractionTarget(e.target)) return;
+        state.cameraZoomTarget = zoomFromWheel(state.cameraZoomTarget ?? ZOOM_DEFAULT, e.deltaY, e.deltaMode);
+        e.preventDefault();
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("contextmenu", handleContextMenu);
 
     return () => {
+        window.removeEventListener("wheel", handleWheel);
         window.removeEventListener("mousedown", handleMouseDown);
         window.removeEventListener("mouseup", handleMouseUp);
         window.removeEventListener("mousemove", handleMouseMove);
