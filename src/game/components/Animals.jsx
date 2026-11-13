@@ -2,11 +2,17 @@ import * as THREE from 'three';
 import { clone as cloneWithSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { alignObjectToTerrain, getTerrainHeight, PLAYABLE_BOUNDARY } from './Terrain.jsx';
 import { isLandAccessible } from './River.jsx';
-import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
+import { PARROT_RUN_RESIDENTS, TIGER_ENCLOSURE, WORLD_PROPS } from '../data/worldPoints.js';
 import { resolveAssetUrl } from '../utils/localAssets.js';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { getAnimalBookEntry } from '../data/animalMetadata.js';
 import { createContactShadow } from '../utils/contactShadow.js';
+
+// Fixed spots under the parrot run for one resident species.
+function parrotRunSpots(key) {
+    const run = WORLD_PROPS.parrotRun;
+    return PARROT_RUN_RESIDENTS[key].map((spot) => ({ x: run.x + spot.x, z: run.z + spot.z, angle: spot.angle }));
+}
 
 const ANIMAL_CONFIGS = [
     {
@@ -168,6 +174,94 @@ const ANIMAL_CONFIGS = [
         species: 'Panthera tigris tigris',
         emoji: '🐅',
         description: 'A majestic big cat in a natural standing idle pose.'
+    },
+    // Visitors can watch and photograph these, but they are not feeding tasks.
+    {
+        file: 'parrot.glb',
+        soundFile: 'bird-chirping.mp3',
+        soundGain: 0.45,
+        targetHeight: 1.6,
+        scale: 1,
+        speed: 0,
+        runSpeed: 0,
+        collisionRadius: 0.8,
+        count: 1,
+        movementStyle: 'static',
+        idleAnimation: 'Idle',
+        spawnPositions: parrotRunSpots('parrot'),
+        observeOnly: true,
+        name: 'Parrot',
+        species: 'Psittacidae',
+        emoji: '🦜',
+        description: 'A colourful, clever bird that can copy sounds and even words.'
+    },
+    {
+        file: 'pigeon.glb',
+        soundFile: 'bird-chirping.mp3',
+        soundGain: 0.4,
+        targetHeight: 0.9,
+        scale: 1,
+        speed: 0,
+        runSpeed: 0,
+        collisionRadius: 0.5,
+        count: 2,
+        movementStyle: 'static',
+        idleAnimation: 'Idle',
+        spawnPositions: parrotRunSpots('pigeon'),
+        observeOnly: true,
+        name: 'Pigeon',
+        species: 'Columba livia',
+        emoji: '🐦',
+        description: 'A gentle city bird with a great sense of direction.'
+    },
+    {
+        file: 'owl.glb',
+        targetHeight: 1.2,
+        scale: 1,
+        speed: 0,
+        runSpeed: 0,
+        collisionRadius: 0.6,
+        count: 1,
+        movementStyle: 'static',
+        idleAnimation: 'Idle',
+        spawnPositions: parrotRunSpots('owl'),
+        observeOnly: true,
+        name: 'Owl',
+        species: 'Strigidae',
+        emoji: '🦉',
+        description: 'A silent night hunter with big eyes and sharp hearing.'
+    },
+    {
+        file: 'goat.glb',
+        targetHeight: 2.0,
+        scale: 1,
+        speed: 0.05,
+        runSpeed: 0.1,
+        collisionRadius: 1.3,
+        count: 2,
+        spawnArea: { x: 100, z: -116, radius: 10 },
+        observeOnly: true,
+        name: 'Goat',
+        species: 'Capra hircus',
+        emoji: '🐐',
+        description: 'A sure-footed climber that loves to nibble on leaves and grass.'
+    },
+    {
+        file: 'forest-rabbit.glb',
+        targetHeight: 1.0,
+        scale: 1,
+        speed: 0.03,
+        runSpeed: 0.05,
+        collisionRadius: 0.6,
+        count: 3,
+        movementStyle: 'walkOnly',
+        walkAnimation: 'Walk',
+        spawnArea: { x: 70, z: -52, radius: 8 },
+        observeOnly: true,
+        name: 'Forest Rabbit',
+        species: 'Sylvilagus floridanus',
+        emoji: '🐰',
+        description: 'A shy rabbit that hops along the forest edge looking for tender plants.'
     }
 ];
 
@@ -396,6 +490,15 @@ class GLTFAnimal {
         const spawn = findSpawnPosition(spawnIndex, ANIMAL_CONFIGS.length, this.bounds, this.radius, this.obstacles, config.spawnArea, config);
         this.pos.x = spawn.x;
         this.pos.z = spawn.z;
+        if (config.spawnPosition) {
+            // Exact spot (for animals that live in a specific place, like the parrot run).
+            this.pos.x = config.spawnPosition.x;
+            this.pos.z = config.spawnPosition.z;
+            if (Number.isFinite(config.spawnPosition.angle)) {
+                this.angle = config.spawnPosition.angle;
+                this.targetAngle = this.angle;
+            }
+        }
 
         const h = getTerrainHeight(this.pos.x, this.pos.z);
         this.group.position.set(this.pos.x, h, this.pos.z);
@@ -437,6 +540,7 @@ class GLTFAnimal {
             requiredItem: this.config.requiredItem,
             hasRequiredItem: this.config.hasRequiredItem,
             dangerous: this.config.dangerous === true,
+            observeOnly: this.config.observeOnly === true,
         };
     }
 
@@ -929,7 +1033,8 @@ export async function loadGLTFAnimals(scene, obstacles, initialVolume) {
             const model = cloneWithSkeleton(gltf.scene);
             const clonedAnimations = gltf.animations.map(clip => clip.clone());
             // Hand the obstacles and volume to the animal instances
-            const animal = new GLTFAnimal(model, clonedAnimations, config, scene, spawnIndex, obstacles, initialVolume);
+            const instanceConfig = config.spawnPositions ? { ...config, spawnPosition: config.spawnPositions[i] } : config;
+            const animal = new GLTFAnimal(model, clonedAnimations, instanceConfig, scene, spawnIndex, obstacles, initialVolume);
             animals.push(animal);
             spawnIndex++;
         }
