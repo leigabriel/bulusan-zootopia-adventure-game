@@ -138,6 +138,11 @@ const ANIMAL_CONFIGS = [
         count: 1,
         movementStyle: 'static',
         idleAnimation: 'Idle',
+        // Every so often it breaks the idle with one of these (no climbing clips).
+        specialAnimations: ['Idle2', 'Smile', 'Jump', 'Jump2', 'Roar2'],
+        specialAnimationIntervalMin: 4,
+        specialAnimationIntervalMax: 9,
+        specialAnimationTimeScale: 1,
         spawnArea: { x: -100, z: -70, radius: 24 },
         name: 'Forest Monkey',
         species: 'Macaca fascicularis',
@@ -545,6 +550,15 @@ class GLTFAnimal {
         this.soleOffset = Math.max(0, this.lowestFootY() - trueMin);
     }
 
+    // True while an outgoing animation is still fading out.
+    isBlending() {
+        for (const key in this.actions) {
+            const action = this.actions[key];
+            if (action !== this.currentAction && action.isRunning() && action.getEffectiveWeight() > 0.001) return true;
+        }
+        return false;
+    }
+
     lowestFootY() {
         let lowest = Infinity;
         for (const bone of this.footBones) lowest = Math.min(lowest, bone.matrixWorld.elements[13]);
@@ -555,7 +569,19 @@ class GLTFAnimal {
     alignToGround(terrainY, clearance) {
         if (!this.footBones) return alignObjectToTerrain(this.group, terrainY, this.dynamicBox, clearance);
         this.group.updateMatrixWorld(true);
+        if (this.specialAnimationActive || (this.groundHoldPending && this.isBlending())) {
+            // Hops and jumps must lift the feet, so hold the resting offset
+            // instead of pinning the lowest foot to the ground (also while it blends
+            // back to idle).
+            this.heldDelta ??= this.lastGroundDelta ?? 0;
+            this.group.position.y += this.heldDelta;
+            this.group.updateMatrixWorld(true);
+            return this.heldDelta;
+        }
+        this.heldDelta = null;
+        this.groundHoldPending = false;
         const delta = terrainY + clearance + this.soleOffset - this.lowestFootY();
+        this.lastGroundDelta = delta;
         this.group.position.y += delta;
         this.group.updateMatrixWorld(true);
         return delta;
@@ -740,11 +766,16 @@ class GLTFAnimal {
             this.targetSpeed = 0;
             this.currentSpeed = 0;
 
-            const specialName = this.config.specialAnimation;
+            const specialPool = this.config.specialAnimations;
+            const specialName = Array.isArray(specialPool) && specialPool.length > 0
+                ? (this.pickedSpecial ?? (this.pickedSpecial = specialPool[Math.floor(Math.random() * specialPool.length)]))
+                : this.config.specialAnimation;
             const specialInterval = getRandomSpecialInterval(this.config);
             if (specialName && specialInterval > 0) {
                 if (this.specialAnimationActive && t >= this.specialAnimationEndAt) {
                     this.specialAnimationActive = false;
+                    // Keep the resting height while the pose blends back to idle.
+                    this.groundHoldPending = true;
                     this.playAnimation('idle');
                 }
 
@@ -757,7 +788,8 @@ class GLTFAnimal {
                     }
 
                     const wantedName = specialName.toLowerCase();
-                    const specialActionKey = Object.keys(this.actions).find((k) => k === wantedName || k.includes(wantedName));
+                    const specialActionKey = this.actions[wantedName] ? wantedName : Object.keys(this.actions).find((k) => k.includes(wantedName));
+                    this.pickedSpecial = null;
                     const specialAction = specialActionKey ? this.actions[specialActionKey] : null;
                     const specialTimeScale = this.config.specialAnimationTimeScale ?? 0.8;
 
