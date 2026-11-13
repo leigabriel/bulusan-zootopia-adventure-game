@@ -7,6 +7,14 @@ import { resolveAssetUrl } from '../utils/localAssets.js';
 
 const ANIMAL_BOOK_ENTRIES = ANIMAL_METADATA;
 
+// Book page canvases are laid out in a 512x700 space and drawn at 1.5x for sharp text.
+const PAGE_W = 512;
+const PAGE_H = 700;
+const PAGE_SCALE = 1.5;
+// Open spread (two pages plus a margin) in world units, viewed straight on.
+const BOOK_VIEW_WIDTH = 9.2;
+const BOOK_VIEW_HEIGHT = 6.9;
+
 const snapshotCache = new Map();
 const pendingSnapshots = new Map();
 
@@ -299,9 +307,25 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
 
         const width = container.clientWidth;
         const height = container.clientHeight;
-        const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-        camera.position.set(0, 10, 8.5);
+        // Straight-on view: an orthographic camera directly above the book with its
+        // up vector along -z, so the pages sit flat and square to the screen with no
+        // perspective skew, and the spread stays centred at any window size.
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);
+        camera.position.set(0, 12, 0);
+        camera.up.set(0, 0, -1);
         camera.lookAt(0, 0, 0);
+        const fitBookView = (w, h) => {
+            const aspect = w / h;
+            const halfHeight = Math.max(BOOK_VIEW_HEIGHT / 2, BOOK_VIEW_WIDTH / 2 / aspect);
+            camera.left = -halfHeight * aspect;
+            camera.right = halfHeight * aspect;
+            camera.top = halfHeight;
+            camera.bottom = -halfHeight;
+            camera.updateProjectionMatrix();
+        };
+        fitBookView(width, height);
+        camera.zoom = 0.82;
+        camera.updateProjectionMatrix();
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setClearColor(0x000000, 0);
@@ -315,7 +339,7 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0xfff0dd, 1.3);
-        dirLight.position.set(5, 10, 5);
+        dirLight.position.set(1, 10, 2);
         dirLight.castShadow = true;
         scene.add(dirLight);
 
@@ -325,40 +349,41 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
         for (let i = 0; i < bookData.length; i++) {
             const pageData = bookData[i];
             const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 700;
+            canvas.width = PAGE_W * PAGE_SCALE;
+            canvas.height = PAGE_H * PAGE_SCALE;
             const ctx = canvas.getContext('2d');
+            ctx.scale(PAGE_SCALE, PAGE_SCALE);
 
             ctx.fillStyle = '#fdf6e3';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, PAGE_W, PAGE_H);
             ctx.strokeStyle = 'rgba(0,0,0,0.06)';
             ctx.lineWidth = 8;
-            ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+            ctx.strokeRect(15, 15, PAGE_W - 30, PAGE_H - 30);
 
             if (pageData.type === 'cover_outside') {
                 ctx.fillStyle = '#4ade80';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillRect(0, 0, PAGE_W, PAGE_H);
                 ctx.fillStyle = '#22c55e';
-                ctx.fillRect(0, 0, 40, canvas.height);
+                ctx.fillRect(0, 0, 40, PAGE_H);
 
                 ctx.fillStyle = '#064e3b';
                 ctx.textAlign = 'center';
                 ctx.font = '700 40px "Simply Rounded", sans-serif';
-                ctx.fillText("BULUSAN ZOO", canvas.width / 2 + 10, 150);
+                ctx.fillText("BULUSAN ZOO", PAGE_W / 2 + 10, 150);
                 ctx.font = '700 75px "Simply Rounded", sans-serif';
-                ctx.fillText("ANIMALS", canvas.width / 2 + 10, 240);
+                ctx.fillText("ANIMALS", PAGE_W / 2 + 10, 240);
                 ctx.font = '180px sans-serif';
-                ctx.fillText("🦒", canvas.width / 2 + 10, 480);
-                ctx.font = '700 20px "Simply Rounded", sans-serif';
-                ctx.fillText("Explorer's Board Book", canvas.width / 2 + 10, 620);
+                ctx.fillText("🦒", PAGE_W / 2 + 10, 480);
+                ctx.font = '700 28px "Simply Rounded", sans-serif';
+                ctx.fillText("Explorer's Board Book", PAGE_W / 2 + 10, 620);
 
             } else if (pageData.type === 'pattern') {
                 ctx.fillStyle = '#f0e8d0';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillRect(0, 0, PAGE_W, PAGE_H);
                 ctx.fillStyle = 'rgba(0,0,0,0.05)';
                 ctx.font = '30px sans-serif';
-                for (let x = 0; x < canvas.width; x += 60) {
-                    for (let y = 0; y < canvas.height; y += 60) {
+                for (let x = 0; x < PAGE_W; x += 60) {
+                    for (let y = 0; y < PAGE_H; y += 60) {
                         ctx.save();
                         ctx.translate(x + 30, y + 30);
                         ctx.rotate(Math.random() * Math.PI * 2);
@@ -369,60 +394,57 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
             } else if (pageData.type === 'title') {
                 ctx.fillStyle = '#333';
                 ctx.textAlign = 'center';
-                ctx.font = '30px "Simply Rounded", sans-serif';
-                ctx.fillText("An Interactive Journey", canvas.width / 2, 250);
+                ctx.font = '36px "Simply Rounded", sans-serif';
+                ctx.fillText("An Interactive Journey", PAGE_W / 2, 250);
                 ctx.font = '700 50px "Simply Rounded", sans-serif';
-                ctx.fillText("ANIMAL GUIDE", canvas.width / 2, 330);
+                ctx.fillText("ANIMAL GUIDE", PAGE_W / 2, 330);
             } else if (pageData.type === 'animal') {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
                 const snapshot = snapshotCache.get(pageData.name);
                 if (snapshot) {
-                    // Frame background
                     ctx.fillStyle = '#ecfdf5';
                     ctx.strokeStyle = '#a7f3d0';
                     ctx.lineWidth = 4;
                     ctx.beginPath();
-                    ctx.roundRect(canvas.width / 2 - 120, 70, 240, 240, 20);
+                    ctx.roundRect(PAGE_W / 2 - 100, 40, 200, 200, 20);
                     ctx.fill();
                     ctx.stroke();
-
-                    // Render 3D Model Snapshot
-                    ctx.drawImage(snapshot, canvas.width / 2 - 110, 80, 220, 220);
+                    ctx.drawImage(snapshot, PAGE_W / 2 - 92, 48, 184, 184);
                 } else {
                     ctx.fillStyle = '#059669';
                     ctx.font = '80px sans-serif';
-                    ctx.fillText("🐾", canvas.width / 2, 190);
+                    ctx.fillText("🐾", PAGE_W / 2, 140);
                 }
 
                 ctx.fillStyle = '#1f2937';
-                ctx.font = '700 36px "Simply Rounded", sans-serif';
-                ctx.fillText(pageData.name.toUpperCase(), canvas.width / 2, 360);
+                ctx.font = '700 40px "Simply Rounded", sans-serif';
+                ctx.fillText(pageData.name.toUpperCase(), PAGE_W / 2, 280);
 
                 ctx.fillStyle = '#6b7280';
-                ctx.font = '20px "Simply Rounded", sans-serif';
-                ctx.fillText(pageData.scientific, canvas.width / 2, 400);
+                ctx.font = '24px "Simply Rounded", sans-serif';
+                ctx.fillText(pageData.scientific, PAGE_W / 2, 322);
 
-                ctx.fillStyle = '#4b5563';
-                ctx.font = '20px "Simply Rounded", sans-serif';
-                wrapText(ctx, pageData.description, canvas.width / 2, 460, canvas.width - 80, 26);
+                ctx.fillStyle = '#374151';
+                ctx.font = '30px "Simply Rounded", sans-serif';
+                const afterDescription = wrapText(ctx, pageData.description, PAGE_W / 2, 378, PAGE_W - 72, 38);
 
                 ctx.fillStyle = '#065f46';
-                ctx.font = '700 18px "Simply Rounded", sans-serif';
-                wrapText(ctx, `Fact: ${pageData.fact}`, canvas.width / 2, 570, canvas.width - 80, 24);
+                ctx.font = '700 28px "Simply Rounded", sans-serif';
+                wrapText(ctx, `Fact: ${pageData.fact}`, PAGE_W / 2, afterDescription + 22, PAGE_W - 72, 34);
 
                 if (pageData.fed) {
-                    ctx.fillStyle = '#22c55e';
-                    ctx.font = '700 22px "Simply Rounded", sans-serif';
-                    ctx.fillText("⭐ Fed Successfully ⭐", canvas.width / 2, 640);
+                    ctx.fillStyle = '#16a34a';
+                    ctx.font = '700 28px "Simply Rounded", sans-serif';
+                    ctx.fillText("⭐ Fed Successfully ⭐", PAGE_W / 2, PAGE_H - 70);
                 }
 
                 ctx.fillStyle = '#9ca3af';
-                ctx.font = '20px "Simply Rounded", sans-serif';
+                ctx.font = '22px "Simply Rounded", sans-serif';
                 ctx.textAlign = (i % 2 !== 0) ? 'left' : 'right';
-                const px = (i % 2 !== 0) ? 30 : canvas.width - 30;
-                ctx.fillText(`Page ${i - 1}`, px, canvas.height - 30);
+                const px = (i % 2 !== 0) ? 30 : PAGE_W - 30;
+                ctx.fillText(`Page ${i - 1}`, px, PAGE_H - 28);
 
             } else if (pageData.type === 'locked') {
                 ctx.textAlign = 'center';
@@ -432,20 +454,20 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
                 ctx.strokeStyle = '#e5e7eb';
                 ctx.lineWidth = 4;
                 ctx.beginPath();
-                ctx.roundRect(canvas.width / 2 - 120, 100, 240, 240, 20);
+                ctx.roundRect(PAGE_W / 2 - 120, 100, 240, 240, 20);
                 ctx.fill();
                 ctx.stroke();
 
                 ctx.fillStyle = '#9ca3af';
                 ctx.font = '120px sans-serif';
-                ctx.fillText("❓", canvas.width / 2, 220);
+                ctx.fillText("❓", PAGE_W / 2, 220);
 
                 ctx.fillStyle = '#9ca3af';
-                ctx.font = '700 36px "Simply Rounded", sans-serif';
-                ctx.fillText("UNDISCOVERED", canvas.width / 2, 420);
+                ctx.font = '700 40px "Simply Rounded", sans-serif';
+                ctx.fillText("UNDISCOVERED", PAGE_W / 2, 420);
 
-                ctx.font = '20px "Simply Rounded", sans-serif';
-                ctx.fillText("Explore the zoo to unlock.", canvas.width / 2, 480);
+                ctx.font = '28px "Simply Rounded", sans-serif';
+                ctx.fillText("Explore the zoo to unlock.", PAGE_W / 2, 480);
             }
 
             const tex = new THREE.CanvasTexture(canvas);
@@ -600,17 +622,21 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
             }
         });
         updateStaticMaterials(initialSpread);
-        animateValue(camera.position, 'y', 7, 700);
-        animateValue(camera.position, 'z', 6.5, 700);
+        animateValue(camera, 'zoom', 1, 700);
         animateValue(frontCoverHinge.rotation, 'z', Math.PI, 700).then(() => {
             setIsAnimating(false);
         });
 
         let animationFrame;
+        let lastZoom = camera.zoom;
         const animate = (time) => {
             if (disposed) return;
             animationFrame = requestAnimationFrame(animate);
             activeAnimations = activeAnimations.filter(anim => !anim.update(time));
+            if (camera.zoom !== lastZoom) {
+                lastZoom = camera.zoom;
+                camera.updateProjectionMatrix();
+            }
             renderer.render(scene, camera);
         };
         animationFrame = requestAnimationFrame(animate);
@@ -619,9 +645,7 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
             const w = container.clientWidth;
             const h = container.clientHeight;
             if (!w || !h) return;
-            camera.aspect = w / h;
-            camera.fov = camera.aspect < 1.65 ? 46 : 40;
-            camera.updateProjectionMatrix();
+            fitBookView(w, h);
             renderer.setSize(w, h);
         };
         const resizeObserver = new ResizeObserver(handleResize);
@@ -668,7 +692,7 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
             <div className="book-navigation pointer-events-none absolute inset-0 flex items-center justify-between z-50">
                 <button
                     disabled={spread === 0 || isAnimating}
-                    className={`ui-icon-button pointer-events-auto flex items-center justify-center rounded-full bg-white/95 text-slate-800 text-2xl font-bold shadow-[0_6px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none ${spread === 0 || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:bg-white'}`}
+                    className={`sz-icon-btn sz-icon-btn--round pointer-events-auto text-2xl ${spread === 0 || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                     onClick={() => {
                         onPageTurn?.();
                         bookApiRef.current?.turnBackward();
@@ -679,7 +703,7 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
                 </button>
                 <button
                     disabled={spread >= maxSpread || isAnimating}
-                    className={`ui-icon-button pointer-events-auto flex items-center justify-center rounded-full bg-white/95 text-slate-800 text-2xl font-bold shadow-[0_6px_0_0_#cbd5e1] transition-all active:translate-y-1 active:shadow-none ${spread >= maxSpread || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:bg-white'}`}
+                    className={`sz-icon-btn sz-icon-btn--round pointer-events-auto text-2xl ${spread >= maxSpread || isAnimating ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                     onClick={() => {
                         onPageTurn?.();
                         bookApiRef.current?.turnForward();
@@ -690,12 +714,12 @@ export function AnimalBookModal({ isOpen, onClose, discoveredAnimals = [], fedAn
                 </button>
             </div>
 
-            <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-50 -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-black text-white shadow-[0_4px_0_0_rgba(0,0,0,.3)]" aria-live="polite">
+            <div className="sz-chip sz-chip--sun pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] left-1/2 z-50 -translate-x-1/2 bg-(--sz-cream)!" aria-live="polite">
                 {spread + 1} of {maxSpread + 1}
             </div>
 
             <button
-                className="ui-close-button absolute top-[max(var(--ui-edge-gap),env(safe-area-inset-top))] right-[max(var(--ui-edge-gap),env(safe-area-inset-right))] z-50 pointer-events-auto rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-lg border-2 border-white transition-transform active:scale-95 flex items-center justify-center"
+                className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close absolute top-[max(var(--ui-edge-gap),env(safe-area-inset-top))] right-[max(var(--ui-edge-gap),env(safe-area-inset-right))] z-50 pointer-events-auto"
                 onClick={onClose}
                 aria-label="Close Book"
             >
