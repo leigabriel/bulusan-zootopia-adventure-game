@@ -61,3 +61,34 @@ test('tiger enclosure and viewing area sit on level ground', async () => {
     }
     assert.ok(Math.max(...heights) - Math.min(...heights) < 0.01, 'pad is not level');
 });
+
+test('hand-placed props are on dry land, inside the map and clear of the tiger enclosure', async () => {
+    const { WORLD_PROPS } = await import('../src/game/data/worldPoints.js');
+    const props = [WORLD_PROPS.stable, WORLD_PROPS.parrotRun, WORLD_PROPS.signBoard, ...WORLD_PROPS.haystacks];
+    for (const prop of props) {
+        assert.equal(isRiverArea(prop.x, prop.z, 12), false, `prop at ${prop.x},${prop.z} is near the river`);
+        assert.equal(isInsideTigerEnclosure(prop.x, prop.z, 6), false);
+        assert.ok(Math.abs(prop.x) < 185 && Math.abs(prop.z) < 185);
+        assert.equal(isInKeepClearZone(prop.x, prop.z), true, 'props reserve their ground');
+    }
+});
+
+test('props do not overlap mission points', async () => {
+    const { WORLD_PROPS } = await import('../src/game/data/worldPoints.js');
+    const props = [WORLD_PROPS.stable, WORLD_PROPS.parrotRun, WORLD_PROPS.signBoard, ...WORLD_PROPS.haystacks];
+    for (const [name, point] of Object.entries(MISSION_POINTS)) {
+        for (const prop of props) {
+            assert.ok(Math.hypot(point.x - prop.x, point.z - prop.z) > 9, `${name} too close to a prop`);
+        }
+    }
+});
+
+test('safety board faces the player start', async () => {
+    const { WORLD_PROPS, getSignBoardRotation, STATUE_CENTER, PLAYER_START_OFFSET } = await import('../src/game/data/worldPoints.js');
+    const rotation = getSignBoardRotation();
+    // The model's front is +z, so its forward vector must point at the start.
+    const forward = { x: Math.sin(rotation), z: Math.cos(rotation) };
+    const toStart = { x: STATUE_CENTER.x + PLAYER_START_OFFSET.x - WORLD_PROPS.signBoard.x, z: STATUE_CENTER.z + PLAYER_START_OFFSET.z - WORLD_PROPS.signBoard.z };
+    const length = Math.hypot(toStart.x, toStart.z);
+    assert.ok((forward.x * toStart.x + forward.z * toStart.z) / length > 0.999);
+});
