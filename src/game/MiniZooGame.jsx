@@ -238,155 +238,93 @@ function setStaffNpcAction(npc, actionName) {
     npc.currentAction = nextAction;
 }
 
-let SMOKE_PUFF_TEXTURE = null;
-function getSmokePuffTexture() {
-    if (SMOKE_PUFF_TEXTURE) return SMOKE_PUFF_TEXTURE;
-    const size = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-
-    ctx.clearRect(0, 0, size, size);
-
-    function drawCartoonCircularPuff(ox, oy, fillStyle, strokeStyle, strokeWidth) {
-        ctx.fillStyle = fillStyle;
-        ctx.strokeStyle = strokeStyle;
-        ctx.lineWidth = strokeWidth;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-
-        const mainRadius = 48;
-        const outerRadius = 40;
-        const count = 7;
-        const circles = [{ x: ox, y: oy, r: mainRadius }];
-
-        for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2;
-            const dist = 34;
-            circles.push({
-                x: ox + Math.cos(angle) * dist,
-                y: oy + Math.sin(angle) * dist,
-                r: outerRadius
-            });
-        }
-
-        if (strokeWidth > 0) {
-            ctx.beginPath();
-            circles.forEach((c) => {
-                ctx.moveTo(c.x + c.r, c.y);
-                ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-            });
-            ctx.stroke();
-        }
-
-        circles.forEach((c) => {
-            ctx.beginPath();
-            ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-            ctx.fill();
-        });
-    }
-
-    const cx = size / 2;
-    const cy = size / 2;
-    // Outer bold cartoon stroke (slate gray outline)
-    drawCartoonCircularPuff(cx, cy, '#ffffff', 'rgba(100, 116, 139, 0.75)', 12);
-    // Inner solid white fill
-    drawCartoonCircularPuff(cx, cy, '#ffffff', '#ffffff', 0);
-
-    SMOKE_PUFF_TEXTURE = new THREE.CanvasTexture(canvas);
-    SMOKE_PUFF_TEXTURE.colorSpace = THREE.SRGBColorSpace;
-    SMOKE_PUFF_TEXTURE.needsUpdate = true;
-    return SMOKE_PUFF_TEXTURE;
-}
-
 // Saved values below 60 (older versions offered 30) are raised to 60; 0 = unlimited.
 function normalizeFpsLimit(value) {
     if (value === 0) return 0;
     return Math.max(60, Number(value) || 60);
 }
 
-function createRunSmokeSystem(scene) {
-    const poolSize = 20;
-    const puffs = [];
-    const geometry = new THREE.PlaneGeometry(1.85, 1.85);
-    const texture = getSmokePuffTexture();
+// Running kicks up a little splash of square "pixels": dusty on land, blue in
+// the river. Each pixel flies out, arcs under gravity and shrinks away, and
+// snaps to a coarse grid so it reads as pixel art.
+function createRunSplashSystem(scene) {
+    const poolSize = 36;
+    const PIXEL = 0.11;
+    const particles = [];
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    const LAND_COLORS = ['#ffffff', '#f3e9d2', '#d9c7a3'];
+    const WATER_COLORS = ['#ffffff', '#bae6fd', '#38bdf8'];
 
     for (let i = 0; i < poolSize; i++) {
-        const material = new THREE.MeshBasicMaterial({
-            map: texture,
-            transparent: true,
-            opacity: 0,
-            depthWrite: false,
-            toneMapped: false
-        });
+        const material = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, toneMapped: false });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.visible = false;
         mesh.renderOrder = 4;
         scene.add(mesh);
-        puffs.push({ mesh, material, life: 0, maxLife: 0.4, initialScale: 1, active: false });
+        particles.push({ mesh, material, active: false, life: 0, maxLife: 0.4, size: 1, vx: 0, vy: 0, vz: 0, x: 0, y: 0, z: 0 });
     }
 
+    const snap = (value) => Math.round(value / PIXEL) * PIXEL;
     let spawnTimer = 0;
+
+    const spawn = (playerPos, inRiver) => {
+        const palette = inRiver ? WATER_COLORS : LAND_COLORS;
+        for (let n = 0; n < 3; n++) {
+            const particle = particles.find((p) => !p.active);
+            if (!particle) return;
+            const angle = Math.random() * Math.PI * 2;
+            const outward = 0.5 + Math.random() * 1.1;
+            particle.active = true;
+            particle.life = 0;
+            particle.maxLife = (inRiver ? 0.42 : 0.34) + Math.random() * 0.18;
+            particle.size = PIXEL * (2 + Math.floor(Math.random() * 3));
+            particle.x = playerPos.x + (Math.random() - 0.5) * 0.3;
+            particle.y = playerPos.y + (inRiver ? 0.08 : 0.12);
+            particle.z = playerPos.z + (Math.random() - 0.5) * 0.3;
+            particle.vx = Math.cos(angle) * outward;
+            particle.vz = Math.sin(angle) * outward;
+            particle.vy = (inRiver ? 2.2 : 1.5) + Math.random() * 1.2;
+            particle.material.color.set(palette[Math.floor(Math.random() * palette.length)]);
+            particle.material.opacity = 1;
+            particle.mesh.visible = true;
+        }
+    };
 
     return {
         update: (dt, playerPos, isRunning, camera) => {
             if (isRunning) {
                 spawnTimer += dt;
-                if (spawnTimer >= 0.065) {
+                if (spawnTimer >= 0.08) {
                     spawnTimer = 0;
-                    const puff = puffs.find((p) => !p.active);
-                    if (puff) {
-                        const inRiver = isRiverArea(playerPos.x, playerPos.z, 0.4);
-                        puff.active = true;
-                        puff.life = 0;
-                        puff.maxLife = inRiver ? (0.28 + Math.random() * 0.18) : (0.35 + Math.random() * 0.2);
-                        puff.initialScale = inRiver ? (0.85 + Math.random() * 0.4) : (0.75 + Math.random() * 0.45);
-                        puff.mesh.position.set(
-                            playerPos.x + (Math.random() - 0.5) * 0.4,
-                            playerPos.y + (inRiver ? 0.08 : 0.2),
-                            playerPos.z + (Math.random() - 0.5) * 0.4
-                        );
-                        puff.mesh.scale.setScalar(0.2);
-                        puff.mesh.visible = true;
-                        puff.material.opacity = 0.95;
-
-                        if (inRiver) {
-                            // Cartoon splash blue tint when running at/in the river
-                            puff.material.color.set('#38bdf8');
-                        } else {
-                            // Classic white cartoon smoke puff on land
-                            puff.material.color.set('#ffffff');
-                        }
-                    }
+                    spawn(playerPos, isRiverArea(playerPos.x, playerPos.z, 0.4));
                 }
             }
 
-            puffs.forEach((puff) => {
-                if (!puff.active) return;
-                puff.life += dt;
-                const progress = puff.life / puff.maxLife;
+            particles.forEach((particle) => {
+                if (!particle.active) return;
+                particle.life += dt;
+                const progress = particle.life / particle.maxLife;
                 if (progress >= 1) {
-                    puff.active = false;
-                    puff.mesh.visible = false;
+                    particle.active = false;
+                    particle.mesh.visible = false;
                     return;
                 }
-                const popScale = Math.sin(Math.min(1, progress * 2.2) * Math.PI * 0.5);
-                const currentScale = (puff.initialScale + progress * 1.35) * popScale;
-                puff.mesh.scale.setScalar(currentScale);
-                puff.mesh.position.y += dt * 0.95;
-
-                puff.material.opacity = progress > 0.45 ? ((1 - progress) / 0.55) * 0.9 : 0.9;
-
-                if (camera) {
-                    puff.mesh.quaternion.copy(camera.quaternion);
-                }
+                particle.vy -= 9 * dt;
+                particle.x += particle.vx * dt;
+                particle.y += particle.vy * dt;
+                particle.z += particle.vz * dt;
+                // Shrinks in whole pixel steps, then fades out in the last stretch.
+                const steps = Math.max(1, Math.round((particle.size / PIXEL) * (1 - progress * 0.6)));
+                particle.mesh.scale.setScalar(steps * PIXEL);
+                particle.mesh.position.set(snap(particle.x), snap(particle.y), snap(particle.z));
+                particle.material.opacity = progress > 0.7 ? (1 - progress) / 0.3 : 1;
+                if (camera) particle.mesh.quaternion.copy(camera.quaternion);
             });
         },
         dispose: () => {
-            puffs.forEach((puff) => {
-                scene.remove(puff.mesh);
-                puff.material.dispose();
+            particles.forEach((particle) => {
+                scene.remove(particle.mesh);
+                particle.material.dispose();
             });
             geometry.dispose();
         }
@@ -1434,7 +1372,7 @@ function MiniZooGame() {
             setLoadProgress(95);
 
             const handleMovement = createMovementHandler(state.playerAnchor, state);
-            const smokeSystem = createRunSmokeSystem(scene);
+            const splashSystem = createRunSplashSystem(scene);
             const waterTrail = createWaterTrail(scene);
             const desiredCameraPosition = new THREE.Vector3();
             const firstPersonCameraPosition = new THREE.Vector3();
@@ -1558,7 +1496,7 @@ function MiniZooGame() {
                     const moving = state.playerIsMoving && state.isGrounded;
                     // The trail returns the water depth; dust puffs only appear on dry land.
                     const waterDepth = waterTrail.update(dt, state.river, state.playerCharacter.position, moving, state.playerMoveSpeed || 0);
-                    smokeSystem.update(dt, state.playerCharacter.position, moving && waterDepth < 0.12, camera);
+                    splashSystem.update(dt, state.playerCharacter.position, moving && waterDepth < 0.12, camera);
                 }
 
                 state.staffNpcs.forEach((npc) => {
@@ -1864,7 +1802,7 @@ function MiniZooGame() {
                 cleanupKeyboard();
                 cleanupTouch();
                 cleanupMouse();
-                smokeSystem.dispose();
+                splashSystem.dispose();
                 waterTrail.dispose();
                 disposeSky(scene, state.sky);
                 state.sky = null;
