@@ -941,7 +941,7 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
     );
 }
 
-export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, onZoom, zoomEdge, showZoom = true, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
+export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
     const menuIcon = '/ui-buttons/settings-button.png';
     const taskIcon = '/ui-buttons/task-list-button.png';
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
@@ -977,17 +977,11 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                     ) : null}
                 </div>
 
-                {/* Right: tasks + camera zoom */}
+                {/* Right: tasks */}
                 <div className="pointer-events-auto flex flex-col items-end gap-2" data-ui-hud="true">
                     <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label="Tasks" data-ui-button="true" data-sfx-self="true">
                         <img src={taskIcon} alt="" />
                     </button>
-                    {showZoom ? (
-                        <div className="hud-zoom flex flex-col gap-2" role="group" aria-label="Camera zoom">
-                            <button type="button" data-ui-button="true" className="sz-icon-btn sz-icon-btn--round text-[28px]! leading-none" onClick={() => onZoom?.(1)} disabled={zoomEdge === 'min'} aria-label="Zoom camera in">+</button>
-                            <button type="button" data-ui-button="true" className="sz-icon-btn sz-icon-btn--round text-[28px]! leading-none" onClick={() => onZoom?.(-1)} disabled={zoomEdge === 'max'} aria-label="Zoom camera out">&minus;</button>
-                        </div>
-                    ) : null}
                 </div>
             </div>
 
