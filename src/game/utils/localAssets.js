@@ -22,7 +22,6 @@ const ANIMAL_MODELS = [
   'Horse.gltf',
   'monkey.glb',
   'ostrich/scene.gltf',
-  'rabbit/scene.gltf',
   'Stag.gltf',
   'tiger/scene.gltf',
   'forest-rabbit.glb',
@@ -35,19 +34,12 @@ const ANIMAL_MODELS = [
 ];
 
 const ANIMAL_MODEL_DEPENDENCIES = [
-  '/models/animals/birds/bird_1/scene.gltf',
-  '/models/animals/birds/bird_1/scene.bin',
-  '/models/animals/birds/bird_2/scene.gltf',
-  '/models/animals/birds/bird_2/scene.bin',
-  '/models/animals/birds/bird_2/textures/blinn2_baseColor.webp',
-  '/models/animals/birds/bird_2/textures/blinn2_normal.webp',
   '/models/animals/ostrich/scene.bin',
   '/models/animals/ostrich/textures/material_baseColor.webp',
   '/models/animals/ostrich/textures/defaultMat_baseColor.webp',
   '/models/animals/ostrich/textures/defaultMat_normal.webp',
   '/models/animals/ostrich/textures/defaultMat_metallicRoughness.webp',
   '/models/animals/ostrich/textures/defaultMat_specularf0.webp',
-  '/models/animals/rabbit/scene.bin',
   '/models/animals/tiger/scene.bin',
   '/models/animals/tiger/textures/Tiger_Default_baseColor.webp',
 ];
@@ -80,6 +72,7 @@ const AUDIO_ASSETS = [
   '/audio/monkey.mp3',
   '/audio/ostrich.mp3',
   '/audio/redd.mp3',
+  '/audio/river-steps.wav',
   '/audio/running-effect-sound.mp3',
   '/audio/task-list-button.mp3',
   '/audio/tiger.mp3',

@@ -174,12 +174,8 @@ function HowToPlayContent() {
 function CreditsContent() {
     const [page, setPage] = useState(0);
     const modelCredits = [
-        ['Rabbit', 'Tiko', 'https://sketchfab.com/3d-models/rabbit-caba07ca532947858ab66b65879cc105', 'CC-BY-4.0'],
-        ['Realsitic Monkey', 'TdoubleU8', 'https://sketchfab.com/3d-models/realsitic-monkey-50e4b1da03494429b1265fc095f2c530', 'CC-BY-4.0'],
         ['Tiger', 'Blender Artist', 'https://sketchfab.com/3d-models/tiger-67bbedd727a047869ef7c7b608445484', 'CC-BY-4.0'],
         ['African ostrich (Revised version)', 'Андрей', 'https://sketchfab.com/3d-models/african-ostrich-revised-version-0999e676453e4562a7777cd006125738', 'CC-BY-4.0'],
-        ['Birds', 'Zacxophone', 'https://sketchfab.com/3d-models/birds-3a9bb97be78944f9bffc23fb25c2154e', 'Sketchfab Standard'],
-        ['Low Poly Bird (Animated)', 'Charlie Tinley', 'https://sketchfab.com/3d-models/low-poly-bird-animated-82ada91f0ac64ab595fbc3dc994a3590', 'CC-BY-4.0'],
     ];
     const pageCount = 1 + Math.ceil(modelCredits.length / 2);
     const visibleCredits = page === 0 ? [] : modelCredits.slice((page - 1) * 2, (page - 1) * 2 + 2);
@@ -506,7 +502,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
         { id: 'audio', label: 'Audio', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
         { id: 'sensitivity', label: 'Look Speed', icon: '↔', className: 'border-amber-200 bg-white text-slate-800' },
         { id: 'perspective', label: 'Camera View', icon: '◉', className: 'border-teal-200 bg-white text-slate-800' },
-        { id: 'controls', label: 'Controls', icon: '🎮', className: 'border-lime-200 bg-white text-slate-800' },
+        { id: 'controls', label: 'Controls', icon: '✥', className: 'border-lime-200 bg-white text-slate-800' },
         ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit', icon: '×', className: 'border-rose-200 bg-rose-50 text-rose-700' }] : []),
     ];
 
@@ -603,7 +599,6 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
 export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible }) {
     const [starting, setStarting] = useState(false);
     const [howToPlayOpen, setHowToPlayOpen] = useState(false);
-    const [controlsOpen, setControlsOpen] = useState(false);
     const [creditsOpen, setCreditsOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [playerDetailsOpen, setPlayerDetailsOpen] = useState(false);
@@ -623,10 +618,6 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     }
                     if (howToPlayOpen) {
                         setHowToPlayOpen(false);
-                        return;
-                    }
-                    if (controlsOpen) {
-                        setControlsOpen(false);
                         return;
                     }
                     if (creditsOpen) {
@@ -658,7 +649,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                 listenerHandle.remove();
             }
         };
-    }, [showExitConfirm, howToPlayOpen, controlsOpen, creditsOpen, settingsOpen, playerDetailsOpen]);
+    }, [showExitConfirm, howToPlayOpen, creditsOpen, settingsOpen, playerDetailsOpen]);
 
     const handleStart = useCallback(() => {
         if (!isPlayerProfileComplete()) {
@@ -772,19 +763,6 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         </span>
                     </button>
 
-                    {/* CONTROLS */}
-                    <button
-                        type="button"
-                        onClick={() => setControlsOpen(true)}
-                        className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
-                        title="Controls"
-                    >
-                        <span className="grid h-8 w-8 place-items-center text-2xl drop-shadow-md transition-transform group-hover:scale-110 sm:h-11 sm:w-11 sm:text-3xl" aria-hidden="true">🎮</span>
-                        <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
-                            Controls
-                        </span>
-                    </button>
-
                     {/* PLAYER DETAILS */}
                     <button
                         type="button"
@@ -821,10 +799,6 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
             {/* Modals */}
             <ModalShell isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="How To Play" size="md">
                 <HowToPlayContent />
-            </ModalShell>
-
-            <ModalShell isOpen={controlsOpen} onClose={() => setControlsOpen(false)} title="How To Control" size="xl">
-                <ControlsContent />
             </ModalShell>
 
             <ModalShell isOpen={creditsOpen} onClose={() => setCreditsOpen(false)} title="Credits" size="md">
@@ -1418,7 +1392,7 @@ export function HoldToFeedControl({
     };
 
     return (
-        <div className="pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+4.9rem)] right-[max(5.3rem,calc(env(safe-area-inset-right)+5.3rem))] z-70 flex flex-col items-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] z-70 flex flex-col items-center px-3 sm:bottom-28">
             <div className="mb-1.5 flex w-auto max-w-48 flex-col items-center justify-center rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/90 px-3 py-1 text-center text-white shadow-xl backdrop-blur-md">
                 <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
                     {animalName ? `${animalName}` : 'Animal'}
