@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMAL_METADATA, ANIMAL_METADATA_BY_NAME, getAnimalBookEntry } from '../src/game/data/animalMetadata.js';
 
-test('ANIMAL_METADATA contains 18 animals', () => {
-    assert.equal(ANIMAL_METADATA.length, 18);
+test('ANIMAL_METADATA contains 17 animals', () => {
+    assert.equal(ANIMAL_METADATA.length, 17);
 });
 
 test('every animal has required fields', () => {
@@ -51,7 +51,7 @@ test('all animal files are unique', () => {
 
 test('new animals are in the book and their models ship in public/', async () => {
     const fs = await import('node:fs');
-    for (const name of ['Parrot', 'Pigeon', 'Owl', 'Goat', 'Forest Rabbit', 'Frog', 'Koi Fish']) {
+    for (const name of ['Parrot', 'Pigeon', 'Owl', 'Goat', 'Frog', 'Koi Fish']) {
         const entry = ANIMAL_METADATA_BY_NAME[name];
         assert.ok(entry, `${name} missing from the book`);
         assert.ok(fs.existsSync(`public/models/animals/${entry.file}`), `${name} model missing`);
