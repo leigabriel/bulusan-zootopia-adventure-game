@@ -5,6 +5,7 @@ import { FOOTPRINTS, footprintCircles, scatterPlacements } from '../utils/propPl
 import { isLandAccessible } from '../utils/riverMath.js';
 import { WORLD_PROPS, getSignBoardRotation, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
 import { getTerrainHeight, plantObjectOnTerrain } from './Terrain.jsx';
+import { BRIDGE_SCALE, getBridgeFrame } from '../data/bridge.js';
 
 // New environment art and structures (GLB, meshopt-compressed, vertex coloured).
 // Hand-placed props come from WORLD_PROPS; trees and logs are scattered with a
@@ -19,6 +20,7 @@ const MODEL_PATHS = {
     stable: '/models/structures/livery-stable.glb',
     parrotRun: '/models/structures/parrot-run.glb',
     signBoard: '/models/structures/safety-sign.glb',
+    footbridge: '/models/structures/creek-footbridge.glb',
 };
 
 const BUDGETS = {
@@ -152,10 +154,10 @@ async function createSignTexture() {
 
 export async function loadWorldProps(scene, quality = 'medium', { existingTrees = [] } = {}) {
     const budget = BUDGETS[quality] || BUDGETS.medium;
-    const [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard] = await Promise.all(
+    const [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge] = await Promise.all(
         Object.values(MODEL_PATHS).map(loadGLB),
     );
-    [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard].forEach((gltf) => gltf && tuneMaterials(gltf.scene));
+    [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge].forEach((gltf) => gltf && tuneMaterials(gltf.scene));
 
     const meshes = [];
     const disposables = [];
@@ -169,6 +171,23 @@ export async function loadWorldProps(scene, quality = 'medium', { existingTrees 
     WORLD_PROPS.haystacks.forEach((hay) => {
         if (placeSingle(scene, haystack, hay, { castShadow }, meshes)) obstacles.push(...footprintCircles(hay, FOOTPRINTS.haystack));
     });
+
+    // Footbridge over the creek, stretched to span it and resting on both banks.
+    if (footbridge) {
+        const frame = getBridgeFrame();
+        const bridge = footbridge.scene.clone(true);
+        bridge.position.set(frame.x, frame.baseY, frame.z);
+        bridge.rotation.y = frame.yaw;
+        bridge.scale.set(BRIDGE_SCALE.x, BRIDGE_SCALE.y, BRIDGE_SCALE.z);
+        bridge.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = castShadow;
+                child.receiveShadow = true;
+            }
+        });
+        scene.add(bridge);
+        meshes.push(bridge);
+    }
 
     // Information board: the model plus a painted panel on its face.
     if (signBoard) {
