@@ -19,7 +19,6 @@ export const DEFAULT_SETTINGS = {
     uiVolume: 1.0,
     sfxVolume: 1.0,
     graphicsQuality: 'medium',
-    fpsLimit: 60,
     sensitivity: 1.0
 };
 
@@ -89,14 +88,6 @@ export function toggleMusic() {
 export function setGraphicsQuality(quality) {
     if (!['low', 'medium', 'high'].includes(quality)) return getSettings();
     return saveSettings({ graphicsQuality: quality });
-}
-
-// 0 means unlimited (follow the display). Nothing below 60: the game targets a
-// steady 60 fps or better, and quality is changed only from the settings.
-export function setFpsLimit(fps) {
-    const valid = [0, 60, 90, 120];
-    if (!valid.includes(fps)) return getSettings();
-    return saveSettings({ fpsLimit: fps });
 }
 
 /**

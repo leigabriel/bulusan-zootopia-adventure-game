@@ -238,12 +238,6 @@ function setStaffNpcAction(npc, actionName) {
     npc.currentAction = nextAction;
 }
 
-// Saved values below 60 (older versions offered 30) are raised to 60; 0 = unlimited.
-function normalizeFpsLimit(value) {
-    if (value === 0) return 0;
-    return Math.max(60, Number(value) || 60);
-}
-
 // Running kicks up a little splash of square "pixels": dusty on land, blue in
 // the river. Each pixel flies out, arcs under gravity and shrinks away, and
 // snaps to a coarse grid so it reads as pixel art.
@@ -525,7 +519,6 @@ function MiniZooGame() {
     const observationStartedAtRef = useRef(0);
     const missionCheckRef = useRef(() => {});
     const graphicsQualityRef = useRef((getSettings().graphicsQuality || 'medium'));
-    const fpsLimitRef = useRef(normalizeFpsLimit(getSettings().fpsLimit));
     // Cached volumes so the render loop never parses localStorage each frame.
     const volumesRef = useRef({
         sfx: getSettings().sfxVolume ?? 1.0,
@@ -1400,21 +1393,10 @@ function MiniZooGame() {
                 state.animationId = requestAnimationFrame(animate);
                 const now = performance.now();
 
-                // FPS limiting
-                // 0 = unlimited: render on every display refresh.
-                const fpsLimit = fpsLimitRef.current;
+                // No frame cap: render on every display refresh, so the game runs at
+                // 60 fps or better wherever the screen allows it.
                 const timeSinceLastRender = now - lastRenderTime;
-                if (fpsLimit > 0) {
-                    const fpsInterval = 1000 / fpsLimit;
-                    // Small tolerance: on a 60 Hz display frames arrive a hair under 16.67 ms
-                    // and would otherwise be skipped, halving the frame rate.
-                    if (timeSinceLastRender < fpsInterval - 2) {
-                        return;
-                    }
-                    lastRenderTime = now - (timeSinceLastRender % fpsInterval);
-                } else {
-                    lastRenderTime = now;
-                }
+                lastRenderTime = now;
 
                 const dt = Math.min(timeSinceLastRender * 0.001, 0.1);
 
@@ -2363,11 +2345,9 @@ function MiniZooGame() {
         const syncGraphicsAndFps = () => {
             const settings = getSettings();
             const newQuality = settings.graphicsQuality || 'medium';
-            const newFpsLimit = normalizeFpsLimit(settings.fpsLimit);
 
             const prevQuality = graphicsQualityRef.current;
             graphicsQualityRef.current = newQuality;
-            fpsLimitRef.current = newFpsLimit;
 
             if (newQuality !== prevQuality) {
                 const state = gameStateRef.current;
