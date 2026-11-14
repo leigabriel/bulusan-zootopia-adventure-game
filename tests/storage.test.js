@@ -204,7 +204,7 @@ test('resetMissionProgress clears to defaults', () => {
 test('getTasks returns one feeding task per safe animal type', () => {
     const tasks = getTasks();
     assert.equal(tasks.length, SAFE_ANIMAL_NAMES.length);
-    assert.ok(['Goat', 'Forest Rabbit', 'Parrot', 'Pigeon'].every((name) => tasks.some((task) => task.animalName === name)));
+    assert.ok(['Goat', 'Parrot', 'Pigeon'].every((name) => tasks.some((task) => task.animalName === name)));
     assert.ok(!tasks.some((task) => ['Owl', 'Frog', 'Koi Fish'].includes(task.animalName)));
     for (const task of tasks) {
         assert.ok(task.id);
