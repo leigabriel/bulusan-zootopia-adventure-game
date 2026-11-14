@@ -65,8 +65,34 @@ export function getRiverPathLength() {
     return getPathCache().length;
 }
 
+// The creek narrows where the visitor path crosses it, so a footbridge can
+// span the water. `half` is the half-width at the crossing; the channel eases
+// back to its natural width over `fade` units either side of the `flat` run.
+export const RIVER_CROSSING = { x: 106.6, z: 74.7, half: 2.2, flat: 6, fade: 18 };
+
+let crossingDistance = null;
+
+function getCrossingDistance() {
+    if (crossingDistance === null) {
+        const { xs, zs, distance, count } = getPathCache();
+        let best = Infinity;
+        for (let i = 0; i < count; i += 1) {
+            const d = (xs[i] - RIVER_CROSSING.x) ** 2 + (zs[i] - RIVER_CROSSING.z) ** 2;
+            if (d < best) {
+                best = d;
+                crossingDistance = distance[i];
+            }
+        }
+    }
+    return crossingDistance;
+}
+
 function widthAtDistance(distance) {
-    return RIVER_WIDTH + Math.sin(distance * 0.035) * WIDTH_VARIATION;
+    const natural = RIVER_WIDTH + Math.sin(distance * 0.035) * WIDTH_VARIATION;
+    const away = Math.abs(distance - getCrossingDistance());
+    const t = Math.min(1, Math.max(0, (away - RIVER_CROSSING.flat) / RIVER_CROSSING.fade));
+    const k = 1 - t * t * (3 - 2 * t);
+    return natural + (RIVER_CROSSING.half - natural) * k;
 }
 
 // Width for a 0..1 position along the path (used by the ribbon meshes).

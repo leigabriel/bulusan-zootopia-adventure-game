@@ -52,6 +52,7 @@ const WORLD_PROP_MODELS = [
   '/models/natures/haystack.glb',
   '/models/structures/livery-stable.glb',
   '/models/structures/parrot-run.glb',
+  '/models/structures/creek-footbridge.glb',
   '/models/structures/safety-sign.glb',
 ];
 

@@ -1698,7 +1698,7 @@ function MiniZooGame() {
                 if (runAudio && riverStepAudio) {
                     const isRunning = state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
                     const sfxVol = volumesRef.current.sfx;
-                    const inWater = Boolean(playerPosition) && isRiverArea(playerPosition.x, playerPosition.z, 0.4);
+                    const inWater = Boolean(playerPosition) && !state.onBridge && isRiverArea(playerPosition.x, playerPosition.z, 0.4);
                     const activeAudio = inWater ? riverStepAudio : runAudio;
                     const idleAudio = inWater ? runAudio : riverStepAudio;
                     if (!idleAudio.paused) {
