@@ -804,6 +804,7 @@ function MiniZooGame() {
     const birdChirpingRef = useRef(null);
     const riverAudioRef = useRef(null);
     const runAudioRef = useRef(null);
+    const riverStepAudioRef = useRef(null);
 
     const getRunAudio = useCallback(() => {
         if (!runAudioRef.current) {
@@ -823,6 +824,26 @@ function MiniZooGame() {
             }).catch(() => {});
         }
         return runAudioRef.current;
+    }, []);
+
+    // Splashing footsteps used instead of the normal footstep loop in the water.
+    const getRiverStepAudio = useCallback(() => {
+        if (!riverStepAudioRef.current) {
+            const fallbackPath = '/audio/river-steps.wav';
+            const audio = new Audio(fallbackPath);
+            audio.loop = true;
+            audio.preload = 'auto';
+            audio.volume = 0;
+            audio.setAttribute('playsinline', 'true');
+            riverStepAudioRef.current = audio;
+
+            resolveAssetUrl(fallbackPath).then((assetUrl) => {
+                if (riverStepAudioRef.current === audio && assetUrl && audio.paused) {
+                    audio.src = assetUrl;
+                }
+            }).catch(() => {});
+        }
+        return riverStepAudioRef.current;
     }, []);
 
     const getRiverAudio = useCallback(() => {
@@ -970,6 +991,10 @@ function MiniZooGame() {
         if (runAudioRef.current) {
             runAudioRef.current.pause();
             if (!keepPosition) runAudioRef.current.currentTime = 0;
+        }
+        if (riverStepAudioRef.current) {
+            riverStepAudioRef.current.pause();
+            if (!keepPosition) riverStepAudioRef.current.currentTime = 0;
         }
     }, []);
 
@@ -1669,18 +1694,26 @@ function MiniZooGame() {
                 }
 
                 const runAudio = getRunAudio();
-                if (runAudio) {
+                const riverStepAudio = getRiverStepAudio();
+                if (runAudio && riverStepAudio) {
                     const isRunning = state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
                     const sfxVol = volumesRef.current.sfx;
+                    const inWater = Boolean(playerPosition) && isRiverArea(playerPosition.x, playerPosition.z, 0.4);
+                    const activeAudio = inWater ? riverStepAudio : runAudio;
+                    const idleAudio = inWater ? runAudio : riverStepAudio;
+                    if (!idleAudio.paused) {
+                        idleAudio.pause();
+                        idleAudio.currentTime = 0;
+                    }
                     if (isRunning && sfxVol > 0) {
-                        runAudio.volume = sfxVol * 0.58;
-                        if (runAudio.paused) {
-                            runAudio.playbackRate = 1.01 + Math.random() * 0.06;
-                            try { runAudio.play().catch(() => {}); } catch {}
+                        activeAudio.volume = Math.min(1, sfxVol * (inWater ? 0.9 : 0.58));
+                        if (activeAudio.paused) {
+                            activeAudio.playbackRate = 1.01 + Math.random() * 0.06;
+                            try { activeAudio.play().catch(() => {}); } catch {}
                         }
-                    } else if (!runAudio.paused) {
-                        runAudio.pause();
-                        runAudio.currentTime = 0;
+                    } else if (!activeAudio.paused) {
+                        activeAudio.pause();
+                        activeAudio.currentTime = 0;
                     }
                 }
 
@@ -1849,7 +1882,7 @@ function MiniZooGame() {
             setInitError(true);
             setIsLoading(false);
         }
-    }, [checkNearbyAnimals, checkNearbyStaff, clearFeedingTimer, disposePlayerCharacter, getRiverAudio, getRunAudio, playPlayerAction]);
+    }, [checkNearbyAnimals, checkNearbyStaff, clearFeedingTimer, disposePlayerCharacter, getRiverAudio, getRiverStepAudio, getRunAudio, playPlayerAction]);
 
     const handleStartGame = useCallback(() => {
         if (isEnteringGameRef.current) return;
