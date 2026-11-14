@@ -8,10 +8,13 @@ import { PATH_WIDTH, PLAZA, getRouteSamples } from '../data/pathways.js';
 // lighter flagstone disc. Everything is a single draw call.
 
 const LIFT = 0.07;
-const LATERAL = [-1, -0.62, 0, 0.62, 1];
-const ALPHA = [0, 0.82, 0.95, 0.82, 0];
+const LATERAL = [-1.08, -0.82, -0.5, -0.18, 0.18, 0.5, 0.82, 1.08];
+const ALPHA = [0, 0.7, 0.92, 0.97, 0.97, 0.92, 0.7, 0];
+const PEBBLE_SPACING = 2.4;
 const EARTH = new THREE.Color(0xcdae79);
 const EARTH_EDGE = new THREE.Color(0xa98a58);
+const EARTH_WORN = new THREE.Color(0xb99a68);
+const PEBBLE = new THREE.Color(0x9a8d78);
 const STONE = new THREE.Color(0xd6c8a4);
 const STONE_RIM = new THREE.Color(0xb5a27a);
 
@@ -71,7 +74,7 @@ export function createPathways(scene) {
                 const taper = end >= 3 ? 1 : 0.55 + 0.15 * end;
                 LATERAL.forEach((offset, column) => {
                     const lateral = offset * half * taper;
-                    const base = Math.abs(offset) > 0.9 ? EARTH_EDGE : EARTH;
+                    const base = Math.abs(offset) > 0.9 ? EARTH_EDGE : Math.abs(offset) < 0.25 ? EARTH_WORN : EARTH;
                     pushVertex(run[i].x + nx * lateral, run[i].z + nz * lateral, base, ALPHA[column] * (end === 0 ? 0.6 : 1));
                 });
             }
@@ -127,6 +130,50 @@ export function createPathways(scene) {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
+    // Small stones along both edges, so the path reads as a laid walkway.
+    const pebbleSpots = [];
+    for (const { samples } of getRouteSamples()) {
+        for (const run of dryRuns(samples)) {
+            let carried = 0;
+            for (let i = 1; i < run.length - 1; i += 1) {
+                const prev = run[i - 1];
+                const next = run[i + 1];
+                carried += Math.hypot(run[i].x - prev.x, run[i].z - prev.z);
+                if (carried < PEBBLE_SPACING) continue;
+                carried = 0;
+                const tx = next.x - prev.x;
+                const tz = next.z - prev.z;
+                const length = Math.hypot(tx, tz) || 1;
+                const nx = -tz / length;
+                const nz = tx / length;
+                for (const side of [-1, 1]) {
+                    const seed = Math.sin(run[i].x * 12.9898 + run[i].z * 78.233 + side * 3.1) * 43758.5453;
+                    const r = seed - Math.floor(seed);
+                    const lateral = side * (PATH_WIDTH / 2 + 0.05 + r * 0.45);
+                    pebbleSpots.push({ x: run[i].x + nx * lateral, z: run[i].z + nz * lateral, size: 0.1 + r * 0.14, yaw: r * 6.28 });
+                }
+            }
+        }
+    }
+    const pebbleGeometry = new THREE.DodecahedronGeometry(1, 0);
+    const pebbleMaterial = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, flatShading: true });
+    const pebbles = new THREE.InstancedMesh(pebbleGeometry, pebbleMaterial, Math.max(1, pebbleSpots.length));
+    const dummy = new THREE.Object3D();
+    pebbleSpots.forEach((spot, index) => {
+        dummy.position.set(spot.x, sampleTerrainHeight(spot.x, spot.z) + 0.03, spot.z);
+        dummy.rotation.set(0, spot.yaw, 0);
+        dummy.scale.set(spot.size * 1.4, spot.size * 0.7, spot.size);
+        dummy.updateMatrix();
+        pebbles.setMatrixAt(index, dummy.matrix);
+        pebbles.setColorAt(index, color.copy(PEBBLE).multiplyScalar(wobble(spot.x * 1.7, spot.z * 1.3) + (spot.size - 0.17)));
+    });
+    pebbles.count = pebbleSpots.length;
+    pebbles.instanceMatrix.needsUpdate = true;
+    if (pebbles.instanceColor) pebbles.instanceColor.needsUpdate = true;
+    pebbles.receiveShadow = true;
+    pebbles.name = 'pathway-pebbles';
+    scene.add(pebbles);
+
     const material = new THREE.MeshStandardMaterial({
         vertexColors: true,
         transparent: true,
@@ -147,6 +194,10 @@ export function createPathways(scene) {
         mesh,
         dispose() {
             scene.remove(mesh);
+            scene.remove(pebbles);
+            pebbles.dispose();
+            pebbleGeometry.dispose();
+            pebbleMaterial.dispose();
             geometry.dispose();
             material.dispose();
         },
