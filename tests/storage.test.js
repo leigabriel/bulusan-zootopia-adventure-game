@@ -22,7 +22,6 @@ import {
     setVolume,
     toggleMusic,
     setGraphicsQuality,
-    setFpsLimit,
     getProgress,
     saveProgress,
     getDiscoveredAnimals,
@@ -54,7 +53,7 @@ test('getSettings returns defaults when empty', () => {
     assert.equal(settings.sfxVolume, 1.0);
     assert.equal(settings.uiVolume, 1.0);
     assert.equal(settings.graphicsQuality, 'medium');
-    assert.equal(settings.fpsLimit, 60);
+    assert.equal(settings.fpsLimit, undefined);
     assert.equal(settings.sensitivity, 1.0);
 });
 
@@ -86,15 +85,6 @@ test('setGraphicsQuality only accepts valid values', () => {
     assert.equal(getSettings().graphicsQuality, 'low');
     setGraphicsQuality('invalid');
     assert.equal(getSettings().graphicsQuality, 'low'); // unchanged
-});
-
-test('setFpsLimit only accepts valid values', () => {
-    setFpsLimit(120);
-    assert.equal(getSettings().fpsLimit, 120);
-    setFpsLimit(30);
-    assert.equal(getSettings().fpsLimit, 120); // unchanged: below 60 is not offered
-    setFpsLimit(0);
-    assert.equal(getSettings().fpsLimit, 0);
 });
 
 test('getProgress returns defaults when empty', () => {
