@@ -43,6 +43,9 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          # The changelog is built from the commit history since the last release.
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -195,7 +198,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add version.json package.json
+          node scripts/changelog.mjs release "${{ steps.version.outputs.name }}" "$(node -p "require('./version.json').versionCode")"
+          git add version.json package.json CHANGELOG.md
           git commit -m "chore: release ${{ steps.version.outputs.name }} [skip ci]"
           for attempt in 1 2 3; do
             git pull --rebase origin "${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}" && exit 0
