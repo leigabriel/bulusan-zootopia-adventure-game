@@ -4,6 +4,7 @@ import { TIGER_ENCLOSURE } from '../data/worldPoints.js';
 import { getWaterDepth } from '../components/River.jsx';
 import { zoomFromPinch, zoomFromWheel, ZOOM_DEFAULT } from '../utils/cameraZoom.js';
 import { wadeSpeedScale } from '../utils/riverMath.js';
+import { clampToBridgeRails, getBridgeDeckHeight } from '../data/bridge.js';
 
 const MOVEMENT_SPEED = 22;
 const ACCELERATION = 12;
@@ -90,7 +91,7 @@ export function createMovementHandler(camera, state) {
 
         // Wading through water slows the player; the factor eases in and out so
         // stepping into the river does not jerk the camera.
-        const wadeTarget = wadeSpeedScale(getWaterDepth(state.river, camera.position.x, camera.position.z));
+        const wadeTarget = state.onBridge ? 1 : wadeSpeedScale(getWaterDepth(state.river, camera.position.x, camera.position.z));
         const wade = state.wadeScale ?? 1;
         state.wadeScale = wade + (wadeTarget - wade) * (1 - Math.exp(-9 * dt));
 
@@ -154,6 +155,15 @@ export function createMovementHandler(camera, state) {
         resolveObstacles(state.obstacles);
         resolveObstacles(state.animalObstacles);
 
+        // Keep a player who is crossing the footbridge inside its rails.
+        if (state.onBridge) {
+            const inside = clampToBridgeRails(nextX, nextZ);
+            if (inside) {
+                nextX = inside.x;
+                nextZ = inside.z;
+            }
+        }
+
         // Apply corrected positions
         const movedX = nextX - previousX;
         const movedZ = nextZ - previousZ;
@@ -186,7 +196,19 @@ export function createMovementHandler(camera, state) {
 
         // Terrain and Platform following
         const playerHeight = state.playerHeight ?? PLAYER_HEIGHT;
-        const terrainHeight = getTerrainHeight(camera.position.x, camera.position.z);
+        let terrainHeight = getTerrainHeight(camera.position.x, camera.position.z);
+
+        // The footbridge deck is walkable only from above: a player wading
+        // beneath it stays on the riverbed.
+        const deckHeight = getBridgeDeckHeight(camera.position.x, camera.position.z);
+        state.onBridge = false;
+        if (deckHeight !== null) {
+            const feet = state.isGrounded && state.groundHeight !== undefined ? state.groundHeight : camera.position.y - playerHeight;
+            if (feet >= deckHeight - 0.6) {
+                terrainHeight = Math.max(terrainHeight, deckHeight);
+                state.onBridge = true;
+            }
+        }
 
         // state.groundHeight is the height the player is actually standing at.
         // Walking over the low-poly triangles is eased so the camera and the
