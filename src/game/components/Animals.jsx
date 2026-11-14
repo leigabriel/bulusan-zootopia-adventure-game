@@ -135,34 +135,21 @@ const ANIMAL_CONFIGS = [
         speed: 0.04,
         runSpeed: 0.08,
         collisionRadius: 1.15,
-        count: 1,
+        // A small troop of four that stays together.
+        count: 4,
         movementStyle: 'static',
         idleAnimation: 'Idle',
-        // Every so often it breaks the idle with one of these (no climbing clips).
+        // Switches to a new action every 3 seconds (no climbing clips).
         specialAnimations: ['Idle2', 'Smile', 'Jump', 'Jump2', 'Roar2'],
-        specialAnimationIntervalMin: 4,
-        specialAnimationIntervalMax: 9,
+        specialAnimationIntervalMin: 3,
+        specialAnimationIntervalMax: 3,
+        specialAnimationStartJitter: 3,
         specialAnimationTimeScale: 1,
-        spawnArea: { x: -100, z: -70, radius: 24 },
+        spawnArea: { x: -100, z: -70, radius: 8 },
         name: 'Forest Monkey',
         species: 'Macaca fascicularis',
         emoji: '🐒',
         description: 'A monkey resting in the forest area.'
-    },
-    {
-        file: 'rabbit/scene.gltf',
-        scale: 0.05,
-        speed: 0.03,
-        runSpeed: 0.05,
-        collisionRadius: 0.65,
-        count: 5,
-        movementStyle: 'walkOnly',
-        walkAnimation: 'Walk',
-        spawnArea: { x: -30, z: 65, radius: 6 },
-        name: 'Rabbit',
-        species: 'Oryctolagus cuniculus',
-        emoji: '🐇',
-        description: 'A small, speedy friend with a twitching nose and soft fur.'
     },
     {
         file: 'tiger/scene.gltf',
@@ -182,12 +169,12 @@ const ANIMAL_CONFIGS = [
         emoji: '🐅',
         description: 'A majestic big cat in a natural standing idle pose.'
     },
-    // Parrot, pigeon, goat and forest rabbit are fed in the feeding tasks only; the owl is watch-only.
+    // Parrot, pigeon and goat are fed in the feeding tasks only; the owl is watch-only.
     {
         file: 'parrot.glb',
         soundFile: 'bird-chirping.mp3',
         soundGain: 0.45,
-        targetHeight: 1.6,
+        targetHeight: 0.45,
         scale: 1,
         speed: 0,
         runSpeed: 0,
@@ -205,7 +192,7 @@ const ANIMAL_CONFIGS = [
         file: 'pigeon.glb',
         soundFile: 'bird-chirping.mp3',
         soundGain: 0.4,
-        targetHeight: 0.9,
+        targetHeight: 0.4,
         scale: 1,
         speed: 0,
         runSpeed: 0,
@@ -221,7 +208,7 @@ const ANIMAL_CONFIGS = [
     },
     {
         file: 'owl.glb',
-        targetHeight: 1.2,
+        targetHeight: 0.7,
         scale: 1,
         speed: 0,
         runSpeed: 0,
@@ -259,18 +246,28 @@ const ANIMAL_CONFIGS = [
         speed: 0.03,
         runSpeed: 0.05,
         collisionRadius: 0.6,
-        count: 3,
+        count: 5,
         movementStyle: 'walkOnly',
         walkAnimation: 'Walk',
-        spawnArea: { x: 70, z: -52, radius: 8 },
-        name: 'Forest Rabbit',
-        species: 'Sylvilagus floridanus',
-        emoji: '🐰',
-        description: 'A shy rabbit that hops along the forest edge looking for tender plants.'
+        spawnArea: { x: -30, z: 65, radius: 6 },
+        name: 'Rabbit',
+        species: 'Oryctolagus cuniculus',
+        emoji: '🐇',
+        description: 'A small, speedy friend with a twitching nose and soft fur.'
     }
 ];
 
-const AMBIENT_SOUND_RADIUS = 55;
+const AMBIENT_SOUND_RADIUS = 48;
+// Full volume while the player is close, then a smooth fade to silence at the
+// edge of the range, so far-away animals are clearly quieter.
+const AMBIENT_SOUND_NEAR = 7;
+
+function spatialSoundFactor(dist) {
+    if (dist <= AMBIENT_SOUND_NEAR) return 1;
+    if (dist >= AMBIENT_SOUND_RADIUS) return 0;
+    const norm = 1 - (dist - AMBIENT_SOUND_NEAR) / (AMBIENT_SOUND_RADIUS - AMBIENT_SOUND_NEAR);
+    return norm * norm * (3 - 2 * norm);
+}
 const AMBIENT_SOUND_RADIUS_SQ = AMBIENT_SOUND_RADIUS * AMBIENT_SOUND_RADIUS;
 const AMBIENT_SOUND_MIN_INTERVAL = 5;
 const AMBIENT_SOUND_MAX_INTERVAL = 11;
@@ -479,7 +476,7 @@ class GLTFAnimal {
         this.shadow = createContactShadow(this.radius * 2.35, 0.23);
         this.slopePitch = 0;
         this.slopeRoll = 0;
-        this.nextSpecialAnimationAt = performance.now() * 0.001 + getRandomSpecialInterval(config);
+        this.nextSpecialAnimationAt = performance.now() * 0.001 + getRandomSpecialInterval(config) + Math.random() * (config.specialAnimationStartJitter ?? 0);
         this.specialAnimationActive = false;
         this.specialAnimationEndAt = 0;
         this.group.rotation.order = 'YXZ';
@@ -631,14 +628,8 @@ class GLTFAnimal {
             const dx = listenerPosition.x - this.group.position.x;
             const dz = listenerPosition.z - this.group.position.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist <= 4.0) {
-                initialFactor = 1.0;
-            } else if (dist < AMBIENT_SOUND_RADIUS) {
-                const norm = 1.0 - (dist - 4.0) / (AMBIENT_SOUND_RADIUS - 4.0);
-                initialFactor = norm * norm;
-            } else {
-                return;
-            }
+            if (dist >= AMBIENT_SOUND_RADIUS) return;
+            initialFactor = spatialSoundFactor(dist);
         }
 
         const baseGain = this.baseSoundGain ?? 0.85;
@@ -646,7 +637,7 @@ class GLTFAnimal {
         if (targetVol <= 0.01) return;
 
         try {
-            this.sound.volume = Math.min(0.04, targetVol);
+            this.sound.volume = THREE.MathUtils.clamp(targetVol, 0, 1);
             this.sound.currentTime = 0;
             await this.sound.play();
         } catch {
@@ -735,13 +726,7 @@ class GLTFAnimal {
             const dz = listenerPosition.z - this.group.position.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
 
-            let spatialFactor = 0;
-            if (dist <= 4.0) {
-                spatialFactor = 1.0;
-            } else if (dist < AMBIENT_SOUND_RADIUS) {
-                const norm = 1.0 - (dist - 4.0) / (AMBIENT_SOUND_RADIUS - 4.0);
-                spatialFactor = norm * norm;
-            }
+            const spatialFactor = spatialSoundFactor(dist);
 
             this.currentSpatialFactor = spatialFactor;
             const targetVol = currentSfxSetting * baseGain * spatialFactor;
@@ -993,45 +978,112 @@ class GLTFAnimal {
     }
 }
 
-class AmbientBird {
-    constructor(model, animations, scene, birdIndex) {
-        this.group = model;
-        this.mixer = animations.length > 0 ? new THREE.AnimationMixer(model) : null;
+// Sky birds are built from plain geometry (no model files): a body, head,
+// beak, tail and two flapping wings. All birds share one set of geometry and
+// materials, so the whole flock costs only a few draw calls.
+const BIRD_PALETTES = [
+    { body: 0x3d4a5c, wing: 0x2c3646, belly: 0xd9dde3 },
+    { body: 0x7a5a3c, wing: 0x5a4029, belly: 0xe8d9bf },
+    { body: 0xf2f2ee, wing: 0xc9ced6, belly: 0xffffff },
+    { body: 0x2e5b8a, wing: 0x1f4066, belly: 0xe9eef5 },
+];
 
-        const skyPositions = [
+let sharedBird = null;
+
+function getSharedBird() {
+    if (sharedBird) return sharedBird;
+    const body = new THREE.SphereGeometry(0.5, 10, 8);
+    body.scale(0.8, 0.8, 1.9);
+    const head = new THREE.SphereGeometry(0.34, 8, 6);
+    const beak = new THREE.ConeGeometry(0.1, 0.4, 5);
+    beak.rotateX(Math.PI / 2);
+    const tail = new THREE.ConeGeometry(0.42, 1.1, 4);
+    tail.rotateX(-Math.PI / 2);
+    tail.scale(1, 0.12, 1);
+    // One wing: a flat feather shape that points out along +x, swept back.
+    const wingShape = new THREE.BufferGeometry();
+    wingShape.setAttribute('position', new THREE.Float32BufferAttribute([
+        0, 0, 0.7, 0, 0, -0.7, 2.6, 0, -0.9,
+        0, 0, 0.7, 2.6, 0, -0.9, 3.1, 0, -0.2,
+    ], 3));
+    wingShape.computeVertexNormals();
+    const wingMirror = wingShape.clone();
+    wingMirror.scale(-1, 1, 1);
+    // Mirroring flips the winding, so flip the index order back.
+    const pos = wingMirror.getAttribute('position');
+    for (let i = 0; i < pos.count; i += 3) {
+        const x = pos.getX(i + 1); const y = pos.getY(i + 1); const z = pos.getZ(i + 1);
+        pos.setXYZ(i + 1, pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
+        pos.setXYZ(i + 2, x, y, z);
+    }
+    wingMirror.computeVertexNormals();
+    sharedBird = {
+        geometries: { body, head, beak, tail, wingRight: wingShape, wingLeft: wingMirror },
+        materials: BIRD_PALETTES.map((palette) => ({
+            body: new THREE.MeshLambertMaterial({ color: palette.body }),
+            wing: new THREE.MeshLambertMaterial({ color: palette.wing, side: THREE.DoubleSide }),
+            beak: new THREE.MeshLambertMaterial({ color: 0xe8a03a }),
+        })),
+        users: 0,
+    };
+    return sharedBird;
+}
+
+class AmbientBird {
+    constructor(scene, birdIndex) {
+        const shared = getSharedBird();
+        shared.users += 1;
+        this.shared = shared;
+        const mats = shared.materials[birdIndex % shared.materials.length];
+        const geo = shared.geometries;
+
+        this.group = new THREE.Group();
+        const addMesh = (geometry, material, x, y, z, parent = this.group) => {
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = false;
+            mesh.receiveShadow = false;
+            parent.add(mesh);
+            return mesh;
+        };
+        addMesh(geo.body, mats.body, 0, 0, 0);
+        addMesh(geo.head, mats.body, 0, 0.12, 0.95);
+        addMesh(geo.beak, mats.beak, 0, 0.08, 1.38);
+        addMesh(geo.tail, mats.wing, 0, 0.02, -1.35);
+        this.wingRight = new THREE.Group();
+        this.wingLeft = new THREE.Group();
+        this.wingRight.position.set(0.3, 0.15, 0.1);
+        this.wingLeft.position.set(-0.3, 0.15, 0.1);
+        addMesh(geo.wingRight, mats.wing, 0, 0, 0, this.wingRight);
+        addMesh(geo.wingLeft, mats.wing, 0, 0, 0, this.wingLeft);
+        this.group.add(this.wingRight, this.wingLeft);
+
+        // Birds fly in a few loose flocks, each circling its own part of the sky.
+        const flocks = [
             { radius: 65, altitude: 42, cx: -35, cz: 25 },
             { radius: 95, altitude: 58, cx: 40, cz: -30 },
             { radius: 120, altitude: 72, cx: -10, cz: -45 },
         ];
-        const sky = skyPositions[birdIndex % skyPositions.length];
-        this.phase = birdIndex * (Math.PI * 2 / 3) + Math.random() * 0.4;
-        this.orbitRadius = sky.radius;
-        this.orbitSpeed = 0.04 + (birdIndex * 0.008);
-        this.altitude = sky.altitude;
+        const flockIndex = birdIndex % flocks.length;
+        const sky = flocks[flockIndex];
+        const mate = Math.floor(birdIndex / flocks.length);
+        this.phase = flockIndex * (Math.PI * 2 / 3) + mate * 0.06 + Math.random() * 0.03;
+        this.orbitRadius = sky.radius + (mate % 2 ? 4 : -3) * (1 + mate * 0.4);
+        this.orbitSpeed = 0.04 + flockIndex * 0.008;
+        this.altitude = sky.altitude + mate * 2.2 - 2;
         this.centerX = sky.cx;
         this.centerZ = sky.cz;
+        this.flapSpeed = 7 + Math.random() * 2.5;
+        this.flapOffset = Math.random() * Math.PI * 2;
 
-        const bounds = new THREE.Box3().setFromObject(model);
-        const size = bounds.getSize(new THREE.Vector3());
-        const sourceHeight = Math.max(size.y, 0.001);
-        model.scale.multiplyScalar(THREE.MathUtils.clamp(2.2 / sourceHeight, 0.01, 10));
-        model.traverse((child) => {
-            if (!child.isMesh) return;
-            child.castShadow = false;
-            child.receiveShadow = false;
-        });
-
-        if (this.mixer) {
-            const flightClip = animations.find((clip) => /fly|flap|wing|flight/i.test(clip.name)) || animations[0];
-            this.mixer.clipAction(flightClip).play();
-        }
-
+        const scale = 1.25 + (birdIndex % 3) * 0.15;
+        this.group.scale.setScalar(scale);
         this.group.rotation.order = 'YXZ';
         scene.add(this.group);
         this.update(0, 0);
     }
 
-    update(time, dt) {
+    update(time) {
         const angle = this.phase + time * this.orbitSpeed;
         const nextAngle = angle + 0.01;
         const x = this.centerX + Math.cos(angle) * this.orbitRadius;
@@ -1041,15 +1093,28 @@ class AmbientBird {
         const y = this.altitude + Math.sin(time * 0.9 + this.phase) * 2.2;
         this.group.position.set(x, y, z);
         this.group.rotation.y = Math.atan2(nextX - x, nextZ - z);
-        this.group.rotation.z = Math.sin(time * 0.9 + this.phase) * 0.08;
-        this.group.rotation.x = Math.cos(time * 0.9 + this.phase) * 0.035;
-        this.mixer?.update(dt);
+        // Bank into the turn and rise a little with each wingbeat.
+        this.group.rotation.z = -0.22 + Math.sin(time * 0.9 + this.phase) * 0.06;
+        this.group.rotation.x = Math.cos(time * 0.9 + this.phase) * 0.05;
+        // Flap in bursts, then glide with wings slightly raised.
+        const cycle = Math.sin(time * 0.35 + this.flapOffset);
+        const flapping = cycle > -0.35;
+        const beat = flapping
+            ? Math.sin(time * this.flapSpeed + this.flapOffset) * 0.75
+            : 0.12;
+        this.wingRight.rotation.z = beat;
+        this.wingLeft.rotation.z = -beat;
+        this.group.position.y += flapping ? Math.sin(time * this.flapSpeed + this.flapOffset) * 0.12 : 0;
     }
 
     dispose() {
-        this.mixer?.stopAllAction();
-        this.mixer?.uncacheRoot(this.group);
         this.group.parent?.remove(this.group);
+        this.shared.users -= 1;
+        if (this.shared.users <= 0 && sharedBird === this.shared) {
+            Object.values(this.shared.geometries).forEach((geometry) => geometry.dispose());
+            this.shared.materials.forEach((set) => Object.values(set).forEach((material) => material.dispose()));
+            sharedBird = null;
+        }
     }
 }
 
@@ -1119,30 +1184,8 @@ export async function loadGLTFAnimals(scene, obstacles, initialVolume) {
     return animals;
 }
 
-export async function loadAmbientBirds(scene) {
-    const birdFiles = ['birds/bird_1/scene.gltf', 'birds/bird_2/scene.gltf', 'birds/bird_1/scene.gltf'];
-    const birds = [];
-    const loadModel = (file) => {
-        if (modelCache.has(file)) return Promise.resolve(modelCache.get(file));
-        return new Promise((resolve) => {
-            const load = async () => {
-                const loader = createGLTFLoader();
-                const modelPath = `/models/animals/${file}`;
-                const modelUrl = await resolveAssetUrl(modelPath);
-                loader.setResourcePath(modelPath.slice(0, modelPath.lastIndexOf('/') + 1));
-                loader.load(modelUrl, (gltf) => {
-                    modelCache.set(file, gltf);
-                    resolve(gltf);
-                }, undefined, () => resolve(null));
-            };
-            load().catch(() => resolve(null));
-        });
-    };
+const SKY_BIRD_COUNT = 9;
 
-    const models = await Promise.all(birdFiles.map(loadModel));
-    models.forEach((gltf, index) => {
-        if (!gltf) return;
-        birds.push(new AmbientBird(cloneWithSkeleton(gltf.scene), gltf.animations.map((clip) => clip.clone()), scene, index));
-    });
-    return birds;
+export async function loadAmbientBirds(scene) {
+    return Array.from({ length: SKY_BIRD_COUNT }, (_, index) => new AmbientBird(scene, index));
 }
