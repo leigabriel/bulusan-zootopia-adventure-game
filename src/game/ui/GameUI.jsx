@@ -7,6 +7,7 @@ import { resolveAssetUrl } from '../utils/localAssets.js';
 import { ActionButton, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
+import { ControlsContent } from './ControlsGuide.jsx';
 import { DEFAULT_SETTINGS, getSettings, saveSettings } from '../utils/storage.js';
 import { getPlayerProfile, isPlayerProfileComplete, PLAYER_GENDERS, savePlayerProfile } from '../utils/playerProfile.js';
 
@@ -426,18 +427,19 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
         audio: 'Audio',
         sensitivity: 'Sensitivity',
         perspective: 'View Perspective',
+        controls: 'How To Control',
     };
 
     if (activeSection) {
         return (
-            <ModalShell isOpen={isOpen && Boolean(activeSection)} onClose={() => setActiveSection(null)} title={sectionTitles[activeSection]} size="md">
+            <ModalShell isOpen={isOpen && Boolean(activeSection)} onClose={() => setActiveSection(null)} title={sectionTitles[activeSection]} size={activeSection === 'controls' ? 'xl' : 'md'}>
                 <div className="flex min-h-0 flex-col gap-3">
                     <ActionButton variant="secondary" size="sm" className="self-start" onClick={() => setActiveSection(null)}>
                         <span aria-hidden="true">&lsaquo;</span> Settings
                     </ActionButton>
 
                     {activeSection === 'graphics' ? (
-                        <div className="grid flex-1 content-center gap-3 min-[568px]:grid-cols-2">
+                        <div className="grid flex-1 content-center">
                             <SelectRow
                                 label="Graphics Quality"
                                 options={[
@@ -448,19 +450,10 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                                 value={settings.graphicsQuality || 'medium'}
                                 onChange={(value) => updateSetting('graphicsQuality', value)}
                             />
-                            <SelectRow
-                                label="FPS Limit"
-                                options={[
-                                    { label: '60', value: 60 },
-                                    { label: '90', value: 90 },
-                                    { label: '120', value: 120 },
-                                    { label: 'Unlimited', value: 0 },
-                                ]}
-                                value={settings.fpsLimit ?? 60}
-                                onChange={(value) => updateSetting('fpsLimit', value)}
-                            />
                         </div>
                     ) : null}
+
+                    {activeSection === 'controls' ? <ControlsContent /> : null}
 
                     {activeSection === 'audio' ? (
                         <div className="grid flex-1 content-center gap-3 min-[568px]:grid-cols-2">
@@ -513,6 +506,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
         { id: 'audio', label: 'Audio', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
         { id: 'sensitivity', label: 'Look Speed', icon: '↔', className: 'border-amber-200 bg-white text-slate-800' },
         { id: 'perspective', label: 'Camera View', icon: '◉', className: 'border-teal-200 bg-white text-slate-800' },
+        { id: 'controls', label: 'Controls', icon: '🎮', className: 'border-lime-200 bg-white text-slate-800' },
         ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit', icon: '×', className: 'border-rose-200 bg-rose-50 text-rose-700' }] : []),
     ];
 
@@ -609,6 +603,7 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
 export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible }) {
     const [starting, setStarting] = useState(false);
     const [howToPlayOpen, setHowToPlayOpen] = useState(false);
+    const [controlsOpen, setControlsOpen] = useState(false);
     const [creditsOpen, setCreditsOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [playerDetailsOpen, setPlayerDetailsOpen] = useState(false);
@@ -628,6 +623,10 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     }
                     if (howToPlayOpen) {
                         setHowToPlayOpen(false);
+                        return;
+                    }
+                    if (controlsOpen) {
+                        setControlsOpen(false);
                         return;
                     }
                     if (creditsOpen) {
@@ -659,7 +658,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                 listenerHandle.remove();
             }
         };
-    }, [showExitConfirm, howToPlayOpen, creditsOpen, settingsOpen, playerDetailsOpen]);
+    }, [showExitConfirm, howToPlayOpen, controlsOpen, creditsOpen, settingsOpen, playerDetailsOpen]);
 
     const handleStart = useCallback(() => {
         if (!isPlayerProfileComplete()) {
@@ -773,6 +772,19 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         </span>
                     </button>
 
+                    {/* CONTROLS */}
+                    <button
+                        type="button"
+                        onClick={() => setControlsOpen(true)}
+                        className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
+                        title="Controls"
+                    >
+                        <span className="grid h-8 w-8 place-items-center text-2xl drop-shadow-md transition-transform group-hover:scale-110 sm:h-11 sm:w-11 sm:text-3xl" aria-hidden="true">🎮</span>
+                        <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
+                            Controls
+                        </span>
+                    </button>
+
                     {/* PLAYER DETAILS */}
                     <button
                         type="button"
@@ -809,6 +821,10 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
             {/* Modals */}
             <ModalShell isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="How To Play" size="md">
                 <HowToPlayContent />
+            </ModalShell>
+
+            <ModalShell isOpen={controlsOpen} onClose={() => setControlsOpen(false)} title="How To Control" size="xl">
+                <ControlsContent />
             </ModalShell>
 
             <ModalShell isOpen={creditsOpen} onClose={() => setCreditsOpen(false)} title="Credits" size="md">
