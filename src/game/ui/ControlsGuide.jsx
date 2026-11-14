@@ -23,8 +23,24 @@ function Key({ children, wide = false }) {
     );
 }
 
-function Emoji({ children }) {
-    return <span className="text-3xl leading-none" aria-hidden="true">{children}</span>;
+// Simple line icons (no emoji) so they look the same on every device.
+const ICONS = {
+    mouse: <><rect x="8" y="3" width="12" height="22" rx="6" /><path d="M14 3v9M8 12h12" /></>,
+    zoom: <><circle cx="12" cy="12" r="7" /><path d="M17.5 17.5L24 24M9 12h6M12 9v6" /></>,
+    stick: <><circle cx="14" cy="14" r="10" /><circle cx="14" cy="14" r="4" fill="currentColor" /><path d="M14 2v3M14 23v3M2 14h3M23 14h3" /></>,
+    swipe: <><path d="M8 20l-4-4 4-4M20 8l4 4-4 4M4 16h20" /></>,
+    pinch: <><path d="M5 5l6 6M23 23l-6-6M5 5h5M5 5v5M23 23h-5M23 23v-5" /></>,
+    book: <><path d="M4 5h8a3 3 0 013 3v15a3 3 0 00-3-3H4zM24 5h-8a3 3 0 00-3 3v15a3 3 0 013-3h8z" /></>,
+    camera: <><rect x="3" y="8" width="22" height="15" rx="3" /><circle cx="14" cy="15.5" r="4.5" /><path d="M9 8l2-3h6l2 3" /></>,
+    tasks: <><rect x="5" y="4" width="18" height="21" rx="3" /><path d="M10 11h8M10 16h8M10 21h5" /></>,
+};
+
+function Icon({ name }) {
+    return (
+        <svg viewBox="0 0 28 28" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700" aria-hidden="true">
+            {ICONS[name]}
+        </svg>
+    );
 }
 
 // `visual` is what the child sees (keys, a picture); `title` and `text` say it
@@ -51,14 +67,14 @@ export const COMPUTER_CONTROLS = [
         tone: 'bg-amber-50 border-amber-200',
         title: 'Look around',
         text: 'Hold the left mouse button and move the mouse.',
-        visual: <Emoji>🖱️</Emoji>,
+        visual: <Icon name="mouse" />,
     },
     {
         id: 'zoom',
         tone: 'bg-sky-50 border-sky-200',
         title: 'Come closer or go back',
         text: 'Roll the mouse wheel. Up is closer. Down is farther.',
-        visual: <Emoji>🔍</Emoji>,
+        visual: <Icon name="zoom" />,
     },
     {
         id: 'jump',
@@ -108,21 +124,21 @@ export const MOBILE_CONTROLS = [
         tone: 'bg-emerald-50 border-emerald-200',
         title: 'Walk around',
         text: 'Put your left thumb on the round stick. Slide it where you want to go.',
-        visual: <Emoji>🕹️</Emoji>,
+        visual: <Icon name="stick" />,
     },
     {
         id: 'look',
         tone: 'bg-amber-50 border-amber-200',
         title: 'Look around',
         text: 'Slide your finger on the empty part of the screen.',
-        visual: <Emoji>👆</Emoji>,
+        visual: <Icon name="swipe" />,
     },
     {
         id: 'zoom',
         tone: 'bg-sky-50 border-sky-200',
         title: 'Come closer or go back',
         text: 'Pinch with two fingers. Spread them apart to come closer. Squeeze them together to go back.',
-        visual: <Emoji>🤏</Emoji>,
+        visual: <Icon name="pinch" />,
     },
     {
         id: 'jump',
@@ -152,8 +168,8 @@ export const MOBILE_CONTROLS = [
         text: 'Tap the Book button to read about animals. Tap the Camera button to take a photo.',
         visual: (
             <div className="flex gap-2" aria-hidden="true">
-                <Emoji>📖</Emoji>
-                <Emoji>📷</Emoji>
+                <Icon name="book" />
+                <Icon name="camera" />
             </div>
         ),
     },
@@ -162,7 +178,7 @@ export const MOBILE_CONTROLS = [
         tone: 'bg-slate-50 border-slate-200',
         title: 'Tasks and menu',
         text: 'Tap the Tasks button to see what to do next. Tap the Menu button to rest or change settings.',
-        visual: <Emoji>📋</Emoji>,
+        visual: <Icon name="tasks" />,
     },
 ];
 
@@ -186,10 +202,10 @@ export function ControlsContent({ initialMode }) {
         <div className="flex min-h-0 flex-col gap-3">
             <div className="sz-tabs shrink-0" role="tablist" aria-label="Choose your device">
                 <button type="button" role="tab" aria-selected={mode === 'computer'} onClick={() => setMode('computer')} className="sz-tab" data-ui-button="true">
-                    <span aria-hidden="true">💻</span> Computer
+                    Computer
                 </button>
                 <button type="button" role="tab" aria-selected={mode === 'mobile'} onClick={() => setMode('mobile')} className="sz-tab" data-ui-button="true">
-                    <span aria-hidden="true">📱</span> Phone / Tablet
+                    Phone / Tablet
                 </button>
             </div>
             <p className="text-center text-[13px] font-black text-emerald-800">
