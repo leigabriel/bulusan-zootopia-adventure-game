@@ -1392,7 +1392,7 @@ export function HoldToFeedControl({
     };
 
     return (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] z-70 flex flex-col items-center px-3 sm:bottom-28">
+        <div className="pointer-events-none absolute right-[max(0.75rem,env(safe-area-inset-right))] top-1/2 z-70 flex -translate-y-1/2 flex-col items-center">
             <div className="mb-1.5 flex w-auto max-w-48 flex-col items-center justify-center rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/90 px-3 py-1 text-center text-white shadow-xl backdrop-blur-md">
                 <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
                     {animalName ? `${animalName}` : 'Animal'}
