@@ -5,10 +5,21 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 2.8** (version code 19, released 2026-11-15)
+**Current version: 2.9** (version code 20, released 2026-11-14)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 2.9 (2026-11-14)
+
+Version code 20.
+
+### Added
+- changelog: Script that adds a release section from commit messages
+
+### Changed
+- changelog: Add changelog with current version and history up to 2.8
+- android: Fetch full history and update changelog on each release
 
 ## Up to 2.8 (before the changelog)
 
