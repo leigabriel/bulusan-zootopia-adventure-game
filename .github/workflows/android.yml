@@ -8,6 +8,16 @@ name: Android release
 #   ANDROID_KEY_ALIAS          key alias inside the keystore
 #   ANDROID_KEY_PASSWORD       key password
 # See "Signed Android releases" in README.md.
+#
+# The APK is also uploaded to a Cloudflare R2 bucket (S3 API), under a folder
+# named after the branch, and every older APK in that folder is deleted so the
+# bucket only keeps the latest build. Needs these repository secrets:
+#   R2_ACCOUNT_ID         Cloudflare account id (the endpoint host prefix)
+#   R2_ACCESS_KEY_ID      R2 API token access key id (Object Read & Write)
+#   R2_SECRET_ACCESS_KEY  R2 API token secret access key
+#   R2_BUCKET             bucket name
+# Without them the upload is skipped with a warning; a failed upload never
+# blocks the release or the version bump.
 
 on:
   push:
@@ -33,6 +43,9 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          # The changelog is built from the commit history since the last release.
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -139,12 +152,54 @@ jobs:
           generate_release_notes: true
           files: ${{ steps.apk.outputs.file }}
 
+      # Keeps only the newest APK per branch in the bucket. The new file is
+      # uploaded and checked before anything old is removed, so a failed upload
+      # never leaves the bucket empty.
+      - name: Upload APK to Cloudflare R2
+        continue-on-error: true
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AWS_DEFAULT_REGION: auto
+          AWS_EC2_METADATA_DISABLED: 'true'
+          APK_FILE: ${{ steps.apk.outputs.file }}
+          APP_VERSION: ${{ steps.version.outputs.name }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ -z "$R2_ACCOUNT_ID" ] || [ -z "$R2_ACCESS_KEY_ID" ] || [ -z "$R2_SECRET_ACCESS_KEY" ] || [ -z "$R2_BUCKET" ]; then
+            echo "::warning::R2 secrets are not set, skipping the Cloudflare R2 upload."
+            exit 0
+          fi
+          export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          prefix="${BRANCH}/"
+          key="${prefix}Bulusan-Zootopia-Adventure-Game-${APP_VERSION}.apk"
+
+          aws s3api put-object --endpoint-url "$endpoint" --bucket "$R2_BUCKET" \
+            --key "$key" --body "$APK_FILE" \
+            --content-type application/vnd.android.package-archive
+          aws s3api head-object --endpoint-url "$endpoint" --bucket "$R2_BUCKET" --key "$key" > /dev/null
+          echo "Uploaded $key"
+
+          # Remove every other APK in this branch's folder.
+          aws s3api list-objects-v2 --endpoint-url "$endpoint" --bucket "$R2_BUCKET" \
+            --prefix "$prefix" --query 'Contents[].Key' --output text \
+            | tr '\t' '\n' | grep -E '\.apk$' | grep -vxF "$key" \
+            | while IFS= read -r old; do
+                aws s3api delete-object --endpoint-url "$endpoint" --bucket "$R2_BUCKET" --key "$old"
+                echo "Deleted $old"
+              done || true
+
       # Last on purpose: a failed build must not use up a version number.
       - name: Commit the new version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add version.json package.json
+          node scripts/changelog.mjs release "${{ steps.version.outputs.name }}" "$(node -p "require('./version.json').versionCode")"
+          git add version.json package.json CHANGELOG.md
           git commit -m "chore: release ${{ steps.version.outputs.name }} [skip ci]"
           for attempt in 1 2 3; do
             git pull --rebase origin "${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}" && exit 0
