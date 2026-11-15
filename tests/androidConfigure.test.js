@@ -80,3 +80,17 @@ test('activity hides system bars and keeps the screen on', () => {
     assert.match(src, /BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE/);
     assert.match(src, /onWindowFocusChanged/);
 });
+
+test('manifest gets legacy storage permission once', () => {
+    const xml = '<manifest>\n    <application>\n        <activity android:name=".MainActivity" />\n    </application>\n</manifest>';
+    const once = patchManifest(xml);
+    assert.match(once, /WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/);
+    assert.equal(patchManifest(once), once);
+});
+
+test('main activity exposes the photo saver bridge', () => {
+    const src = mainActivitySource('com.example.zoo');
+    assert.match(src, /addJavascriptInterface\(new PhotoSaver\(\), "AndroidPhotoSaver"\)/);
+    assert.match(src, /@JavascriptInterface/);
+    assert.match(src, /MediaStore/);
+});
