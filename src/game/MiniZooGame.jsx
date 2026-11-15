@@ -808,6 +808,34 @@ function MiniZooGame() {
     const riverAudioRef = useRef(null);
     const runAudioRef = useRef(null);
     const riverStepAudioRef = useRef(null);
+    const linoVoiceRef = useRef(null);
+
+    // Ranger Lino's spoken greeting, played once each time the player starts talking to him.
+    const playLinoVoice = useCallback(() => {
+        if (!soundEnabledRef.current) return;
+        if (!linoVoiceRef.current) {
+            const fallbackPath = '/audio/ranger-lino.mp3';
+            const audio = new Audio(fallbackPath);
+            audio.preload = 'auto';
+            audio.setAttribute('playsinline', 'true');
+            linoVoiceRef.current = audio;
+            resolveAssetUrl(fallbackPath).then((assetUrl) => {
+                if (linoVoiceRef.current === audio && assetUrl && audio.paused) audio.src = assetUrl;
+            }).catch(() => {});
+        }
+        const audio = linoVoiceRef.current;
+        audio.volume = Math.min(1, (volumesRef.current?.sfx ?? 1) * 0.9);
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+    }, []);
+
+    const stopLinoVoice = useCallback(() => {
+        const audio = linoVoiceRef.current;
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    }, []);
 
     const getRunAudio = useCallback(() => {
         if (!runAudioRef.current) {
@@ -832,7 +860,7 @@ function MiniZooGame() {
     // Splashing footsteps used instead of the normal footstep loop in the water.
     const getRiverStepAudio = useCallback(() => {
         if (!riverStepAudioRef.current) {
-            const fallbackPath = '/audio/river-steps.wav';
+            const fallbackPath = '/audio/running-on-water.mp3';
             const audio = new Audio(fallbackPath);
             audio.loop = true;
             audio.preload = 'auto';
@@ -2244,9 +2272,11 @@ function MiniZooGame() {
         setDialogueLines(storyMatchesStaff ? storyLines : [getStaffDialogueNode(nearbyStaff.id, 'root').message]);
         setDialogueLineIndex(0);
         setShowNpcDialogue(true);
-    }, [closeInterfaces, nearbyStaff, gameStarted, characterReady]);
+        if (nearbyStaff.id === 'lino') playLinoVoice();
+    }, [closeInterfaces, nearbyStaff, gameStarted, characterReady, playLinoVoice]);
 
     const closeNpcDialogue = useCallback(() => {
+        stopLinoVoice();
         setShowNpcDialogue(false);
         setActiveStaff(null);
         activeStaffRef.current = null;
@@ -2255,7 +2285,7 @@ function MiniZooGame() {
         if (gameStarted && characterReady) {
             state.controlsEnabled = true;
         }
-    }, [gameStarted, characterReady]);
+    }, [gameStarted, characterReady, stopLinoVoice]);
 
     const advanceNpcDialogue = useCallback(() => {
         if (dialogueLineIndex < dialogueLines.length - 1) {

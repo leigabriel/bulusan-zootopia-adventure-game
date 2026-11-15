@@ -190,8 +190,8 @@ const ANIMAL_CONFIGS = [
     },
     {
         file: 'pigeon.glb',
-        soundFile: 'bird-chirping.mp3',
-        soundGain: 0.4,
+        soundFile: 'pigeon.mp3',
+        soundGain: 0.7,
         targetHeight: 0.4,
         scale: 1,
         speed: 0,
@@ -225,6 +225,8 @@ const ANIMAL_CONFIGS = [
     },
     {
         file: 'goat.glb',
+        soundFile: 'goat.mp3',
+        soundGain: 0.85,
         trackFeet: true,
         targetHeight: 2.0,
         scale: 1,
@@ -257,12 +259,12 @@ const ANIMAL_CONFIGS = [
     }
 ];
 
-const AMBIENT_SOUND_RADIUS = 48;
+export const AMBIENT_SOUND_RADIUS = 48;
 // Full volume while the player is close, then a smooth fade to silence at the
 // edge of the range, so far-away animals are clearly quieter.
 const AMBIENT_SOUND_NEAR = 7;
 
-function spatialSoundFactor(dist) {
+export function spatialSoundFactor(dist) {
     if (dist <= AMBIENT_SOUND_NEAR) return 1;
     if (dist >= AMBIENT_SOUND_RADIUS) return 0;
     const norm = 1 - (dist - AMBIENT_SOUND_NEAR) / (AMBIENT_SOUND_RADIUS - AMBIENT_SOUND_NEAR);
@@ -272,7 +274,7 @@ const AMBIENT_SOUND_RADIUS_SQ = AMBIENT_SOUND_RADIUS * AMBIENT_SOUND_RADIUS;
 const AMBIENT_SOUND_MIN_INTERVAL = 5;
 const AMBIENT_SOUND_MAX_INTERVAL = 11;
 
-function createAnimalSound(soundFile, initialVolume = 0.75) {
+export function createAnimalSound(soundFile, initialVolume = 0.75) {
     if (!soundFile || typeof Audio === 'undefined') return null;
     const normalized = String(soundFile).replace(/^\/+/, '');
     const fallbackPath = `/audio/${normalized}`;
