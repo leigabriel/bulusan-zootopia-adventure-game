@@ -19,7 +19,7 @@ const MODEL_PATHS = {
     haystack: '/models/natures/haystack.glb',
     stable: '/models/structures/livery-stable.glb',
     parrotRun: '/models/structures/parrot-run.glb',
-    signBoard: '/models/structures/safety-sign.glb',
+    signBoard: '/models/structures/trailhead-sign.glb',
     footbridge: '/models/structures/creek-footbridge.glb',
 };
 
@@ -86,72 +86,6 @@ function placeSingle(scene, gltf, prop, { castShadow = false, sink = 0.05 } = {}
     return object;
 }
 
-async function createSignTexture() {
-    try {
-        await document.fonts?.load('800 60px "Simply Rounded"');
-    } catch { /* falls back to the system font */ }
-    const width = 1024;
-    const height = 820;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    const family = '"Simply Rounded", "Trebuchet MS", sans-serif';
-    // Text is shrunk to fit its row so it can never run off the board.
-    const fitText = (text, x, y, size, maxWidth, weight = 800) => {
-        let px = size;
-        ctx.font = `${weight} ${px}px ${family}`;
-        while (ctx.measureText(text).width > maxWidth && px > 20) {
-            px -= 2;
-            ctx.font = `${weight} ${px}px ${family}`;
-        }
-        ctx.fillText(text, x, y);
-    };
-
-    ctx.fillStyle = '#fff4d8';
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = '#2e9e5b';
-    ctx.fillRect(0, 0, width, 160);
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    fitText('BULUSAN ZOOTOPIA', width / 2, 70, 88, width - 60);
-    ctx.fillStyle = '#ffe28a';
-    fitText('Visitor Safety Guide', width / 2, 126, 44, width - 60);
-
-    const rules = [
-        ['#e8453c', 'Never go near the Bengal Tiger.'],
-        ['#2e9e5b', 'Look, don\u2019t touch the animals.'],
-        ['#2e9e5b', 'Feed gently: hold the Feed button.'],
-        ['#237fb5', 'Deep water slows you down.'],
-    ];
-    rules.forEach(([colour, text], index) => {
-        const y = 232 + index * 108;
-        ctx.fillStyle = colour;
-        ctx.beginPath();
-        ctx.arc(70, y, 34, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'center';
-        fitText(String(index + 1), 70, y + 2, 40, 40);
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#3b2a1a';
-        fitText(text, 122, y + 2, 50, width - 150);
-    });
-
-    ctx.fillStyle = '#ffe28a';
-    ctx.fillRect(0, height - 132, width, 132);
-    ctx.fillStyle = '#3b2a1a';
-    ctx.textAlign = 'center';
-    fitText('Be kind to every animal.', width / 2, height - 88, 48, width - 60);
-    fitText('Ask a ranger if you need help!', width / 2, height - 38, 42, width - 60, 700);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
-    return texture;
-}
-
 export async function loadWorldProps(scene, quality = 'medium', { existingTrees = [] } = {}) {
     const budget = BUDGETS[quality] || BUDGETS.medium;
     const [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge] = await Promise.all(
@@ -189,18 +123,11 @@ export async function loadWorldProps(scene, quality = 'medium', { existingTrees 
         meshes.push(bridge);
     }
 
-    // Information board: the model plus a painted panel on its face.
+    // Trailhead sign by the plaza: a map board with a hanging arrow plaque.
     if (signBoard) {
         const prop = { ...WORLD_PROPS.signBoard, rotation: getSignBoardRotation() };
-        const group = placeSingle(scene, signBoard, prop, { castShadow, sink: 0.02 }, meshes);
+        placeSingle(scene, signBoard, prop, { castShadow, sink: 0.02 }, meshes);
         obstacles.push(...footprintCircles(prop, FOOTPRINTS.signBoard));
-        const texture = await createSignTexture();
-        const panelGeometry = new THREE.PlaneGeometry(1.62, 1.3);
-        const panelMaterial = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
-        const panel = new THREE.Mesh(panelGeometry, panelMaterial);
-        panel.position.set(0, 1.35, 0.03);
-        group.add(panel);
-        disposables.push(texture, panelGeometry, panelMaterial);
     }
 
     // Scattered trees and logs. They keep clear of the plaza, the river, the
