@@ -12,6 +12,12 @@ const STORAGE_KEYS = {
 
 import { DEFAULT_STORY_PROGRESS, SAFE_ANIMAL_NAMES, normalizeStoryProgress } from '../data/storyTasks.js';
 
+// Phones and tablets start with cheaper shadows.
+function defaultShadowQuality() {
+    const mobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
+    return mobile ? 'low' : 'medium';
+}
+
 // Default values
 export const DEFAULT_SETTINGS = {
     ambienceVolume: 1.0,
@@ -19,6 +25,7 @@ export const DEFAULT_SETTINGS = {
     uiVolume: 1.0,
     sfxVolume: 1.0,
     graphicsQuality: 'medium',
+    shadowQuality: defaultShadowQuality(),
     sensitivity: 1.0
 };
 
@@ -83,6 +90,11 @@ export function setVolume(key, value) {
 export function toggleMusic() {
     const settings = getSettings();
     return setVolume('musicVolume', settings.musicVolume > 0 ? 0 : 0.5);
+}
+
+export function setShadowQuality(quality) {
+    if (!['off', 'low', 'medium', 'high'].includes(quality)) return getSettings();
+    return saveSettings({ shadowQuality: quality });
 }
 
 export function setGraphicsQuality(quality) {

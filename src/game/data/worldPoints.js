@@ -27,12 +27,12 @@ export const STAFF_START_POSITIONS = {
 export const PLAYER_START_OFFSET = { x: 14, z: 10 };
 
 // Hand-placed props. The stable and haystacks sit by the barn farm, the parrot
-// run in the open meadow west of the statue, and the safety board beside the
+// run in the open meadow west of the statue, and the trailhead sign beside the
 // path from the start point, turned to face it.
 export const WORLD_PROPS = {
     stable: { x: 100, z: -138, rotation: 0.12, scale: 1.7 },
     parrotRun: { x: -55, z: -42, rotation: 0, scale: 3.2 },
-    signBoard: { x: 30, z: -8, scale: 3 },
+    signBoard: { x: 30, z: -8, scale: 1.7 },
     haystacks: [
         { x: 160, z: -138, rotation: 0.4, scale: 1.8 },
         { x: 126, z: -168, rotation: 2.1, scale: 1.8 },

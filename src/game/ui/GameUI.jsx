@@ -435,7 +435,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                     </ActionButton>
 
                     {activeSection === 'graphics' ? (
-                        <div className="grid flex-1 content-center">
+                        <div className="grid flex-1 content-center gap-3">
                             <SelectRow
                                 label="Graphics Quality"
                                 options={[
@@ -445,6 +445,17 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                                 ]}
                                 value={settings.graphicsQuality || 'medium'}
                                 onChange={(value) => updateSetting('graphicsQuality', value)}
+                            />
+                            <SelectRow
+                                label="Shadows"
+                                options={[
+                                    { label: 'Off', value: 'off' },
+                                    { label: 'Low', value: 'low' },
+                                    { label: 'Medium', value: 'medium' },
+                                    { label: 'High', value: 'high' },
+                                ]}
+                                value={settings.shadowQuality || 'medium'}
+                                onChange={(value) => updateSetting('shadowQuality', value)}
                             />
                         </div>
                     ) : null}
