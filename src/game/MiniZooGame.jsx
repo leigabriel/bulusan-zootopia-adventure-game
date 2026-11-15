@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { App as CapacitorApp } from '@capacitor/app';
+import { savePhotoToDevice } from './utils/photoSave';
 
 import { createScene, createCamera, createRenderer, createLighting, applyRendererQuality, applySceneQuality } from './components/Scene.jsx';
+import { applyShadowFlags, configureSunShadow, followSunShadow, normalizeShadowQuality, recompileMaterials } from './utils/shadows.js';
 import { createMeadow, disposeMeadow, updateMeadow } from './components/Meadow.jsx';
 import { createInsects, disposeInsects, updateInsects } from './components/Insects.jsx';
 import { createPathways } from './components/Pathways.jsx';
@@ -519,6 +521,7 @@ function MiniZooGame() {
     const observationStartedAtRef = useRef(0);
     const missionCheckRef = useRef(() => {});
     const graphicsQualityRef = useRef((getSettings().graphicsQuality || 'medium'));
+    const shadowQualityRef = useRef(normalizeShadowQuality(getSettings().shadowQuality));
     // Cached volumes so the render loop never parses localStorage each frame.
     const volumesRef = useRef({
         sfx: getSettings().sfxVolume ?? 1.0,
@@ -1267,7 +1270,11 @@ function MiniZooGame() {
             const camera = createCamera(); state.camera = camera;
             const renderer = createRenderer(containerRef.current, quality); state.renderer = renderer;
 
-            createLighting(scene);
+            const lights = createLighting(scene);
+            state.sun = lights.sun;
+            const shadowQuality = normalizeShadowQuality(settings.shadowQuality);
+            shadowQualityRef.current = shadowQuality;
+            configureSunShadow(renderer, lights.sun, shadowQuality, { mobile: isMobile });
             createTerrain(scene);
             createPathways(scene);
             createFence(scene, quality);
@@ -1414,6 +1421,7 @@ function MiniZooGame() {
             let missionCheckTimer = 0;
             const nearbyInterval = isMobile ? 0.3 : 0.2;
 
+            let shadowScanFrame = 0;
             const animate = () => {
                 state.animationId = requestAnimationFrame(animate);
                 const now = performance.now();
@@ -1428,6 +1436,17 @@ function MiniZooGame() {
                 // Reduce CPU usage while hidden.
                 if (document.hidden) {
                     return;
+                }
+
+                // Keep the sun's shadow box on the player. Anything added after loading
+                // (new people, carried items) is picked up by a slow re-scan.
+                if (state.sun && shadowQualityRef.current !== 'off') {
+                    followSunShadow(state.sun, camera.position.x, camera.position.z);
+                    shadowScanFrame += 1;
+                    if (shadowScanFrame >= 300) {
+                        shadowScanFrame = 0;
+                        applyShadowFlags(scene, true);
+                    }
                 }
 
                 // Reuse the obstacle objects instead of allocating an array and
@@ -1875,6 +1894,7 @@ function MiniZooGame() {
                 }
             };
 
+            applyShadowFlags(scene, shadowQualityRef.current !== 'off');
             state.initialized = true;
             setIsLoading(false);
         } catch (err) {
@@ -2127,14 +2147,11 @@ function MiniZooGame() {
             setCameraMode(preCameraModeRef.current || 'third');
         }
     }, [completeStoryTask, showMissionNotice, updateMissionProgress]);
-    const savePhoto = useCallback(() => {
+    const savePhoto = useCallback(async () => {
         if (!photoPreview) return;
-        const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        const link = document.createElement('a');
-        link.href = photoPreview;
-        link.download = `bulusan-zoo-adventure-${stamp}.png`;
-        link.click();
-    }, [photoPreview]);
+        const result = await savePhotoToDevice(photoPreview);
+        showMissionNotice(result.message);
+    }, [photoPreview, showMissionNotice]);
     const handleResetTasks = useCallback(() => {
         setShowResetTasksModal(true);
     }, []);
@@ -2381,6 +2398,18 @@ function MiniZooGame() {
 
             const prevQuality = graphicsQualityRef.current;
             graphicsQualityRef.current = newQuality;
+
+            const newShadows = normalizeShadowQuality(settings.shadowQuality);
+            if (newShadows !== shadowQualityRef.current) {
+                shadowQualityRef.current = newShadows;
+                const shadowState = gameStateRef.current;
+                if (shadowState.renderer && shadowState.sun && shadowState.scene) {
+                    const mobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                    const { needsRecompile } = configureSunShadow(shadowState.renderer, shadowState.sun, newShadows, { mobile });
+                    applyShadowFlags(shadowState.scene, newShadows !== 'off');
+                    if (needsRecompile) recompileMaterials(shadowState.scene);
+                }
+            }
 
             if (newQuality !== prevQuality) {
                 const state = gameStateRef.current;
