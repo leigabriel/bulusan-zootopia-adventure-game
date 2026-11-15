@@ -5,10 +5,32 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 2.9** (version code 20, released 2026-11-14)
+**Current version: 3.0** (version code 21, released 2026-11-15)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.0 (2026-11-15)
+
+Version code 21.
+
+### Added
+- assets: Add trailhead sign model
+- props: Replace painted safety guide with trailhead sign model
+- shadows: Add quality presets, shadow flags and sun-following shadow box
+- settings: Add shadow quality setting with device default
+- ui: Add shadows off, low, medium, high selector to graphics settings
+- photo: Add device save via android bridge, share sheet or blob download
+- android: Add gallery photo saver bridge and legacy storage permission
+- game: Apply shadow quality to every model and save photos to device
+
+### Changed
+- world: Place trailhead sign at the old safety guide spot
+- assets: Precache trailhead sign instead of safety sign
+- scene: Hand shadow control to shadow helpers and add sun target
+
+### Removed
+- assets: Drop old safety sign model
 
 ## 2.9 (2026-11-14)
 
