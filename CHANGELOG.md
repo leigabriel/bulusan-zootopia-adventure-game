@@ -5,10 +5,27 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.0** (version code 21, released 2026-11-15)
+**Current version: 3.1** (version code 22, released 2026-11-15)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.1 (2026-11-15)
+
+Version code 22.
+
+### Added
+- audio: Add goat sound
+- audio: Add pigeon sound
+- audio: Add frog croak sound
+- audio: Add running on water loop
+- audio: Add ranger lino voice with pitch and formant raised for a girl voice
+- animals: Play goat and pigeon sounds and export sound helpers
+- frogs: Croak at random intervals with distance fade
+- game: Use running on water loop and play ranger lino voice in dialogue
+
+### Changed
+- assets: Precache new animal, water and ranger lino sounds
 
 ## 3.0 (2026-11-15)
 
