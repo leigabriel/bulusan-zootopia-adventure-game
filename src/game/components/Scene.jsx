@@ -36,13 +36,11 @@ function getQualityConfig(quality) {
         low: {
             pixelRatio: Math.min(dpr, 0.75),
             antialias: false,
-            shadows: false,
             toneMappingExposure: 1.0,
         },
         medium: {
             pixelRatio: isMobile ? Math.min(dpr, 1.0) : Math.min(dpr, 1.25),
             antialias: !isMobile && dpr <= 1.5,
-            shadows: true,
             toneMappingExposure: 1.0,
         },
         high: {
@@ -50,7 +48,6 @@ function getQualityConfig(quality) {
             // and MSAA, both of which are disproportionately expensive there.
             pixelRatio: isMobile ? Math.min(dpr, 1.25) : Math.min(dpr, 2.0),
             antialias: !isMobile,
-            shadows: true,
             toneMappingExposure: 1.1,
         },
     };
@@ -73,8 +70,8 @@ export function createRenderer(container, graphicsQuality) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(config.pixelRatio);
 
-    // Shadows stay off: the sun's shadow frustum never covered the map, so they
-    // only cost GPU time.
+    // Sun shadows are switched on by configureSunShadow (utils/shadows.js) from the
+    // Shadows setting; they start off.
     renderer.shadowMap.enabled = false;
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -92,7 +89,6 @@ export function applyRendererQuality(renderer, quality) {
     if (!renderer) return;
     const config = getQualityConfig(quality || 'medium');
     renderer.setPixelRatio(config.pixelRatio);
-    renderer.shadowMap.enabled = false;
     renderer.toneMappingExposure = config.toneMappingExposure;
 }
 
@@ -106,6 +102,8 @@ export function createLighting(scene) {
     sun.position.set(SUN_POSITION.x, SUN_POSITION.y, SUN_POSITION.z);
     sun.castShadow = false;
     scene.add(sun);
+    // The shadow box follows the player, so the light's target is part of the scene.
+    scene.add(sun.target);
 
     // The visible sun and its god rays are drawn by Sky.jsx at this same direction.
 
