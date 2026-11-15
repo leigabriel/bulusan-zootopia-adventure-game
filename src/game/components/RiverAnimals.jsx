@@ -4,6 +4,7 @@ import { loadGLB } from '../utils/glbCache.js';
 import { getAnimalBookEntry } from '../data/animalMetadata.js';
 import { sampleSmoothPath } from '../utils/riverMath.js';
 import { getWaterSurfaceHeight } from './River.jsx';
+import { AMBIENT_SOUND_RADIUS, createAnimalSound, spatialSoundFactor } from './Animals.jsx';
 
 // Koi swim up and down the river and frogs sit at the water's edge. Both are
 // watch-only: they never block the player and are not part of the feeding tasks.
@@ -51,6 +52,11 @@ class RiverCreature {
         this.noCollision = true;
         this.radius = config.collisionRadius ?? 0.5;
         this.mixer = null;
+        this.sfxSetting = 1;
+        this.soundGain = config.soundGain ?? 0.8;
+        this.sound = config.soundFile ? createAnimalSound(config.soundFile, 0) : null;
+        // Stagger the frogs so they do not croak in unison.
+        this.nextCroakAt = 1 + Math.random() * 8;
 
         const box = new THREE.Box3().setFromObject(this.group);
         const size = box.getSize(new THREE.Vector3());
@@ -85,15 +91,48 @@ class RiverCreature {
         };
     }
 
-    update(t, dt) {
+    update(t, dt, listenerPosition = null, sfxSetting = null) {
         this.mixer?.update(dt);
+        if (typeof sfxSetting === 'number') this.sfxSetting = sfxSetting;
+        if (!this.sound || !listenerPosition) return;
+
+        const dx = listenerPosition.x - this.group.position.x;
+        const dz = listenerPosition.z - this.group.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        this.spatialFactor = spatialSoundFactor(dist);
+        const targetVol = THREE.MathUtils.clamp((this.sfxSetting ?? 1) * this.soundGain * this.spatialFactor, 0, 1);
+
+        // A croak that is already playing fades with distance and stops when out of range.
+        if (!this.sound.paused) {
+            this.sound.volume = THREE.MathUtils.clamp(this.sound.volume + (targetVol - this.sound.volume) * Math.min(1, dt * 7.5), 0, 1);
+            if (targetVol <= 0.005 && this.sound.volume <= 0.01) this.stopSound();
+            return;
+        }
+        if (dist >= AMBIENT_SOUND_RADIUS || t < this.nextCroakAt || targetVol <= 0.01) return;
+        this.sound.volume = targetVol;
+        this.sound.currentTime = 0;
+        this.sound.play().catch(() => { });
+        this.nextCroakAt = t + 6 + Math.random() * 10;
     }
 
-    updateVolume() { }
+    updateVolume(volume) {
+        this.sfxSetting = THREE.MathUtils.clamp(volume, 0, 1);
+        if (this.sound) this.sound.volume = this.sfxSetting * this.soundGain * (this.spatialFactor ?? 1);
+    }
 
-    stopSound() { }
+    stopSound(reset = true) {
+        if (!this.sound) return;
+        this.sound.pause();
+        if (reset) this.sound.currentTime = 0;
+    }
 
     dispose() {
+        if (this.sound) {
+            this.sound.pause();
+            this.sound.removeAttribute('src');
+            this.sound.load();
+            this.sound = null;
+        }
         this.mixer?.stopAllAction();
         this.mixer?.uncacheRoot(this.group);
         this.group.parent?.remove(this.group);
@@ -133,7 +172,7 @@ class Koi extends RiverCreature {
 }
 
 const KOI = { name: 'Koi Fish', species: 'Cyprinus rubrofuscus', emoji: '🐟', targetHeight: 1.1, collisionRadius: 0.8, animation: 'swim' };
-const FROG = { name: 'Frog', species: 'Ranidae', emoji: '🐸', targetHeight: 0.5, collisionRadius: 0.6, animation: 'idle' };
+const FROG = { name: 'Frog', species: 'Ranidae', emoji: '🐸', soundFile: 'frog.mp3', soundGain: 0.8, targetHeight: 0.5, collisionRadius: 0.6, animation: 'idle' };
 
 // Koi stretches and frog spots along the river, by position along the path.
 const KOI_SWIMS = [
