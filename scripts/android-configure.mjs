@@ -56,10 +56,19 @@ export function patchGradle(source, { versionName, versionCode }) {
 // The game is a landscape game: lock it so players never have to rotate the
 // phone, while still allowing either landscape direction.
 export function patchManifest(xml) {
-    if (xml.includes('android:screenOrientation')) return xml;
-    const pattern = /(<activity\b[^>]*?android:name="\.MainActivity")/;
-    if (!pattern.test(xml)) throw new Error('MainActivity not found in AndroidManifest.xml');
-    return xml.replace(pattern, '$1\n            android:screenOrientation="sensorLandscape"');
+    let text = xml;
+    if (!text.includes('android:screenOrientation')) {
+        const pattern = /(<activity\b[^>]*?android:name="\.MainActivity")/;
+        if (!pattern.test(text)) throw new Error('MainActivity not found in AndroidManifest.xml');
+        text = text.replace(pattern, '$1\n            android:screenOrientation="sensorLandscape"');
+    }
+    // Saving a photo to the gallery needs this only on Android 9 and older; newer
+    // versions save through MediaStore without any permission.
+    if (!text.includes('WRITE_EXTERNAL_STORAGE')) {
+        if (!/<application\b/.test(text)) throw new Error('application element not found in AndroidManifest.xml');
+        text = text.replace(/(\s*)<application\b/, '$1<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />$1<application');
+    }
+    return text;
 }
 
 // Full-screen window plus a branded splash background (Android 12+ ignores the
@@ -95,15 +104,28 @@ export function patchLauncherBackground(xml) {
 export function mainActivitySource(packageName) {
     return `package ${packageName};
 
+import android.Manifest;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Base64;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.getcapacitor.BridgeActivity;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -117,6 +139,56 @@ public class MainActivity extends BridgeActivity {
         }
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         hideSystemBars();
+        // The game saves its photos through this: a WebView cannot download a
+        // data URL on its own.
+        getBridge().getWebView().addJavascriptInterface(new PhotoSaver(), "AndroidPhotoSaver");
+    }
+
+    // Writes a PNG (sent as base64) into Pictures/Bulusan Zootopia so it shows
+    // up in the gallery. Returns true when the file was saved.
+    public class PhotoSaver {
+        private static final String ALBUM = "Bulusan Zootopia";
+
+        @JavascriptInterface
+        public boolean savePng(String fileName, String base64) {
+            try {
+                byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentResolver resolver = getContentResolver();
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Images.Media.DISPLAY_NAME, fileName);
+                    values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+                    values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/" + ALBUM);
+                    values.put(MediaStore.Images.Media.IS_PENDING, 1);
+                    Uri uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                    if (uri == null) return false;
+                    try (OutputStream out = resolver.openOutputStream(uri)) {
+                        if (out == null) return false;
+                        out.write(bytes);
+                    }
+                    values.clear();
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0);
+                    resolver.update(uri, values, null, null);
+                    return true;
+                }
+                // Android 9 and older write to the public Pictures folder, which
+                // needs the storage permission. Ask for it and let the player retry.
+                if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, 4207);
+                    return false;
+                }
+                File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), ALBUM);
+                if (!dir.exists() && !dir.mkdirs()) return false;
+                File file = new File(dir, fileName);
+                try (FileOutputStream out = new FileOutputStream(file)) {
+                    out.write(bytes);
+                }
+                sendBroadcast(new android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)));
+                return true;
+            } catch (Exception error) {
+                return false;
+            }
+        }
     }
 
     @Override
