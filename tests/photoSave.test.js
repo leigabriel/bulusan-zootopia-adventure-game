@@ -4,8 +4,28 @@ import { dataUrlToBase64, photoFileName, savePhotoToDevice } from '../src/game/u
 
 const URL_PNG = 'data:image/png;base64,iVBORw0KGgo=';
 
-test('file name is stamped and png', () => {
-    assert.match(photoFileName(new Date('2026-01-02T03:04:05Z')), /^bulusan-zoo-adventure-2026-01-02T03-04-05\.png$/);
+test('file name is stamped, numbered and png', () => {
+    assert.match(photoFileName(new Date('2026-01-02T03:04:05.678Z')), /^bulusan-zoo-adventure-2026-01-02T03-04-05-678-\d{3}\.png$/);
+});
+
+test('two photos in the same instant get different names', () => {
+    const moment = new Date('2026-01-02T03:04:05.000Z');
+    assert.notEqual(photoFileName(moment), photoFileName(moment));
+});
+
+test('browser always downloads, even on touch devices that can share', async () => {
+    const clicks = [];
+    let shared = false;
+    const win = {
+        navigator: { maxTouchPoints: 5, canShare: () => true, share: async () => { shared = true; } },
+        URL: { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} },
+        setTimeout: () => {},
+        document: { body: { appendChild: () => {} }, createElement: () => ({ click() { clicks.push(this.download); }, remove() {} }) },
+    };
+    const res = await savePhotoToDevice(URL_PNG, win);
+    assert.equal(res.method, 'download');
+    assert.equal(shared, false);
+    assert.equal(clicks.length, 1);
 });
 
 test('extracts base64 payload', () => {
