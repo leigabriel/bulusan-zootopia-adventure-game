@@ -46,9 +46,11 @@ import {
     AnimalCaution,
     playGameButtonSfx
 } from './ui/GameUI.jsx';
-import { AnimalBookModal, CameraModeOverlay, CameraPreview } from './ui/ExplorationHUD.jsx';
+import { CameraModeOverlay, CameraPreview } from './ui/ExplorationHUD.jsx';
+import { AnimalBookModal } from './ui/AnimalBook.jsx';
 import { LoadingScreen } from '../components/loading-screen.jsx';
 import { cx } from './ui/UIComponents.jsx';
+import { t, useLanguage } from './i18n/index.js';
 
 import {
     getTasks,
@@ -95,7 +97,7 @@ const THIRD_PERSON_FOV = 70;
 const EARLIER_PHOTO_ANIMALS = ['Alpaca', 'Bengal Tiger'];
 const SETTINGS_CHANGE_EVENT = 'minizoo-settings-changed';
 const STAFF_NPC_CONFIGS = [{
-    id: 'lino', name: 'Ranger Lino', role: 'Zoo Mission Guide', file: 'ranger-lino.gltf', position: { ...STAFF_START_POSITIONS.lino },
+    id: 'lino', name: 'Ranger Lino', role: 'Zoo Guide', file: 'ranger-lino.gltf', position: { ...STAFF_START_POSITIONS.lino },
     interactionRadius: 6.5,
     obstacleRadius: 2.4,
     targetHeight: 1.75,
@@ -106,67 +108,15 @@ const STAFF_NPC_CONFIGS = [{
     stopDistance: 0.45,
     facingOffset: Math.PI,
 }, {
-    id: 'lina', name: 'Ranger Lina', role: 'Zoo Care Ranger', file: 'ranger-lina.gltf', position: { ...STAFF_START_POSITIONS.lina },
+    id: 'lina', name: 'Ranger Lina', role: 'Animal Helper', file: 'ranger-lina.gltf', position: { ...STAFF_START_POSITIONS.lina },
     interactionRadius: 6.5, obstacleRadius: 2.4, targetHeight: 1.75,
     patrolRadiusMin: 3.5, patrolRadiusMax: 8.5, moveSpeed: 0.75,
     turnSpeed: 4.2, stopDistance: 0.45, facingOffset: Math.PI,
 }];
-const LINO_DIALOGUE_NODES = {
-    root: {
-        id: 'root',
-        message: 'Hello, explorer! I am Ranger Lino, your Zoo Ranger guide. I can help you care for animals and finish your mission.',
-        choices: [
-            { id: 'mission', label: 'Current Mission', nextId: 'mission', icon: '★', accent: true },
-            { id: 'animals', label: 'Learn About Animals', nextId: 'animals', icon: '🐾' },
-            { id: 'bulusan', label: 'About Bulusan', nextId: 'bulusan', icon: '🌋' },
-            { id: 'how', label: 'How to Play', nextId: 'how', icon: '🧭' },
-            { id: 'bye', label: 'Goodbye', close: true, icon: '👋' }
-        ]
-    },
-    animals: {
-        id: 'animals',
-        message: 'Meet the animals you have discovered. Choose an animal to learn a little more.',
-        choices: [
-            { id: 'back', label: 'Back', nextId: 'root' }
-        ]
-    },
-    mission: { id: 'mission', message: 'Let us care for a horse and rabbit together. I will remind you what to do next.', choices: [{ id: 'back', label: 'Back', nextId: 'root' }] },
-    bulusan: {
-        id: 'bulusan',
-        message: 'Bulusan is known for rich nature and wildlife around the forest area. This adventure teaches kids to protect local habitats.',
-        choices: [
-            { id: 'back', label: 'Back', nextId: 'root' }
-        ]
-    },
-    how: {
-        id: 'how',
-        message: 'Move with WASD on desktop or the joystick on mobile. Your explorer runs automatically. Use Jump when needed, move near a gentle animal, and hold Feed. Press T or E near me to talk.',
-        choices: [
-            { id: 'back', label: 'Back', nextId: 'root' }
-        ]
-    },
-    tools: {
-        id: 'tools',
-        message: 'The book records animals you discover and shows their facts. The camera captures a view of your adventure so you can save or share a zoo photo. Your task progress is always available from the task list.',
-        choices: [
-            { id: 'back', label: 'Back', nextId: 'root' }
-        ]
-    }
-};
-const LINA_DIALOGUE_NODES = {
-    root: {
-        id: 'root',
-        message: 'Hi! I am Ranger Lina. I am taking a little walk around the zoo. How is your adventure going?',
-        choices: [
-            { id: 'day', label: 'How Is Your Day?', nextId: 'day', icon: '☀' },
-            { id: 'favorite', label: 'Favorite Animal', nextId: 'favorite', icon: '♥' },
-            { id: 'tip', label: 'A Quick Tip', nextId: 'tip', icon: '✦' },
-            { id: 'bye', label: 'See You Later', close: true, icon: '👋' },
-        ],
-    },
-    day: { id: 'day', message: 'It is a lovely day to be outside. I have been checking the paths and saying hello to every animal I pass.', choices: [{ id: 'back', label: 'Back', nextId: 'root' }] },
-    favorite: { id: 'favorite', message: 'I really enjoy watching the alpacas. They are calm, curious, and always look ready for a photo!', choices: [{ id: 'back', label: 'Back', nextId: 'root' }] },
-    tip: { id: 'tip', message: 'Take your time and look around. The animal book remembers every friend you discover along the way.', choices: [{ id: 'back', label: 'Back', nextId: 'root' }] },
+// What a ranger says when there is no story task to talk about.
+const STAFF_GREETINGS = {
+    lino: 'Hello, explorer! I am Ranger Lino. I will help you take care of the animals.',
+    lina: 'Hi! I am Ranger Lina. I am walking around the zoo. How is your adventure?',
 };
 function createMissionWorldObjects(scene) {
     const marker = new THREE.Group();
@@ -206,9 +156,8 @@ function createMissionWorldObjects(scene) {
     return { marker, markerMaterial, hay, hayMaterial, carrot, carrotMaterials: [root.material, leafMaterial] };
 }
 
-function getStaffDialogueNode(staffId, nodeId) {
-    const nodes = staffId === 'lina' ? LINA_DIALOGUE_NODES : LINO_DIALOGUE_NODES;
-    return nodes[nodeId] || nodes.root;
+function getStaffGreeting(staffId) {
+    return STAFF_GREETINGS[staffId] || STAFF_GREETINGS.lino;
 }
 
 function chooseNextStaffPatrolTarget(config, homeX, homeZ) {
@@ -501,6 +450,7 @@ async function loadStaffNpc(scene, isMobile, config) {
 }
 
 function MiniZooGame() {
+    useLanguage();
     const containerRef = useRef(null);
     const stickRef = useRef(null);
     const baseRef = useRef(null);
@@ -627,7 +577,7 @@ function MiniZooGame() {
     }, []);
 
     const showMissionNotice = useCallback((message) => {
-        setMissionNotice(message);
+        setMissionNotice(t(message));
         if (missionNoticeTimerRef.current) window.clearTimeout(missionNoticeTimerRef.current);
         missionNoticeTimerRef.current = window.setTimeout(() => setMissionNotice(''), 2600);
     }, []);
@@ -641,7 +591,7 @@ function MiniZooGame() {
         setMissionProgress(saved);
         observationStartedAtRef.current = 0;
         playGameButtonSfx('task-complete');
-        showMissionNotice(notice || `Task ${current.completedTaskIds.length + 1} complete`);
+        showMissionNotice(notice || t('Task {number} done!', { number: current.completedTaskIds.length + 1 }));
         return true;
     }, [showMissionNotice]);
 
@@ -764,21 +714,21 @@ function MiniZooGame() {
             publishNavigation({ distance: null, direction: 0, onScreen: true });
         }
 
-        if (task.id === 'reach-barn' && within(17)) completeStoryTask(task.id, {}, 'Barn reached');
+        if (task.id === 'reach-barn' && within(17)) completeStoryTask(task.id, {}, 'You are at the barn!');
         if (task.id === 'find-horse' && targetAnimal === nearbyAnimalRef.current) completeStoryTask(task.id);
         if (task.id === 'find-rabbits' && (getAnimalBookEntry(nearbyAnimalRef.current?.config?.name)?.name || nearbyAnimalRef.current?.config?.name) === 'Rabbit') completeStoryTask(task.id);
         if (task.id === 'find-alpaca' && within(8)) completeStoryTask(task.id);
         if (task.id === 'find-monkey' && within(8)) completeStoryTask(task.id);
-        if (task.id === 'find-carrot' && within(7)) completeStoryTask(task.id, {}, 'Carrot patch found');
-        if (task.id === 'visit-windmill' && within(18)) completeStoryTask(task.id, {}, 'Windmill discovered');
-        if (task.id === 'reach-tiger-view' && within(6)) completeStoryTask(task.id, {}, 'Safe tiger viewing area reached');
+        if (task.id === 'find-carrot' && within(7)) completeStoryTask(task.id, {}, 'You found the carrots!');
+        if (task.id === 'visit-windmill' && within(18)) completeStoryTask(task.id, {}, 'You found the windmill!');
+        if (task.id === 'reach-tiger-view' && within(6)) completeStoryTask(task.id, {}, 'You are at the safe tiger spot!');
 
         const timedTasks = {
-            'observe-alpaca': { duration: 4000, valid: within(8), animal: 'Alpaca', notice: 'Alpacas communicate with gentle humming sounds.' },
-            'observe-monkey': { duration: 4000, valid: within(8), animal: 'Forest Monkey', notice: 'Monkeys use many calls to communicate.' },
-            'visit-river': { duration: 3000, valid: within(7) && !isRiverArea(playerPosition.x, playerPosition.z), notice: 'Clean water protects every zoo habitat.' },
-            'visit-statue': { duration: 3000, valid: within(18), notice: 'The Bulusan statue celebrates the community and its natural heritage.' },
-            'observe-tiger': { duration: 5000, valid: Math.hypot(playerPosition.x - MISSION_POINTS['tiger-view'].x, playerPosition.z - MISSION_POINTS['tiger-view'].z) <= 7, animal: 'Bengal Tiger', notice: 'Protecting forests gives endangered Bengal Tigers a safe future.' },
+            'observe-alpaca': { duration: 4000, valid: within(8), animal: 'Alpaca', notice: 'Alpacas hum softly to talk to each other.' },
+            'observe-monkey': { duration: 4000, valid: within(8), animal: 'Forest Monkey', notice: 'Monkeys use many calls to talk to each other.' },
+            'visit-river': { duration: 3000, valid: within(7) && !isRiverArea(playerPosition.x, playerPosition.z), notice: 'Clean water keeps every animal home healthy.' },
+            'visit-statue': { duration: 3000, valid: within(18), notice: 'The Bulusan statue shows how much we love our town and nature.' },
+            'observe-tiger': { duration: 5000, valid: Math.hypot(playerPosition.x - MISSION_POINTS['tiger-view'].x, playerPosition.z - MISSION_POINTS['tiger-view'].z) <= 7, animal: 'Bengal Tiger', notice: 'Saving forests helps Bengal Tigers stay safe.' },
         };
         const timed = timedTasks[task.id];
         if (timed) {
@@ -1155,8 +1105,8 @@ function MiniZooGame() {
             feedAnimal(missionAnimal);
             const discovered = getProgress().animalsDiscovered.map((name) => getAnimalBookEntry(name)?.name || name);
             setDiscoveredAnimals([...new Set(discovered)]);
-            if (missionAnimal === 'Domestic Horse') completeStoryTask('feed-horse', { hasHay: false }, 'The horse is happy and well fed');
-            if (missionAnimal === 'Rabbit') completeStoryTask('feed-rabbit', { hasCarrot: false }, 'The rabbit enjoyed its healthy snack');
+            if (missionAnimal === 'Domestic Horse') completeStoryTask('feed-horse', { hasHay: false }, 'The horse is full and happy!');
+            if (missionAnimal === 'Rabbit') completeStoryTask('feed-rabbit', { hasCarrot: false }, 'The rabbit loved its healthy snack!');
             setTasks(getTasks());
             setFeedingSuccess({ visible: true, animalName: missionAnimal });
             playVictoryAnimation();
@@ -2056,7 +2006,7 @@ function MiniZooGame() {
         });
         const atTigerView = playerPosition && Math.hypot(playerPosition.x - MISSION_POINTS['tiger-view'].x, playerPosition.z - MISSION_POINTS['tiger-view'].z) <= 8;
         if (requiredName && (photographedAnimal !== requiredName || (requiredName === 'Bengal Tiger' && !atTigerView))) {
-            showMissionNotice(requiredName === 'Bengal Tiger' ? 'Frame the tiger from the safe viewing area' : 'Move near the Alpaca and keep it in the frame');
+            showMissionNotice(requiredName === 'Bengal Tiger' ? 'Take the photo from the safe tiger spot' : 'Go near the Alpaca and keep it in the picture');
             return;
         }
         try {
@@ -2163,10 +2113,10 @@ function MiniZooGame() {
             if (photographedAnimal) {
                 const photoAnimals = [...new Set([...missionProgressRef.current.photoAnimals, photographedAnimal])];
                 updateMissionProgress({ photoAnimals });
-                if (activeTaskId === 'photo-alpaca') completeStoryTask(activeTaskId, { photoAnimals }, 'Alpaca photo captured');
+                if (activeTaskId === 'photo-alpaca') completeStoryTask(activeTaskId, { photoAnimals }, 'Nice photo of the Alpaca!');
                 if (activeTaskId === 'photo-tiger') {
                     const baseline = getTasks().filter((task) => task.completed).map((task) => task.animalName);
-                    completeStoryTask(activeTaskId, { photoAnimals, feedThreeBaseline: baseline }, 'Tiger photo captured safely');
+                    completeStoryTask(activeTaskId, { photoAnimals, feedThreeBaseline: baseline }, 'Nice photo of the tiger!');
                 }
             }
         } catch (error) {
@@ -2243,10 +2193,10 @@ function MiniZooGame() {
         const taskId = missionProgressRef.current.activeTaskId;
         if (taskId === 'collect-hay' && (missionNavigation.distance !== null && missionNavigation.distance <= 6)) {
             playGameButtonSfx('confirm');
-            completeStoryTask(taskId, { hasHay: true }, 'Hay collected');
+            completeStoryTask(taskId, { hasHay: true }, 'You got the hay!');
         } else if (taskId === 'collect-carrot' && (missionNavigation.distance !== null && missionNavigation.distance <= 6)) {
             playGameButtonSfx('confirm');
-            completeStoryTask(taskId, { hasCarrot: true }, 'Carrot collected');
+            completeStoryTask(taskId, { hasCarrot: true }, 'You got a carrot!');
         }
     }, [completeStoryTask, missionNavigation.distance]);
 
@@ -2269,7 +2219,7 @@ function MiniZooGame() {
         const storyLines = STORY_DIALOGUE[taskId];
         const storyMatchesStaff = storyLines && !missionProgressRef.current.completedTaskIds.includes(taskId) && ((taskId === 'talk-lina' || taskId === 'return-lina') ? nearbyStaff.id === 'lina' : nearbyStaff.id === 'lino');
         dialogueTaskIdRef.current = storyMatchesStaff ? taskId : null;
-        setDialogueLines(storyMatchesStaff ? storyLines : [getStaffDialogueNode(nearbyStaff.id, 'root').message]);
+        setDialogueLines(storyMatchesStaff ? storyLines : [getStaffGreeting(nearbyStaff.id)]);
         setDialogueLineIndex(0);
         setShowNpcDialogue(true);
         if (nearbyStaff.id === 'lino') playLinoVoice();
@@ -2296,7 +2246,7 @@ function MiniZooGame() {
         closeNpcDialogue();
         if (!taskId) return;
         if (taskId === 'final-lino') {
-            completeStoryTask(taskId, { rewardClaimed: true, certificateUnlocked: true }, 'Junior Zoo Ranger adventure complete');
+            completeStoryTask(taskId, { rewardClaimed: true, certificateUnlocked: true }, 'You are a Junior Zoo Ranger!');
             setShowAllFedCelebration(true);
         } else {
             completeStoryTask(taskId);
@@ -2318,7 +2268,7 @@ function MiniZooGame() {
     }, [closeInterfaces, gameStarted, characterReady]);
 
     const handleBookEntryViewed = useCallback((animalName) => {
-        if (animalName === 'Rabbit') completeStoryTask('open-animal-book', {}, 'Rabbit viewed in the Animal Book');
+        if (animalName === 'Rabbit') completeStoryTask('open-animal-book', {}, 'You read about the Rabbit!');
     }, [completeStoryTask]);
 
     const closeBook = useCallback(() => {
@@ -2557,13 +2507,13 @@ function MiniZooGame() {
         const fedNames = tasks.filter((task) => task.completed).map((task) => task.animalName);
         if (taskId === 'feed-three') {
             const newlyFed = fedNames.filter((name) => !missionProgress.feedThreeBaseline.includes(name));
-            if (newlyFed.length >= 3) completeStoryTask(taskId, {}, 'Three safe animal types fed');
+            if (newlyFed.length >= 3) completeStoryTask(taskId, {}, 'You fed three animals!');
         } else if (taskId === 'discover-five' && discoveredAnimals.length >= 5) {
-            completeStoryTask(taskId, {}, 'Five animals discovered');
+            completeStoryTask(taskId, {}, 'You met five animals!');
         } else if (taskId === 'photo-two' && missionProgress.photoAnimals.filter((name) => !EARLIER_PHOTO_ANIMALS.includes(name)).length >= 2) {
-            completeStoryTask(taskId, {}, 'Two different animal photos captured');
+            completeStoryTask(taskId, {}, 'You took two animal photos!');
         } else if (taskId === 'animal-care' && fedNames.length === SAFE_ANIMAL_NAMES.length) {
-            completeStoryTask(taskId, {}, 'Animal Care Challenge complete');
+            completeStoryTask(taskId, {}, 'You fed all the animals!');
         }
     }, [completeStoryTask, discoveredAnimals, missionProgress, tasks]);
 
@@ -2768,8 +2718,8 @@ function MiniZooGame() {
     const rabbitBlocked = nearbyAnimalName === 'Rabbit' && (missionProgress.activeTaskId !== 'feed-rabbit' || !missionProgress.hasCarrot);
     const feedingBlocked = isDangerousAnimalNearby || horseBlocked || rabbitBlocked;
     const feedingBlockedMessage = horseBlocked
-        ? (missionProgress.hasHay ? 'Complete the active task first' : 'Collect hay from the barn first')
-        : rabbitBlocked ? (missionProgress.hasCarrot ? 'Complete the active task first' : 'Find a carrot first') : '';
+        ? (missionProgress.hasHay ? 'Finish your task first' : 'Get hay from the barn first')
+        : rabbitBlocked ? (missionProgress.hasCarrot ? 'Finish your task first' : 'Find a carrot first') : '';
     useEffect(() => {
         if (interfaceOpen || document.hidden) clearFeedingTimer();
     }, [interfaceOpen, clearFeedingTimer]);
@@ -2777,10 +2727,10 @@ function MiniZooGame() {
     const storyTasks = STORY_TASKS.map((task) => ({ ...task, completed: missionProgress.completedTaskIds.includes(task.id) }));
     const timedDuration = activeStoryTask.id === 'observe-tiger' ? 5000 : ['observe-alpaca', 'observe-monkey'].includes(activeStoryTask.id) ? 4000 : ['visit-river', 'visit-statue'].includes(activeStoryTask.id) ? 3000 : 0;
     const newlyFedCount = tasks.filter((task) => task.completed && !missionProgress.feedThreeBaseline.includes(task.animalName)).length;
-    const taskProgress = activeStoryTask.id === 'feed-three' ? `${Math.min(3, newlyFedCount)} of 3 fed`
-        : activeStoryTask.id === 'discover-five' ? `${Math.min(5, discoveredAnimals.length)} of 5 discovered`
-            : activeStoryTask.id === 'photo-two' ? `${Math.min(2, missionProgress.photoAnimals.filter((name) => !EARLIER_PHOTO_ANIMALS.includes(name)).length)} of 2 new photos`
-                : activeStoryTask.id === 'animal-care' ? `${completedCount} of ${totalCount} fed`
+    const taskProgress = activeStoryTask.id === 'feed-three' ? t('{n} of 3 fed', { n: Math.min(3, newlyFedCount) })
+        : activeStoryTask.id === 'discover-five' ? t('{n} of 5 met', { n: Math.min(5, discoveredAnimals.length) })
+            : activeStoryTask.id === 'photo-two' ? t('{n} of 2 photos', { n: Math.min(2, missionProgress.photoAnimals.filter((name) => !EARLIER_PHOTO_ANIMALS.includes(name)).length) })
+                : activeStoryTask.id === 'animal-care' ? t('{n} of {total} fed', { n: completedCount, total: totalCount })
                     : timedDuration ? `${Math.round(Math.min(1, missionProgress.observationMs / timedDuration) * 100)}%` : '';
     const isCollectTask = ['collect-hay', 'collect-carrot'].includes(activeStoryTask.id);
     const canShowNpcPrompt = gameStarted
@@ -2805,9 +2755,9 @@ function MiniZooGame() {
             {isLoading && <LoadingScreen />}
             {initError && (
                 <div role="alert" className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black/85 p-6 text-center text-white">
-                    <h2 className="text-2xl font-bold">The zoo could not load</h2>
-                    <p className="max-w-md text-sm opacity-80">Your device may not support 3D graphics, or a game file failed to download. Check your connection and try again. Your saved progress is safe.</p>
-                    <button type="button" className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-white" onClick={() => window.location.reload()}>Try again</button>
+                    <h2 className="text-2xl font-bold">{t('Oops! The zoo did not open.')}</h2>
+                    <p className="max-w-md text-sm opacity-80">{t('Check your internet, then try again. Your game is saved.')}</p>
+                    <button type="button" className="rounded-xl bg-emerald-500 px-6 py-3 font-semibold text-white" onClick={() => window.location.reload()}>{t('Try again')}</button>
                 </div>
             )}
             {!isLoading && !initError && showMenu && (
@@ -2835,7 +2785,7 @@ function MiniZooGame() {
                             isTouchDevice={isTouchDevice}
                             currentTask={missionProgress.completedTaskIds.length < STORY_TASKS.length ? activeStoryTask : null}
                             taskProgress={taskProgress}
-                            missionItem={missionProgress.hasHay ? 'Hay' : missionProgress.hasCarrot ? 'Carrot' : ''}
+                            missionItem={missionProgress.hasHay ? t('Holding: Hay') : missionProgress.hasCarrot ? t('Holding: Carrot') : ''}
                             navigation={guidanceEnabled ? missionNavigation : { distance: null, direction: 0, onScreen: true }}
                             guidanceEnabled={guidanceEnabled}
                             onToggleGuidance={() => setGuidanceEnabled((enabled) => !enabled)}
@@ -2889,7 +2839,7 @@ function MiniZooGame() {
                         npcName={nearbyStaff?.name}
                         isTouchDevice={isTouchDevice}
                     />
-                    <ContextActionPrompt visible={isCollectTask && (missionNavigation.distance !== null && missionNavigation.distance <= 6) && !interfaceOpen} label={activeStoryTask.id === 'collect-hay' ? 'Collect Hay' : 'Collect Carrot'} detail="Mission item" onInteract={handleCollectMissionItem} />
+                    <ContextActionPrompt visible={isCollectTask && (missionNavigation.distance !== null && missionNavigation.distance <= 6) && !interfaceOpen} label={activeStoryTask.id === 'collect-hay' ? 'Get Hay' : 'Get Carrot'} detail="Task item" onInteract={handleCollectMissionItem} />
                     <NPCDialogueModal
                         isOpen={showNpcDialogue}
                         onClose={closeNpcDialogue}
