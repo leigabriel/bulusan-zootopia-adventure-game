@@ -1,10 +1,16 @@
-// Saves a captured photo (PNG data URL) to the player's device.
+// Saves a captured photo (PNG data URL) to the player's device, only when the
+// player presses Save in the photo preview.
 // Android app: native bridge writes into Pictures/Bulusan Zootopia.
-// Browsers: share sheet on phones that support files, otherwise a blob download.
+// Browsers: the PNG is downloaded.
 
+let photoCounter = 0;
+
+// Every call gives a new name: date, time to the millisecond and a counter, so
+// two photos taken in the same second never overwrite each other.
 export function photoFileName(date = new Date()) {
-    const stamp = date.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    return `bulusan-zoo-adventure-${stamp}.png`;
+    const stamp = date.toISOString().replace(/[:.]/g, '-').replace('Z', '');
+    photoCounter = (photoCounter + 1) % 1000;
+    return `bulusan-zoo-adventure-${stamp}-${String(photoCounter).padStart(3, '0')}.png`;
 }
 
 export function dataUrlToBase64(dataUrl) {
@@ -39,19 +45,6 @@ export async function savePhotoToDevice(dataUrl, win = typeof window !== 'undefi
 
     try {
         const blob = dataUrlToBlob(dataUrl);
-        const nav = win.navigator;
-        const isTouch = Boolean(nav && nav.maxTouchPoints > 0);
-        if (isTouch && nav.canShare && nav.share) {
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (nav.canShare({ files: [file] })) {
-                try {
-                    await nav.share({ files: [file], title: 'Bulusan Zootopia photo' });
-                    return { ok: true, method: 'share', message: 'Photo ready to save.' };
-                } catch (error) {
-                    if (error && error.name === 'AbortError') return { ok: false, method: 'share', message: 'Save cancelled.' };
-                }
-            }
-        }
         const url = win.URL.createObjectURL(blob);
         const link = win.document.createElement('a');
         link.href = url;
