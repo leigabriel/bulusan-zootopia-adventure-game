@@ -5,10 +5,33 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.2** (version code 23, released 2026-11-16)
+**Current version: 3.3** (version code 24, released 2026-11-16)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.3 (2026-11-16)
+
+Version code 24.
+
+### Added
+- i18n: Add t() lookup, language detection and useLanguage hook
+- i18n: Add kid-friendly tagalog dictionary
+- settings: Add language to default settings
+- ui: Translate shared modal, pagination and side sheet text
+- settings: Add english/tagalog language option and translate menus
+- book: Add kid-friendly animal facts, categories and picture slugs
+- book: Add nature journal animal book with real animal pictures
+- i18n: Translate loading screen text
+- book: Add 17 animal portrait images
+
+### Changed
+- guide: Translate controls guide and simplify wording
+- hud: Drop old 3d book, keep translated camera overlay
+- tasks: Rewrite task and dialogue text in simple kid wording
+- book: Add ring-bound journal styles
+- game: Translate notices and dialogue, wire new animal book
+- error: Translate and simplify error screen text
 
 ## 3.2 (2026-11-16)
 
