@@ -1,6 +1,8 @@
 import { TextShimmerWave } from '@/components/loading-ui/text-shimmer-wave';
+import { t, useLanguage } from '../game/i18n/index.js';
 
 export function LoadingScreen() {
+    useLanguage();
     return (
         <div
             className="absolute inset-0 z-50 flex flex-col items-center justify-center overflow-hidden px-4 py-5"
@@ -11,7 +13,7 @@ export function LoadingScreen() {
                 style={{ color: '#212631' }}
             >
                 <TextShimmerWave className="whitespace-nowrap text-[clamp(1.75rem,8vw,3.25rem)] font-normal leading-tight">
-                    LOADING
+                    {t('LOADING')}
                 </TextShimmerWave>
             </div>
         </div>
