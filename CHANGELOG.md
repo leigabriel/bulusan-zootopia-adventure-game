@@ -5,10 +5,21 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.1** (version code 22, released 2026-11-15)
+**Current version: 3.2** (version code 23, released 2026-11-16)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.2 (2026-11-16)
+
+Version code 23.
+
+### Added
+- ui: Add first and third person view button top right and send web quit to bulusanzoo.com
+- game: Wire camera view button into the hud
+
+### Fixed
+- monkeys: Keep feet planted during idle2, smile and roar so they stop floating
 
 ## 3.1 (2026-11-15)
 
