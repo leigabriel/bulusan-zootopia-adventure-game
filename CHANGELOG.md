@@ -5,10 +5,28 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.3** (version code 24, released 2026-11-16)
+**Current version: 3.4** (version code 25, released 2026-11-16)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.4 (2026-11-16)
+
+Version code 25.
+
+### Added
+- book: Add page size, turn angle, curl, shade and drag rules
+
+### Changed
+- book: Add covers, hinge, paper stacks, punched holes, hollow rings and leaf faces
+- i18n: Rename graphics lines and add saving text
+
+### Fixed
+- book: Rebuild as two-page spread with spine, rings through holes, bending page turn and drag or swipe
+- settings: Restore graphics section name and graphics quality label
+- photo: Always download png in browsers and give every photo a unique name
+- camera: Show save result in photo preview and drop false saved toast
+- camera: Return save result so preview can show it
 
 ## 3.3 (2026-11-16)
 
