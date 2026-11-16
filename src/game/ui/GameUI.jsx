@@ -825,6 +825,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                 onConfirm={() => {
                     setShowExitConfirm(false);
                     if (Capacitor.isNativePlatform()) {
+                        // The APK closes and returns to the phone's home screen.
                         try {
                             CapacitorApp.exitApp();
                         } catch (e) {
@@ -833,6 +834,9 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                                 window.navigator.app.exitApp();
                             }
                         }
+                    } else {
+                        // A browser cannot close its own tab, so send the player to the website.
+                        window.location.assign(WEBSITE_URL);
                     }
                 }}
                 onCancel={() => setShowExitConfirm(false)}
@@ -942,7 +946,9 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
     );
 }
 
-export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
+const WEBSITE_URL = 'https://bulusanzoo.com';
+
+export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, cameraMode = 'third', onCycleCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
     const menuIcon = '/ui-buttons/settings-button.png';
     const taskIcon = '/ui-buttons/task-list-button.png';
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
@@ -1001,6 +1007,27 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                 <div className="pointer-events-auto flex flex-col items-end gap-2" data-ui-hud="true">
                     <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label="Tasks" data-ui-button="true" data-sfx-self="true">
                         <img src={taskIcon} alt="" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onCycleCamera}
+                        className="sz-icon-btn"
+                        aria-label={cameraMode === 'first' ? 'Camera view: first person. Switch to third person' : 'Camera view: third person. Switch to first person'}
+                        title={cameraMode === 'first' ? 'First person' : 'Third person'}
+                        data-ui-button="true"
+                    >
+                        {cameraMode === 'first' ? (
+                            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        ) : (
+                            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="7" r="3" />
+                                <path d="M6 21v-3a6 6 0 0 1 12 0v3" />
+                            </svg>
+                        )}
+                        <span className="text-[14px] leading-none">{cameraMode === 'first' ? '1st' : '3rd'}</span>
                     </button>
                 </div>
             </div>

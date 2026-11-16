@@ -141,6 +141,8 @@ const ANIMAL_CONFIGS = [
         idleAnimation: 'Idle',
         // Switches to a new action every 3 seconds (no climbing clips).
         specialAnimations: ['Idle2', 'Smile', 'Jump', 'Jump2', 'Roar2'],
+        // Only the jumps leave the ground; Idle2, Smile and Roar2 stay planted.
+        airborneSpecials: ['Jump', 'Jump2'],
         specialAnimationIntervalMin: 3,
         specialAnimationIntervalMax: 3,
         specialAnimationStartJitter: 3,
@@ -568,10 +570,12 @@ class GLTFAnimal {
     alignToGround(terrainY, clearance) {
         if (!this.footBones) return alignObjectToTerrain(this.group, terrainY, this.dynamicBox, clearance);
         this.group.updateMatrixWorld(true);
-        if (this.specialAnimationActive || (this.groundHoldPending && this.isBlending())) {
+        if ((this.specialAnimationActive && this.specialLiftsFeet) || (this.groundHoldPending && this.isBlending())) {
             // Hops and jumps must lift the feet, so hold the resting offset
             // instead of pinning the lowest foot to the ground (also while it blends
-            // back to idle).
+            // back to idle). Other specials keep the feet planted, so they stay
+            // pinned: some clips (e.g. the monkey's smile) sit higher than the idle
+            // pose and would otherwise float.
             this.heldDelta ??= this.lastGroundDelta ?? 0;
             this.group.position.y += this.heldDelta;
             this.group.updateMatrixWorld(true);
@@ -761,8 +765,8 @@ class GLTFAnimal {
             if (specialName && specialInterval > 0) {
                 if (this.specialAnimationActive && t >= this.specialAnimationEndAt) {
                     this.specialAnimationActive = false;
-                    // Keep the resting height while the pose blends back to idle.
-                    this.groundHoldPending = true;
+                    // Keep the resting height while a jump blends back to idle.
+                    this.groundHoldPending = this.specialLiftsFeet === true;
                     this.playAnimation('idle');
                 }
 
@@ -785,6 +789,12 @@ class GLTFAnimal {
                         const duration = Math.max(0.01, specialAction.getClip().duration / specialTimeScale);
                         this.specialAnimationEndAt = t + duration;
                         this.specialAnimationActive = true;
+                        // Only clips listed in `airborneSpecials` leave the ground; every other
+                        // special keeps the feet on the terrain.
+                        const airborne = this.config.airborneSpecials;
+                        this.specialLiftsFeet = Array.isArray(airborne)
+                            ? airborne.some((name) => specialActionKey.includes(name.toLowerCase()))
+                            : true;
                         this.nextSpecialAnimationAt = this.specialAnimationEndAt + specialInterval;
                     } else {
                         this.nextSpecialAnimationAt = t + specialInterval;
