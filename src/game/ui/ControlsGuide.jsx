@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { cx } from './UIComponents.jsx';
+import { t, useLanguage } from '../i18n/index.js';
 
 // Kid-friendly "how do I play" guide with separate pages for a computer
 // (keyboard and mouse) and for a phone or tablet (touch). Short words, one
@@ -145,21 +146,21 @@ export const MOBILE_CONTROLS = [
         tone: 'bg-lime-50 border-lime-200',
         title: 'Jump',
         text: 'Tap the Jump button to hop up.',
-        visual: <span className="rounded-full border-2 border-lime-400 bg-lime-100 px-3 py-1.5 text-sm font-black text-lime-800">JUMP</span>,
+        visual: <span className="rounded-full border-2 border-lime-400 bg-lime-100 px-3 py-1.5 text-sm font-black text-lime-800">{t('JUMP')}</span>,
     },
     {
         id: 'feed',
         tone: 'bg-rose-50 border-rose-200',
         title: 'Feed an animal',
         text: 'Stand near a friendly animal. Press and hold the Feed button until the food is given.',
-        visual: <span className="rounded-full border-2 border-rose-300 bg-rose-100 px-3 py-1.5 text-sm font-black text-rose-800">FEED</span>,
+        visual: <span className="rounded-full border-2 border-rose-300 bg-rose-100 px-3 py-1.5 text-sm font-black text-rose-800">{t('FEED')}</span>,
     },
     {
         id: 'talk',
         tone: 'bg-violet-50 border-violet-200',
         title: 'Talk to a ranger',
         text: 'Walk near a ranger and tap the Talk button.',
-        visual: <span className="rounded-full border-2 border-amber-300 bg-amber-100 px-3 py-1.5 text-sm font-black text-amber-800">TALK</span>,
+        visual: <span className="rounded-full border-2 border-amber-300 bg-amber-100 px-3 py-1.5 text-sm font-black text-amber-800">{t('TALK')}</span>,
     },
     {
         id: 'tools',
@@ -187,29 +188,30 @@ function ControlCard({ item }) {
         <li className={cx('flex items-center gap-3 rounded-2xl border-2 p-2.5', item.tone)}>
             <div className="flex min-h-14 w-24 shrink-0 items-center justify-center">{item.visual}</div>
             <div className="min-w-0">
-                <p className="text-sm font-black leading-tight text-slate-800">{item.title}</p>
-                <p className="mt-0.5 text-[13px] font-bold leading-snug text-slate-600">{item.text}</p>
+                <p className="text-sm font-black leading-tight text-slate-800">{t(item.title)}</p>
+                <p className="mt-0.5 text-[13px] font-bold leading-snug text-slate-600">{t(item.text)}</p>
             </div>
         </li>
     );
 }
 
 export function ControlsContent({ initialMode }) {
+    useLanguage();
     const [mode, setMode] = useState(() => initialMode ?? (usesTouchControls() ? 'mobile' : 'computer'));
     const items = mode === 'mobile' ? MOBILE_CONTROLS : COMPUTER_CONTROLS;
 
     return (
         <div className="flex min-h-0 flex-col gap-3">
-            <div className="sz-tabs shrink-0" role="tablist" aria-label="Choose your device">
+            <div className="sz-tabs shrink-0" role="tablist" aria-label={t('Choose your device')}>
                 <button type="button" role="tab" aria-selected={mode === 'computer'} onClick={() => setMode('computer')} className="sz-tab" data-ui-button="true">
-                    Computer
+                    {t('Computer')}
                 </button>
                 <button type="button" role="tab" aria-selected={mode === 'mobile'} onClick={() => setMode('mobile')} className="sz-tab" data-ui-button="true">
-                    Phone / Tablet
+                    {t('Phone / Tablet')}
                 </button>
             </div>
             <p className="text-center text-[13px] font-black text-emerald-800">
-                {mode === 'mobile' ? 'Use your fingers to play!' : 'Use the keyboard and mouse to play!'}
+                {mode === 'mobile' ? t('Use your fingers to play!') : t('Use the keyboard and mouse to play!')}
             </p>
             <ul className="grid gap-2 min-[700px]:grid-cols-2" role="tabpanel">
                 {items.map((item) => <ControlCard key={item.id} item={item} />)}
