@@ -664,8 +664,9 @@ select:focus-visible,
 }
 
 /* ---------------------------------------------------------------------------
-   Animal Book: a ring-bound field journal. Drawn on a fixed 960x540 stage that
-   AnimalBook.jsx scales to fit the window.
+   Animal Book: a ring-bound field journal built like a real book. Drawn on a
+   fixed 960x556 stage that AnimalBook.jsx scales to fit the window. Sizes match
+   BOOK in bookMath.js: spine at 480px, pages 426x440, pages start 70px down.
    --------------------------------------------------------------------------- */
 .zb-backdrop {
     background: radial-gradient(ellipse at 50% 40%, rgba(60, 46, 32, 0.92), rgba(22, 16, 11, 0.97));
@@ -677,60 +678,267 @@ select:focus-visible,
     flex: none;
     transform-origin: center center;
     color: #3a2a18;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.zb-cover {
+.zb-book {
     position: absolute;
-    inset: 38px 8px 6px;
-    border-radius: 22px;
-    background: linear-gradient(180deg, #2c5a55, #1c403d);
-    box-shadow: inset 0 0 0 3px #d2a24a33, 0 24px 40px -10px rgba(0, 0, 0, 0.7);
+    inset: 0;
+    perspective: 2400px;
+    perspective-origin: 50% 45%;
+    touch-action: none;
+    cursor: grab;
 }
 
-.zb-cover::before,
-.zb-cover::after {
+.zb-book:active { cursor: grabbing; }
+
+/* Covers: two boards that meet at a hinge under the rings. */
+.zb-board {
+    position: absolute;
+    top: calc(var(--page-top) - 18px);
+    height: calc(var(--page-h) + 38px);
+    width: calc(var(--page-w) + 36px);
+    background: linear-gradient(180deg, #2f6761, #1b403c);
+    box-shadow:
+        inset 0 0 0 3px rgba(214, 168, 79, 0.28),
+        inset 0 -5px 0 rgba(0, 0, 0, 0.25),
+        0 16px 28px -8px rgba(0, 0, 0, 0.75);
+}
+
+.zb-board--left {
+    left: calc(var(--spine) - var(--page-w) - 36px);
+    border-radius: 22px 0 0 22px;
+}
+
+.zb-board--right {
+    left: var(--spine);
+    border-radius: 0 22px 22px 0;
+}
+
+.zb-board--left::before,
+.zb-board--right::before {
     content: '';
     position: absolute;
-    width: 26px;
-    height: 26px;
+    bottom: 9px;
+    width: 28px;
+    height: 28px;
     border: 4px solid #d6a84f;
-    border-radius: 6px;
+    border-top: 0;
 }
 
-.zb-cover::before { left: 8px; bottom: 8px; border-top: 0; border-right: 0; }
-.zb-cover::after { right: 8px; bottom: 8px; border-top: 0; border-left: 0; }
+.zb-board--left::before { left: 9px; border-right: 0; border-radius: 0 0 0 8px; }
+.zb-board--right::before { right: 9px; border-left: 0; border-radius: 0 0 8px 0; }
 
-.zb-page {
+.zb-hinge {
     position: absolute;
-    top: 58px;
-    bottom: 26px;
-    padding: 22px 26px 40px;
-    background:
-        radial-gradient(ellipse at 20% 15%, rgba(255, 255, 255, 0.35), transparent 55%),
-        repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.035) 0 2px, transparent 2px 5px),
-        #ead9a4;
-    box-shadow: inset 0 0 28px rgba(110, 80, 30, 0.28), 0 3px 0 #b99a5a;
+    left: calc(var(--spine) - 12px);
+    top: calc(var(--page-top) - 18px);
+    width: 24px;
+    height: calc(var(--page-h) + 38px);
+    background: linear-gradient(90deg, #13302d, #2a5f59 40%, #2a5f59 60%, #13302d);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
-.zb-page--left {
-    left: 38px;
-    width: 432px;
-    border-radius: 14px 4px 4px 14px;
+/* Paper stacks at the outer edges show how thick each side of the book is. */
+.zb-edge { position: absolute; pointer-events: none; }
+
+.zb-edge--left-side,
+.zb-edge--right-side {
+    top: calc(var(--page-top) + 3px);
+    background: repeating-linear-gradient(90deg, #cdbd8d 0 1px, #f2e7c4 1px 3px);
 }
 
-.zb-page--right {
-    left: 490px;
-    width: 432px;
-    border-radius: 4px 14px 14px 4px;
-    background:
-        radial-gradient(ellipse at 80% 12%, rgba(255, 255, 255, 0.4), transparent 55%),
-        repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.035) 0 2px, transparent 2px 5px),
-        #efe1b2;
+.zb-edge--left-side {
+    right: calc(960px - var(--spine) + var(--page-w));
+    border-radius: 6px 0 0 6px;
+    box-shadow: inset 2px 0 3px rgba(60, 40, 10, 0.35);
 }
+
+.zb-edge--right-side {
+    left: calc(var(--spine) + var(--page-w));
+    border-radius: 0 6px 6px 0;
+    box-shadow: inset -2px 0 3px rgba(60, 40, 10, 0.35);
+}
+
+.zb-edge--left-bottom,
+.zb-edge--right-bottom {
+    top: calc(var(--page-top) + var(--page-h));
+    background: repeating-linear-gradient(0deg, #cdbd8d 0 1px, #f2e7c4 1px 3px);
+    box-shadow: inset 0 -2px 3px rgba(60, 40, 10, 0.35);
+}
+
+.zb-edge--left-bottom { right: calc(960px - var(--spine)); border-radius: 0 0 0 6px; }
+.zb-edge--right-bottom { left: var(--spine); border-radius: 0 0 6px 0; }
+
+/* The two flat pages */
+.zb-slot {
+    position: absolute;
+    top: var(--page-top);
+    width: var(--page-w);
+    height: var(--page-h);
+}
+
+.zb-slot--left { left: calc(var(--spine) - var(--page-w)); }
+.zb-slot--right { left: var(--spine); }
+
+.zb-sheet {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at 20% 12%, rgba(255, 255, 255, 0.38), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.035) 0 2px, transparent 2px 5px),
+        #ecdca8;
+    background-color: #ecdca8;
+}
+
+.zb-sheet--left {
+    border-radius: 12px 0 0 12px;
+    box-shadow: inset -26px 0 26px -18px rgba(70, 45, 10, 0.55), inset 0 0 22px rgba(110, 80, 30, 0.22);
+}
+
+.zb-sheet--right {
+    border-radius: 0 12px 12px 0;
+    background-color: #f0e3b6;
+    box-shadow: inset 26px 0 26px -18px rgba(70, 45, 10, 0.55), inset 0 0 22px rgba(110, 80, 30, 0.22);
+}
+
+.zb-hole {
+    position: absolute;
+    width: 22px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 40%, #2a1d0e, #4a3519);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.zb-sheet--left .zb-hole { right: 19px; }
+.zb-sheet--right .zb-hole { left: 19px; }
+
+.zb-content {
+    position: absolute;
+    inset: 0;
+    padding: 26px 56px 22px 30px;
+}
+
+.zb-sheet--right .zb-content { padding: 26px 30px 22px 56px; }
+
+/* Where the two pages meet, and the shadow a leaf casts on the page beneath */
+.zb-gutter {
+    position: absolute;
+    left: calc(var(--spine) - 1px);
+    top: var(--page-top);
+    width: 2px;
+    height: var(--page-h);
+    background: rgba(40, 25, 5, 0.55);
+    pointer-events: none;
+}
+
+.zb-cast {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.zb-cast--right {
+    left: 0;
+    background: linear-gradient(90deg, rgba(30, 18, 4, 0.7), rgba(30, 18, 4, 0));
+}
+
+.zb-cast--left {
+    right: 0;
+    background: linear-gradient(270deg, rgba(30, 18, 4, 0.7), rgba(30, 18, 4, 0));
+}
+
+/* The turning leaf. It pivots on the spine edge. */
+.zb-leaf {
+    position: absolute;
+    left: var(--spine);
+    top: var(--page-top);
+    width: var(--page-w);
+    height: var(--page-h);
+    z-index: 3;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    pointer-events: none;
+}
+
+.zb-strip {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+}
+
+.zb-face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.zb-face--back { transform: rotateY(180deg); }
+
+.zb-slice {
+    position: absolute;
+    top: 0;
+    height: 100%;
+}
+
+.zb-shade {
+    position: absolute;
+    inset: 0;
+    background: #1e1204;
+    pointer-events: none;
+}
+
+/* Rings: each one passes through a punched hole on both pages. */
+.zb-rings {
+    position: absolute;
+    left: var(--spine);
+    top: var(--page-top);
+    z-index: 4;
+    pointer-events: none;
+}
+
+.zb-ring {
+    position: absolute;
+    left: -39px;
+    width: 78px;
+    height: 34px;
+    margin-top: -17px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 6px solid #b9722d;
+    border-color: #f3c987 #a8621f #7a4616 #c98a3d;
+    background: transparent;
+    box-shadow: 0 3px 4px rgba(0, 0, 0, 0.5), inset 0 2px 2px rgba(0, 0, 0, 0.4);
+}
+
+.zb-ring::before,
+.zb-ring::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 22px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 40%, rgba(20, 12, 4, 0.55), transparent 70%);
+}
+
+.zb-ring::before { left: -2px; }
+.zb-ring::after { right: -2px; }
 
 .zb-title {
     margin: 0;
-    font-size: 34px;
+    font-size: 33px;
     font-style: italic;
     font-weight: 700;
     line-height: 1.1;
@@ -749,14 +957,14 @@ select:focus-visible,
     display: flex;
     gap: 14px;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 14px;
 }
 
 .zb-photo {
     position: relative;
     flex: none;
-    width: 214px;
-    height: 214px;
+    width: 178px;
+    height: 178px;
     margin: 0;
     display: grid;
     place-items: center;
@@ -778,8 +986,8 @@ select:focus-visible,
     position: absolute;
     top: -9px;
     left: 50%;
-    width: 64px;
-    height: 20px;
+    width: 60px;
+    height: 19px;
     transform: translateX(-50%) rotate(2deg);
     background: rgba(210, 190, 120, 0.72);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -789,12 +997,12 @@ select:focus-visible,
     position: absolute;
     right: -10px;
     bottom: -8px;
-    padding: 4px 12px;
+    padding: 3px 10px;
     border: 3px solid #2f7a45;
     border-radius: 999px;
     color: #2f7a45;
     font-weight: 800;
-    font-size: 16px;
+    font-size: 15px;
     letter-spacing: 0.06em;
     transform: rotate(-9deg);
     background: rgba(246, 236, 201, 0.9);
@@ -805,23 +1013,24 @@ select:focus-visible,
     padding: 0;
     list-style: none;
     display: grid;
-    gap: 7px;
-    font-size: 17px;
-    line-height: 1.22;
+    gap: 8px;
+    font-size: 15px;
+    line-height: 1.2;
+    min-width: 0;
 }
 
 .zb-facts li {
     position: relative;
-    padding-left: 15px;
+    padding-left: 13px;
 }
 
 .zb-facts li::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0.5em;
-    width: 7px;
-    height: 7px;
+    top: 0.48em;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #3a2a18;
 }
@@ -836,7 +1045,7 @@ select:focus-visible,
 }
 
 .zb-note--found {
-    margin-top: 16px;
+    margin-top: 22px;
     font-size: 19px;
     transform: rotate(-1.5deg);
 }
@@ -849,7 +1058,7 @@ select:focus-visible,
 
 .zb-heading {
     margin: 0;
-    font-size: 27px;
+    font-size: 26px;
     font-style: italic;
     font-weight: 700;
     border-bottom: 2px solid rgba(58, 42, 24, 0.4);
@@ -857,36 +1066,36 @@ select:focus-visible,
 }
 
 .zb-heading--small {
-    margin-top: 12px;
-    font-size: 20px;
+    margin-top: 10px;
+    font-size: 19px;
 }
 
 .zb-fact {
-    margin: 8px 0 0;
-    font-size: 19px;
-    line-height: 1.28;
+    margin: 6px 0 0;
+    font-size: 17px;
+    line-height: 1.25;
 }
 
 .zb-about {
-    margin: 6px 0 0;
-    font-size: 16px;
-    line-height: 1.28;
+    margin: 5px 0 0;
+    font-size: 15px;
+    line-height: 1.25;
     color: #55401f;
 }
 
 .zb-card {
-    margin-top: 14px;
-    padding: 8px 10px 10px;
+    margin-top: 12px;
+    padding: 7px 10px 10px;
     background: #f8efce;
     border: 1px solid rgba(80, 60, 30, 0.28);
     box-shadow: 0 8px 16px -8px rgba(50, 35, 10, 0.6);
-    transform: rotate(0.8deg);
+    transform: rotate(0.6deg);
 }
 
 .zb-card-title {
-    margin: 0 0 6px;
+    margin: 0 0 5px;
     text-align: center;
-    font-size: 16px;
+    font-size: 15px;
     font-style: italic;
     font-weight: 700;
     color: #6b4a2a;
@@ -895,7 +1104,7 @@ select:focus-visible,
 .zb-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    gap: 7px;
 }
 
 .zb-thumb {
@@ -946,7 +1155,7 @@ select:focus-visible,
     position: absolute;
     top: 0;
     left: 70px;
-    z-index: 3;
+    z-index: 2;
     display: flex;
     gap: 14px;
     align-items: flex-end;
@@ -954,7 +1163,7 @@ select:focus-visible,
 
 .zb-tab {
     width: 38px;
-    height: 44px;
+    height: 46px;
     padding-bottom: 6px;
     display: grid;
     place-items: end center;
@@ -969,31 +1178,7 @@ select:focus-visible,
     touch-action: manipulation;
 }
 
-.zb-tab.is-active { transform: translateY(2px); height: 56px; }
-
-.zb-rings {
-    position: absolute;
-    left: 454px;
-    top: 74px;
-    bottom: 40px;
-    width: 52px;
-    z-index: 4;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
-    pointer-events: none;
-}
-
-.zb-ring {
-    width: 56px;
-    height: 44px;
-    border-radius: 50%;
-    border: 7px solid #c08038;
-    background: transparent;
-    box-shadow: inset 0 0 0 2px #e6b068, 0 2px 4px rgba(0, 0, 0, 0.45);
-    clip-path: inset(-10px -10px -10px -10px);
-}
+.zb-tab.is-active { transform: translateY(4px); height: 58px; }
 
 .zb-arrow {
     position: absolute;
@@ -1014,17 +1199,18 @@ select:focus-visible,
 }
 
 .zb-arrow:active { transform: translateY(2px); box-shadow: 0 1px 0 #6b4a2a; }
+.zb-arrow:disabled { opacity: 0.35; cursor: default; }
 .zb-arrow--prev { left: -2px; }
 .zb-arrow--next { right: -2px; }
 
 .zb-counter {
     position: absolute;
     left: 50%;
-    bottom: 44px;
+    bottom: 2px;
     z-index: 5;
     margin: 0;
     transform: translateX(-50%);
-    padding: 3px 14px;
+    padding: 2px 14px;
     border-radius: 999px;
     background: #f6e6b0;
     border: 2px solid #6b4a2a;
@@ -1034,8 +1220,8 @@ select:focus-visible,
 
 .zb-close {
     position: absolute;
-    top: 46px;
-    right: 14px;
+    top: 50px;
+    right: 8px;
     z-index: 6;
     width: 42px;
     height: 42px;
