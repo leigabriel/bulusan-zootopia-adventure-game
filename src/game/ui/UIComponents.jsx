@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { useEffect, useId, useRef } from 'react';
+import { t, useLanguage } from '../i18n/index.js';
 
 export function cx(...tokens) {
     return tokens.filter(Boolean).join(' ');
@@ -117,30 +118,31 @@ export function PaginationControls({
     nextLabel = 'Next',
     className = '',
 }) {
+    useLanguage();
     if (pageCount <= 1) return null;
 
     return (
-        <nav className={cx('flex shrink-0 items-center justify-between gap-3', className)} aria-label="Pagination">
+        <nav className={cx('flex shrink-0 items-center justify-between gap-3', className)} aria-label={t('Pages')}>
             <ActionButton
                 size="sm"
                 variant="secondary"
                 disabled={page <= 0}
                 onClick={() => onPageChange(page - 1)}
-                aria-label="Previous page"
+                aria-label={t('Previous page')}
             >
-                <span aria-hidden="true">&lsaquo;</span> {previousLabel === 'Previous' ? 'Back' : previousLabel}
+                <span aria-hidden="true">&lsaquo;</span> {t(previousLabel === 'Previous' ? 'Back' : previousLabel)}
             </ActionButton>
             <span className="sz-chip sz-chip--sun min-w-16 justify-center" aria-live="polite">
-                {page + 1} of {pageCount}
+                {t('{page} of {total}', { page: page + 1, total: pageCount })}
             </span>
             <ActionButton
                 size="sm"
                 variant="primary"
                 disabled={page >= pageCount - 1}
                 onClick={() => onPageChange(page + 1)}
-                aria-label="Next page"
+                aria-label={t('Next page')}
             >
-                {nextLabel} <span aria-hidden="true">&rsaquo;</span>
+                {t(nextLabel)} <span aria-hidden="true">&rsaquo;</span>
             </ActionButton>
         </nav>
     );
@@ -175,6 +177,7 @@ export function useModalTransition(isOpen, duration = 250) {
 }
 
 export function ModalShell({ isOpen, onClose, title, children, footer = null, size = 'md', closeOnBackdrop = true, showClose = true }) {
+    useLanguage();
     const { mounted, active } = useModalTransition(isOpen, 250);
     const titleId = useId();
     const panelRef = useRef(null);
@@ -223,7 +226,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
         >
             <button
                 type="button"
-                aria-label="Close modal"
+                aria-label={t('Close')}
                 onClick={closeOnBackdrop ? onClose : undefined}
                 className={cx(
                     'absolute inset-0 bg-[#3b2a1a]/45 backdrop-blur-xs transition-opacity duration-250 ease-out',
@@ -241,8 +244,8 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
                 )}
             >
                 <div className="ui-modal-header sz-card-header shrink-0">
-                    {title ? <h2 id={titleId} className="ui-modal-title sz-title truncate uppercase">{title}</h2> : <span />}
-                    {showClose ? <button type="button" data-ui-button="true" onClick={onClose} aria-label="Close" className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button> : null}
+                    {title ? <h2 id={titleId} className="ui-modal-title sz-title truncate uppercase">{t(title)}</h2> : <span />}
+                    {showClose ? <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button> : null}
                 </div>
                 <div className="ui-modal-body min-h-0 flex-1 overflow-y-auto" data-ui-scrollable="true">
                     {children}
@@ -254,6 +257,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
 }
 
 export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
+    useLanguage();
     const sidePosition = side === 'right' ? 'right-0' : 'left-0';
     const hiddenPosition = side === 'right' ? 'translate-x-full' : '-translate-x-full';
 
@@ -261,7 +265,7 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
         <>
             <button
                 type="button"
-                aria-label="Close panel"
+                aria-label={t('Close')}
                 onClick={onClose}
                 className={cx(
                     'fixed inset-0 z-90 bg-[#3b2a1a]/45 backdrop-blur-xs transition-opacity',
@@ -279,8 +283,8 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
             >
                 <div className="flex h-full flex-col">
                     <div className="sz-card-header">
-                        <h3 className="sz-title uppercase">{title}</h3>
-                        <button type="button" data-ui-button="true" onClick={onClose} aria-label="Close panel" className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close">&times;</button>
+                        <h3 className="sz-title uppercase">{t(title)}</h3>
+                        <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close">&times;</button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-ui-scrollable="true">
                         {children}

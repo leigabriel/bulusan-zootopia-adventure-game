@@ -26,7 +26,9 @@ export const DEFAULT_SETTINGS = {
     sfxVolume: 1.0,
     graphicsQuality: 'medium',
     shadowQuality: defaultShadowQuality(),
-    sensitivity: 1.0
+    sensitivity: 1.0,
+    // 'en' or 'tl'. Empty until the player chooses; the browser language decides then.
+    language: ''
 };
 
 const DEFAULT_PROGRESS = {

@@ -9,6 +9,7 @@ import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
 import { ControlsContent } from './ControlsGuide.jsx';
 import { DEFAULT_SETTINGS, getSettings, saveSettings } from '../utils/storage.js';
+import { LANGUAGES, getLanguage, setLanguage, t, useLanguage } from '../i18n/index.js';
 import { getPlayerProfile, isPlayerProfileComplete, PLAYER_GENDERS, savePlayerProfile } from '../utils/playerProfile.js';
 
 const SETTINGS_CHANGE_EVENT = 'minizoo-settings-changed';
@@ -83,8 +84,8 @@ function VolumeSliderRow({ label, description, value, onChange }) {
         <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-slate-100 bg-white p-4 shadow-sm">
             <div className="flex justify-between items-center px-1">
                 <div className="text-left">
-                    <span className="block text-sm font-black uppercase tracking-wider text-slate-800">{label}</span>
-                    {description && <span className="block text-[11px] font-semibold text-slate-500">{description}</span>}
+                    <span className="block text-sm font-black uppercase tracking-wider text-slate-800">{t(label)}</span>
+                    {description && <span className="block text-[11px] font-semibold text-slate-500">{t(description)}</span>}
                 </div>
                 <span className="text-xs font-black text-emerald-600">{Math.round(value * 100)}%</span>
             </div>
@@ -108,7 +109,7 @@ function SelectRow({ label, options = [], value, onChange }) {
     return (
         <div className="flex w-full flex-col gap-2 rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-sm">
             <span className="text-[11px] font-black uppercase tracking-wide text-slate-500 px-1">
-                {label}
+                {t(label)}
             </span>
             <div className="flex flex-wrap gap-2" role="radiogroup">
                 {options.map((opt) => {
@@ -127,7 +128,7 @@ function SelectRow({ label, options = [], value, onChange }) {
                                     : 'bg-emerald-50 text-emerald-700 shadow-[0_4px_0_0_#d1fae5] hover:bg-emerald-100'
                             )}
                         >
-                            {opt.label}
+                            {t(opt.label)}
                         </button>
                     );
                 })}
@@ -137,32 +138,33 @@ function SelectRow({ label, options = [], value, onChange }) {
 }
 
 function HowToPlayContent() {
+    useLanguage();
     const [page, setPage] = useState(0);
     const usesTouchControls = Capacitor.isNativePlatform() || /android/i.test(navigator.userAgent || '');
     const pages = usesTouchControls
         ? [
-             { label: 'Move', color: 'text-emerald-600', icon: '🕹️', iconClass: 'bg-emerald-100', text: 'Drag the joystick to move.' },
-             { label: 'Look and jump', color: 'text-amber-600', icon: '👆', iconClass: 'bg-amber-100', text: 'Swipe to look. Tap Jump to hop.' },
-             { label: 'Care for animals', color: 'text-sky-600', icon: '🍎', iconClass: 'bg-sky-100', text: 'Go near a safe animal. Hold Feed.' },
-             { label: 'Meet the ranger', color: 'text-emerald-700', icon: '🏅', iconClass: 'bg-lime-100', text: 'Tap Talk. Finish tasks to earn a prize.' },
+             { label: 'Move', color: 'text-emerald-600', icon: '🕹️', iconClass: 'bg-emerald-100', text: 'Slide the round stick to walk.' },
+             { label: 'Look and jump', color: 'text-amber-600', icon: '👆', iconClass: 'bg-amber-100', text: 'Slide your finger to look around. Tap Jump to hop.' },
+             { label: 'Care for animals', color: 'text-sky-600', icon: '🍎', iconClass: 'bg-sky-100', text: 'Walk up to a friendly animal. Press and hold Feed.' },
+             { label: 'Meet the ranger', color: 'text-emerald-700', icon: '🏅', iconClass: 'bg-lime-100', text: 'Tap Talk near a ranger. Finish tasks to win a prize.' },
         ]
         : [
-             { label: 'Move and look', color: 'text-emerald-600', icon: 'WASD', iconClass: 'bg-emerald-100 text-xs', text: 'Use WASD to move. Drag the mouse to look.' },
-             { label: 'Jump and view', color: 'text-amber-600', icon: 'SPACE', iconClass: 'bg-amber-100 text-[11px]', text: 'Press Space to jump. Press V to change view.' },
-             { label: 'Care and talk', color: 'text-sky-600', icon: 'F / T', iconClass: 'bg-sky-100 text-xs', text: 'Hold F to feed. Press T or E to talk.' },
-             { label: 'Finish tasks', color: 'text-emerald-700', icon: 'ESC', iconClass: 'bg-lime-100 text-xs', text: 'Press Escape to close. Finish tasks to earn a prize.' },
+             { label: 'Move and look', color: 'text-emerald-600', icon: 'WASD', iconClass: 'bg-emerald-100 text-xs', text: 'Press W A S D to walk. Drag the mouse to look around.' },
+             { label: 'Jump and view', color: 'text-amber-600', icon: 'SPACE', iconClass: 'bg-amber-100 text-[11px]', text: 'Press Space to jump. Press V to change the view.' },
+             { label: 'Care and talk', color: 'text-sky-600', icon: 'F / T', iconClass: 'bg-sky-100 text-xs', text: 'Hold F to feed an animal. Press T or E to talk.' },
+             { label: 'Finish tasks', color: 'text-emerald-700', icon: 'ESC', iconClass: 'bg-lime-100 text-xs', text: 'Press Esc to close a window. Finish tasks to win a prize.' },
         ];
     const current = pages[page];
 
     return (
         <div className="flex min-h-0 flex-col gap-3 text-sm text-slate-700">
-            <p className="text-center text-[11px] font-semibold italic">{usesTouchControls ? 'Touch controls' : 'Keyboard and mouse'}</p>
+            <p className="text-center text-[11px] font-semibold italic">{usesTouchControls ? t('Playing with your fingers') : t('Playing with keyboard and mouse')}</p>
             <div className="flex min-h-20 flex-1 items-center rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-sm">
                 <div className="flex items-center gap-4">
                     <div className={cx('flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl', current.iconClass)}>{current.icon}</div>
                     <div>
-                        <p className={cx('mb-1 text-[11px] font-black uppercase tracking-wide', current.color)}>{current.label}</p>
-                        <p className="font-bold leading-snug text-slate-800">{current.text}</p>
+                        <p className={cx('mb-1 text-[11px] font-black uppercase tracking-wide', current.color)}>{t(current.label)}</p>
+                        <p className="font-bold leading-snug text-slate-800">{t(current.text)}</p>
                     </div>
                 </div>
             </div>
@@ -172,6 +174,7 @@ function HowToPlayContent() {
 }
 
 function CreditsContent() {
+    useLanguage();
     const [page, setPage] = useState(0);
     const modelCredits = [
         ['Tiger', 'Blender Artist', 'https://sketchfab.com/3d-models/tiger-67bbedd727a047869ef7c7b608445484', 'CC-BY-4.0'],
@@ -185,20 +188,20 @@ function CreditsContent() {
             <div className="flex-1 space-y-2 text-left">
                 {page === 0 ? (
                     <div className="grid h-full content-center gap-4 text-center">
-                        <p className="font-semibold italic">Character and environment assets provided by Quaternius.</p>
+                        <p className="font-semibold italic">{t('Many of the people, trees and buildings were made by Quaternius. Thank you!')}</p>
                         <a href="https://quaternius.com/" target="_blank" rel="noreferrer" className="mx-auto inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-500 px-6 text-sm font-black uppercase tracking-wider text-white shadow-[0_4px_0_0_#065f46] transition-all active:translate-y-1 active:shadow-none">
-                            Quaternius Link
+                            {t('Visit Quaternius')}
                         </a>
-                        <p className="text-xs font-semibold text-slate-500">Additional animal model licenses are listed on the following pages.</p>
+                        <p className="text-xs font-semibold text-slate-500">{t('More animal artists are thanked on the next pages.')}</p>
                     </div>
                 ) : (
-                    <><h3 className="text-center text-xs font-black uppercase tracking-widest text-emerald-800">Animal Model Licenses</h3><p className="text-center text-xs font-semibold text-slate-500">CC-BY-4.0 models require author credit. The Birds model uses the Sketchfab Standard license.</p></>
+                    <><h3 className="text-center text-xs font-black uppercase tracking-widest text-emerald-800">{t('Animal Artists')}</h3><p className="text-center text-xs font-semibold text-slate-500">{t('We say thank you to the artists who made these animals.')}</p></>
                 )}
                 {visibleCredits.map(([title, author, source, license]) => (
                     <div key={source} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
-                        <p className="font-black text-slate-800">{title}</p>
-                        <p className="text-xs font-semibold">By {author} | {license}</p>
-                        <a href={source} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-500 px-4 text-[11px] font-black uppercase tracking-wide text-white shadow-[0_3px_0_0_#065f46] transition-all active:translate-y-0.5 active:shadow-none">Link</a>
+                        <p className="font-black text-slate-800">{t(title)}</p>
+                        <p className="text-xs font-semibold">{t('Made by {author} | License: {license}', { author, license })}</p>
+                        <a href={source} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-500 px-4 text-[11px] font-black uppercase tracking-wide text-white shadow-[0_3px_0_0_#065f46] transition-all active:translate-y-0.5 active:shadow-none">{t('Visit')}</a>
                     </div>
                 ))}
             </div>
@@ -216,9 +219,10 @@ function ConfirmModal({
     confirmLabel,
     confirmVariant = 'danger',
 }) {
+    useLanguage();
     return (
-        <ModalShell isOpen={isOpen} onClose={onCancel} title={title} size="sm" footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onCancel}>Back</ActionButton><ActionButton variant={confirmVariant} onClick={onConfirm}>{confirmLabel}</ActionButton></div>}>
-            <p className="text-sm font-semibold leading-relaxed text-slate-600">{message}</p>
+        <ModalShell isOpen={isOpen} onClose={onCancel} title={title} size="sm" footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onCancel}>{t('Back')}</ActionButton><ActionButton variant={confirmVariant} onClick={onConfirm}>{t(confirmLabel)}</ActionButton></div>}>
+            <p className="text-sm font-semibold leading-relaxed text-slate-600">{t(message)}</p>
         </ModalShell>
     );
 }
@@ -403,6 +407,7 @@ function Character3DPreview({ modelFile }) {
 }
 
 function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange, inGame = false }) {
+    useLanguage();
     const [settings, setSettings] = useState(() => readSettings());
     const [activeSection, setActiveSection] = useState(null);
 
@@ -420,10 +425,11 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
 
     const sectionTitles = {
         graphics: 'Graphics',
-        audio: 'Audio',
-        sensitivity: 'Sensitivity',
-        perspective: 'View Perspective',
-        controls: 'How To Control',
+        audio: 'Sound',
+        sensitivity: 'Look Speed',
+        perspective: 'Camera View',
+        controls: 'Controls',
+        language: 'Language',
     };
 
     if (activeSection) {
@@ -431,7 +437,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
             <ModalShell isOpen={isOpen && Boolean(activeSection)} onClose={() => setActiveSection(null)} title={sectionTitles[activeSection]} size={activeSection === 'controls' ? 'xl' : 'md'}>
                 <div className="flex min-h-0 flex-col gap-3">
                     <ActionButton variant="secondary" size="sm" className="self-start" onClick={() => setActiveSection(null)}>
-                        <span aria-hidden="true">&lsaquo;</span> Settings
+                        <span aria-hidden="true">&lsaquo;</span> {t('Settings')}
                     </ActionButton>
 
                     {activeSection === 'graphics' ? (
@@ -462,19 +468,33 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
 
                     {activeSection === 'controls' ? <ControlsContent /> : null}
 
+                    {activeSection === 'language' ? (
+                        <div className="grid flex-1 content-center">
+                            <SelectRow
+                                label="Language"
+                                options={LANGUAGES}
+                                value={settings.language || getLanguage()}
+                                onChange={(value) => {
+                                    updateSetting('language', value);
+                                    setLanguage(value);
+                                }}
+                            />
+                        </div>
+                    ) : null}
+
                     {activeSection === 'audio' ? (
                         <div className="grid flex-1 content-center gap-3 min-[568px]:grid-cols-2">
-                            <VolumeSliderRow label="Music" description="Background" value={settings.musicVolume ?? 0.5} onChange={(value) => handleVolumeChange('musicVolume', value)} />
-                            <VolumeSliderRow label="Ambience" description="Nature" value={settings.ambienceVolume ?? 1} onChange={(value) => handleVolumeChange('ambienceVolume', value)} />
-                            <VolumeSliderRow label="SFX" description="Animals" value={settings.sfxVolume ?? 1} onChange={(value) => handleVolumeChange('sfxVolume', value)} />
-                            <VolumeSliderRow label="UI" description="Buttons" value={settings.uiVolume ?? 1} onChange={(value) => handleVolumeChange('uiVolume', value)} />
+                            <VolumeSliderRow label="Music" description="Songs" value={settings.musicVolume ?? 0.5} onChange={(value) => handleVolumeChange('musicVolume', value)} />
+                            <VolumeSliderRow label="Nature Sounds" description="Birds, wind and water" value={settings.ambienceVolume ?? 1} onChange={(value) => handleVolumeChange('ambienceVolume', value)} />
+                            <VolumeSliderRow label="Animal Sounds" description="Animal noises" value={settings.sfxVolume ?? 1} onChange={(value) => handleVolumeChange('sfxVolume', value)} />
+                            <VolumeSliderRow label="Button Sounds" description="Button taps" value={settings.uiVolume ?? 1} onChange={(value) => handleVolumeChange('uiVolume', value)} />
                         </div>
                     ) : null}
 
                     {activeSection === 'sensitivity' ? (
                         <div className="grid flex-1 content-center">
                             <SelectRow
-                                label="Look Sensitivity"
+                                label="How fast you look"
                                 options={[
                                     { label: 'Slow', value: 0.5 },
                                     { label: 'Normal', value: 1 },
@@ -491,8 +511,8 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                             <SelectRow
                                 label="Camera View"
                                 options={[
-                                    { label: 'First Person', value: 'first' },
-                                    { label: 'Third Person', value: 'third' },
+                                    { label: 'First Person (my eyes)', value: 'first' },
+                                    { label: 'Third Person (from behind)', value: 'third' },
                                 ]}
                                 value={cameraMode || settings.cameraMode || 'third'}
                                 onChange={(value) => {
@@ -508,17 +528,18 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
     }
 
     const categories = [
-        ...(inGame ? [{ id: 'resume', label: 'Resume', icon: '▶', className: 'border-emerald-400 bg-emerald-500 text-white' }] : []),
+        ...(inGame ? [{ id: 'resume', label: 'Back to Game', icon: '▶', className: 'border-emerald-400 bg-emerald-500 text-white' }] : []),
         { id: 'graphics', label: 'Graphics', icon: '▣', className: 'border-sky-200 bg-white text-slate-800' },
-        { id: 'audio', label: 'Audio', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
+        { id: 'audio', label: 'Sound', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
         { id: 'sensitivity', label: 'Look Speed', icon: '↔', className: 'border-amber-200 bg-white text-slate-800' },
         { id: 'perspective', label: 'Camera View', icon: '◉', className: 'border-teal-200 bg-white text-slate-800' },
         { id: 'controls', label: 'Controls', icon: '✥', className: 'border-lime-200 bg-white text-slate-800' },
+        { id: 'language', label: 'Language', icon: 'Aあ', className: 'border-pink-200 bg-white text-slate-800' },
         ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit', icon: '×', className: 'border-rose-200 bg-rose-50 text-rose-700' }] : []),
     ];
 
     return (
-        <ModalShell isOpen={isOpen && !activeSection} onClose={onClose} title="Game Settings" size="md">
+        <ModalShell isOpen={isOpen && !activeSection} onClose={onClose} title="Settings" size="md">
             <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2.5 w-full">
                     {categories.map((category) => (
@@ -536,7 +557,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                             )}
                         >
                             <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100/80 text-base" aria-hidden="true">{category.icon}</span>
-                            <span className="min-w-0 flex-1">{category.label}</span>
+                            <span className="min-w-0 flex-1">{t(category.label)}</span>
                             {category.id !== 'resume' && category.id !== 'quit' ? <span aria-hidden="true">›</span> : null}
                         </button>
                     ))}
@@ -547,6 +568,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
 }
 
 export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }) {
+    useLanguage();
     const storedProfile = getPlayerProfile();
     const [name, setName] = useState(storedProfile.name);
     const [gender, setGender] = useState(storedProfile.gender);
@@ -557,7 +579,7 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
     const submit = () => {
         const profile = savePlayerProfile({ name, gender });
         if (!profile) {
-            setError('Enter your name and choose a character.');
+            setError(t('Type your name and choose a character.'));
             return;
         }
         playGameButtonSfx('confirm');
@@ -573,16 +595,16 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
             showClose={!required}
             title={storedProfile.name ? 'Player Details' : 'Welcome, Explorer!'}
             size="md"
-            footer={<ActionButton className="w-full" onClick={submit}>Save</ActionButton>}
+            footer={<ActionButton className="w-full" onClick={submit}>{t('Save')}</ActionButton>}
         >
             <div className="grid min-[568px]:grid-cols-[1.2fr_1fr] gap-3">
                 <div className="flex flex-col justify-center">
-                    <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-emerald-700" htmlFor="player-ign">Player name</label>
-                    <input id="player-ign" type="text" maxLength={24} value={name} onChange={(event) => { setName(event.target.value); setError(''); }} className="block min-h-11 w-full rounded-xl border-2 border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-slate-800 outline-none focus:border-emerald-400 focus:bg-white" placeholder="Your name" autoFocus />
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-wide text-emerald-700" htmlFor="player-ign">{t('Your name')}</label>
+                    <input id="player-ign" type="text" maxLength={24} value={name} onChange={(event) => { setName(event.target.value); setError(''); }} className="block min-h-11 w-full rounded-xl border-2 border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-black text-slate-800 outline-none focus:border-emerald-400 focus:bg-white" placeholder={t('Type your name')} autoFocus />
                     {error ? <p className="mt-2 text-[11px] font-black text-rose-600" role="alert">{error}</p> : null}
                 </div>
                 <fieldset className="min-w-0">
-                    <legend className="mb-1 text-[11px] font-black uppercase tracking-wide text-emerald-700">Choose a character</legend>
+                    <legend className="mb-1 text-[11px] font-black uppercase tracking-wide text-emerald-700">{t('Choose a character')}</legend>
                     <div className="grid grid-cols-2 gap-2 w-full">
                         {PLAYER_GENDERS.map((option) => (
                             <button
@@ -595,7 +617,7 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
                                     gender === option.id ? 'border-emerald-600 bg-emerald-500 text-white shadow-[0_3px_0_0_#065f46]' : 'border-emerald-100 bg-white text-slate-700 shadow-sm'
                                 )}
                             >
-                                {option.label}
+                                {t(option.label)}
                             </button>
                         ))}
                     </div>
@@ -608,6 +630,7 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
 // REDESIGNED MAIN MENU - REAL 3D BUTTONS & AESTHETIC BUSHES
 
 export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible }) {
+    useLanguage();
     const [starting, setStarting] = useState(false);
     const [howToPlayOpen, setHowToPlayOpen] = useState(false);
     const [creditsOpen, setCreditsOpen] = useState(false);
@@ -725,9 +748,9 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         disabled={starting}
                         className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
                     >
-                        <img src="/ui-buttons/play-button.png" alt="Play" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <img src="/ui-buttons/play-button.png" alt={t('Play')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
-                            PLAY
+                            {t('PLAY')}
                         </span>
                     </button>
 
@@ -737,9 +760,9 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         onClick={() => setSettingsOpen(true)}
                         className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                        <img src="/ui-buttons/settings-button.png" alt="Settings" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <img src="/ui-buttons/settings-button.png" alt={t('Settings')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
-                            SETTINGS
+                            {t('SETTINGS')}
                         </span>
                     </button>
 
@@ -749,9 +772,9 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         onClick={() => setShowExitConfirm(true)}
                         className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                        <img src="/ui-buttons/quit-button.png" alt="Quit" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <img src="/ui-buttons/quit-button.png" alt={t('Quit')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
-                            QUIT
+                            {t('QUIT')}
                         </span>
                     </button>
                 </div>
@@ -766,11 +789,11 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         type="button"
                         onClick={() => setHowToPlayOpen(true)}
                         className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
-                        title="How To Play"
+                        title={t('How To Play')}
                     >
-                        <img src="/ui-buttons/how-to-play-button.png" alt="How To Play" className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
+                        <img src="/ui-buttons/how-to-play-button.png" alt={t('How To Play')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
                         <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
-                            Guide
+                            {t('Guide')}
                         </span>
                     </button>
 
@@ -779,11 +802,11 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         type="button"
                         onClick={() => { setProfileRequired(false); setPlayerDetailsOpen(true); }}
                         className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
-                        title="Player Details"
+                        title={t('Player Details')}
                     >
-                        <img src="/ui-buttons/character-button.png" alt="Player Details" className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
+                        <img src="/ui-buttons/character-button.png" alt={t('Player Details')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
                         <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
-                            Player
+                            {t('Player')}
                         </span>
                     </button>
 
@@ -792,18 +815,18 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         type="button"
                         onClick={() => setCreditsOpen(true)}
                         className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
-                        title="Credits"
+                        title={t('Credits')}
                     >
-                        <img src="/ui-buttons/credit-button.png" alt="Credits" className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
+                        <img src="/ui-buttons/credit-button.png" alt={t('Credits')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
                         <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
-                            Credits
+                            {t('Credits')}
                         </span>
                     </button>
                 </div>
 
                 {/* VERSION ONLY IN BOTTOM RIGHT */}
                 <div className="pb-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-950/70 drop-shadow-xs">
-                    <span>VERSION {typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '1.0'}</span>
+                    <span>{t('VERSION')} {typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '1.0'}</span>
                 </div>
             </div>
 
@@ -840,8 +863,8 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                     }
                 }}
                 onCancel={() => setShowExitConfirm(false)}
-                title="Exit Game?"
-                message="Are you sure you want to exit? Your progress will be safely saved!"
+                title="Stop Playing?"
+                message="Do you want to stop playing? Your game is saved."
                 confirmLabel="Exit"
                 confirmVariant="danger"
             />
@@ -904,19 +927,20 @@ function DirectionArrow({ direction }) {
  * number badge, title, progress chip and arrow in both places.
  */
 export function MissionCard({ task, status = '', navigation, variant = 'compact', expanded = false, onToggle, guidanceEnabled, onToggleGuidance, onOpenTasks }) {
+    useLanguage();
     if (!task) return null;
     const full = variant === 'full';
     const showArrow = navigation && navigation.onScreen === false && navigation.direction;
     const distance = navigation?.distance != null ? `${navigation.distance} m` : '';
-    const chipText = status || distance;
+    const chipText = t(status) || distance;
     const open = full || expanded;
 
     const header = (
         <>
             <span className="sz-badge h-10! w-10! text-base!">{task.number}</span>
             <span className="min-w-0 flex-1 text-left">
-                <span className="sz-label block text-[14px]! leading-none">Task {task.number} of 30</span>
-                <span className={cx('block font-black leading-tight text-(--sz-ink)', full ? 'text-[18px]' : 'truncate text-[16px]')}>{task.title}</span>
+                <span className="sz-label block text-[14px]! leading-none">{t('Task {number} of {total}', { number: task.number, total: 30 })}</span>
+                <span className={cx('block font-black leading-tight text-(--sz-ink)', full ? 'text-[18px]' : 'truncate text-[16px]')}>{t(task.title)}</span>
             </span>
             {chipText ? <span className="sz-chip sz-chip--sun shrink-0">{chipText}</span> : null}
             {showArrow ? <span className="shrink-0 text-(--sz-green-deep)"><DirectionArrow direction={navigation.direction} /></span> : null}
@@ -929,15 +953,15 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
             {full ? (
                 <div className="flex items-center gap-2 px-3 py-2">{header}</div>
             ) : (
-                <button type="button" onClick={onToggle} aria-expanded={expanded} aria-label={`${expanded ? 'Hide' : 'Show'} current task`} className="flex min-h-14 w-full items-center gap-2 px-3 py-1.5">{header}</button>
+                <button type="button" onClick={onToggle} aria-expanded={expanded} aria-label={expanded ? t('Hide current task') : t('Show current task')} className="flex min-h-14 w-full items-center gap-2 px-3 py-1.5">{header}</button>
             )}
             {open ? (
                 <div className="border-t-2 border-(--sz-sun)/60 bg-(--sz-sun-tint) px-3 py-2">
-                    <p className="sz-text text-[15px]! leading-snug">{task.instruction}</p>
+                    <p className="sz-text text-[15px]! leading-snug">{t(task.instruction)}</p>
                     {!full ? (
                         <div className="mt-2 flex gap-2">
-                            <button type="button" data-ui-button="true" onClick={onToggleGuidance} className="sz-btn sz-btn--sm sz-btn--ghost flex-1" aria-pressed={guidanceEnabled}>{guidanceEnabled ? 'Guide: On' : 'Guide: Off'}</button>
-                            <button type="button" data-ui-button="true" onClick={onOpenTasks} className="sz-btn sz-btn--sm sz-btn--sun flex-1">All Tasks</button>
+                            <button type="button" data-ui-button="true" onClick={onToggleGuidance} className="sz-btn sz-btn--sm sz-btn--ghost flex-1" aria-pressed={guidanceEnabled}>{guidanceEnabled ? t('Arrow: On') : t('Arrow: Off')}</button>
+                            <button type="button" data-ui-button="true" onClick={onOpenTasks} className="sz-btn sz-btn--sm sz-btn--sun flex-1">{t('All Tasks')}</button>
                         </div>
                     ) : null}
                 </div>
@@ -949,6 +973,7 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
 const WEBSITE_URL = 'https://bulusanzoo.com';
 
 export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, cameraMode = 'third', onCycleCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
+    useLanguage();
     const menuIcon = '/ui-buttons/settings-button.png';
     const taskIcon = '/ui-buttons/task-list-button.png';
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
@@ -968,12 +993,12 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                 {/* Left: menu + player, with the current task right underneath */}
                 <div className="flex min-w-0 flex-col items-start gap-2">
                     <div className="pointer-events-auto flex min-w-0 items-center gap-2" data-ui-hud="true">
-                        <button type="button" onClick={onMenuClick} className="sz-icon-btn" aria-label="Menu" data-ui-button="true">
+                        <button type="button" onClick={onMenuClick} className="sz-icon-btn" aria-label={t('Menu')} data-ui-button="true">
                             <img src={menuIcon} alt="" />
                         </button>
-                        <button type="button" onClick={onPlayerDetails} aria-label="Edit player details" className="hud-player-pill sz-card flex min-h-12 min-w-0 items-center gap-2 rounded-2xl! px-3 shadow-none! active:scale-95" data-ui-button="true">
+                        <button type="button" onClick={onPlayerDetails} aria-label={t('Player Details')} className="hud-player-pill sz-card flex min-h-12 min-w-0 items-center gap-2 rounded-2xl! px-3 shadow-none! active:scale-95" data-ui-button="true">
                             <span className="h-3 w-3 shrink-0 rounded-full bg-(--sz-green)" />
-                            <span className="max-w-32 truncate text-[16px] font-black">{playerName || 'Explorer'}</span>
+                            <span className="max-w-32 truncate text-[16px] font-black">{playerName || t('Explorer')}</span>
                         </button>
                     </div>
                     {currentTask ? (
@@ -990,12 +1015,12 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                                         onToggleGuidance={onToggleGuidance}
                                         onOpenTasks={onTasksClick}
                                     />
-                                    <button type="button" data-ui-button="true" onClick={() => setCardVisible(false)} aria-label="Hide current task" className="sz-icon-btn sz-icon-btn--round h-9! w-9! min-h-0! text-base!">&times;</button>
+                                    <button type="button" data-ui-button="true" onClick={() => setCardVisible(false)} aria-label={t('Hide current task')} className="sz-icon-btn sz-icon-btn--round h-9! w-9! min-h-0! text-base!">&times;</button>
                                 </>
                             ) : (
-                                <button type="button" data-ui-button="true" onClick={() => setCardVisible(true)} aria-label="Show current task" className="sz-mission flex min-h-12 items-center gap-2 px-2.5 py-1">
+                                <button type="button" data-ui-button="true" onClick={() => setCardVisible(true)} aria-label={t('Show current task')} className="sz-mission flex min-h-12 items-center gap-2 px-2.5 py-1">
                                     <span className="sz-badge h-8! w-8! text-sm!">{currentTask.number}</span>
-                                    <span className="sz-label text-[14px]!">Task</span>
+                                    <span className="sz-label text-[14px]!">{t('Task')}</span>
                                     <span className="text-lg font-black text-(--sz-ink-soft)" aria-hidden="true">▾</span>
                                 </button>
                             )}
@@ -1005,15 +1030,15 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
 
                 {/* Right: tasks */}
                 <div className="pointer-events-auto flex flex-col items-end gap-2" data-ui-hud="true">
-                    <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label="Tasks" data-ui-button="true" data-sfx-self="true">
+                    <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label={t('Tasks')} data-ui-button="true" data-sfx-self="true">
                         <img src={taskIcon} alt="" />
                     </button>
                     <button
                         type="button"
                         onClick={onCycleCamera}
                         className="sz-icon-btn"
-                        aria-label={cameraMode === 'first' ? 'Camera view: first person. Switch to third person' : 'Camera view: third person. Switch to first person'}
-                        title={cameraMode === 'first' ? 'First person' : 'Third person'}
+                        aria-label={cameraMode === 'first' ? t('Looking through my eyes. Tap to look from behind.') : t('Looking from behind. Tap to look through my eyes.')}
+                        title={cameraMode === 'first' ? t('First Person (my eyes)') : t('Third Person (from behind)')}
                         data-ui-button="true"
                     >
                         {cameraMode === 'first' ? (
@@ -1027,20 +1052,20 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                                 <path d="M6 21v-3a6 6 0 0 1 12 0v3" />
                             </svg>
                         )}
-                        <span className="text-[14px] leading-none">{cameraMode === 'first' ? '1st' : '3rd'}</span>
+                        <span className="text-[14px] leading-none">{cameraMode === 'first' ? t('Eyes') : t('Behind')}</span>
                     </button>
                 </div>
             </div>
 
             {/* Bottom centre: exploration tools, icon + word so they read without guessing */}
-            <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] left-1/2 z-65 flex -translate-x-1/2 items-center gap-2" data-ui-hud="true" aria-label="Exploration tools">
-                <button type="button" onClick={onBook} className="sz-icon-btn w-[72px]!" aria-label="Open Animal Book" data-ui-button="true">
+            <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] left-1/2 z-65 flex -translate-x-1/2 items-center gap-2" data-ui-hud="true" aria-label={t('Animal tools')}>
+                <button type="button" onClick={onBook} className="sz-icon-btn w-[72px]!" aria-label={t('Open Animal Book')} data-ui-button="true">
                     <img src="/ui-buttons/book-button.png" alt="" />
-                    <span className="text-[14px] leading-none">Book</span>
+                    <span className="text-[14px] leading-none">{t('Book')}</span>
                 </button>
-                <button type="button" onClick={onCamera} className="sz-icon-btn w-[72px]!" aria-label="Take a photo" data-ui-button="true">
+                <button type="button" onClick={onCamera} className="sz-icon-btn w-[72px]!" aria-label={t('Take a photo')} data-ui-button="true">
                     <img src="/ui-buttons/camera-button.png" alt="" />
-                    <span className="text-[14px] leading-none">Photo</span>
+                    <span className="text-[14px] leading-none">{t('Photo')}</span>
                 </button>
             </div>
         </div>
@@ -1061,6 +1086,7 @@ export function SettingsPanel({ isOpen, onClose, onQuit, cameraMode, onCameraMod
 }
 
 export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], activeTaskId, taskProgress = '', onTaskClick, onResetTasks, onViewCertificate }) {
+    useLanguage();
     const { mounted, active } = useModalTransition(isOpen, 300);
     const [tab, setTab] = useState('story');
 
@@ -1075,12 +1101,12 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
     if (!mounted) return null;
 
     return (
-        <div className="fixed inset-0 z-110 flex items-center justify-center p-[var(--ui-edge-gap)] pt-[max(var(--ui-edge-gap),env(safe-area-inset-top))] pr-[max(var(--ui-edge-gap),env(safe-area-inset-right))] pb-[max(var(--ui-edge-gap),env(safe-area-inset-bottom))] pl-[max(var(--ui-edge-gap),env(safe-area-inset-left))] pointer-events-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label="Adventure tasks">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-[var(--ui-edge-gap)] pt-[max(var(--ui-edge-gap),env(safe-area-inset-top))] pr-[max(var(--ui-edge-gap),env(safe-area-inset-right))] pb-[max(var(--ui-edge-gap),env(safe-area-inset-bottom))] pl-[max(var(--ui-edge-gap),env(safe-area-inset-left))] pointer-events-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label={t('Adventure Tasks')}>
             <button
                 type="button"
                 className={cx('pointer-events-auto fixed inset-0 bg-[#3b2a1a]/45 backdrop-blur-sm transition-opacity duration-300 ease-out', active ? 'opacity-100' : 'opacity-0')}
                 onClick={onClose}
-                aria-label="Close tasks"
+                aria-label={t('Close')}
             />
 
             <section className={cx(
@@ -1090,14 +1116,14 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                 <header className="sz-card-header shrink-0">
                     <div className="flex min-w-0 items-center gap-3">
                         <img src="/ui-buttons/task-list-button.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
-                        <h2 className="sz-title truncate uppercase">Adventure Tasks</h2>
+                        <h2 className="sz-title truncate uppercase">{t('Adventure Tasks')}</h2>
                     </div>
-                    <button type="button" data-ui-button="true" onClick={onClose} aria-label="Close tasks" className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button>
+                    <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button>
                 </header>
 
-                <div className="sz-tabs shrink-0" role="tablist" aria-label="Task type">
-                    <button type="button" role="tab" aria-selected={showingStory} onClick={() => setTab('story')} className="sz-tab" data-ui-button="true">Story {storyDone}/{storyTasks.length}</button>
-                    <button type="button" role="tab" aria-selected={!showingStory} onClick={() => setTab('animals')} className="sz-tab" data-ui-button="true">Feeding {fedCount}/{tasks.length}</button>
+                <div className="sz-tabs shrink-0" role="tablist" aria-label={t('Task type')}>
+                    <button type="button" role="tab" aria-selected={showingStory} onClick={() => setTab('story')} className="sz-tab" data-ui-button="true">{t('Story')} {storyDone}/{storyTasks.length}</button>
+                    <button type="button" role="tab" aria-selected={!showingStory} onClick={() => setTab('animals')} className="sz-tab" data-ui-button="true">{t('Feeding')} {fedCount}/{tasks.length}</button>
                 </div>
 
                 <div className="shrink-0 px-3 pb-2">
@@ -1112,7 +1138,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                     <MissionCard task={activeTask} status={taskProgress} variant="full" />
                                 </div>
                             ) : (
-                                <p className="sz-row sz-row--done mb-3 justify-center">All story tasks done!</p>
+                                <p className="sz-row sz-row--done mb-3 justify-center">{t('All story tasks done!')}</p>
                             )}
                             <ol className="grid gap-2">
                                 {storyTasks.filter((task) => task.id !== activeTaskId).map((task) => {
@@ -1121,8 +1147,8 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                     return (
                                         <li key={task.id} className={cx('sz-row', `sz-row--${state}`)}>
                                             <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : isActive ? '' : 'sz-badge--locked')}>{task.completed ? '✓' : task.number}</span>
-                                            <span className="min-w-0 flex-1">{task.title}</span>
-                                            <span className="sz-label shrink-0">{task.completed ? 'Done' : isActive ? 'Now' : ''}</span>
+                                            <span className="min-w-0 flex-1">{t(task.title)}</span>
+                                            <span className="sz-label shrink-0">{task.completed ? t('Done') : isActive ? t('Now') : ''}</span>
                                         </li>
                                     );
                                 })}
@@ -1134,8 +1160,8 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                 <li key={task.id}>
                                     <button type="button" data-ui-button="true" onClick={() => onTaskClick?.(task)} className={cx('sz-row w-full text-left', task.completed ? 'sz-row--done' : '')}>
                                         <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : '')}>{task.completed ? '✓' : index + 1}</span>
-                                        <span className={cx('min-w-0 flex-1', task.completed && 'opacity-70')}>{task.name}</span>
-                                        <span className="sz-label shrink-0">{task.completed ? 'Fed' : 'Feed'}</span>
+                                        <span className={cx('min-w-0 flex-1', task.completed && 'opacity-70')}>{t(task.name)}</span>
+                                        <span className="sz-label shrink-0">{task.completed ? t('Fed') : t('Feed')}</span>
                                     </button>
                                 </li>
                             ))}
@@ -1145,8 +1171,8 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
 
                 {(onViewCertificate || onResetTasks) ? (
                     <footer className="flex shrink-0 items-center justify-end gap-2 border-t-[3px] border-(--sz-line) bg-(--sz-cream-2) p-2">
-                        {onResetTasks ? <ActionButton variant="ghost" size="sm" onClick={onResetTasks}>Reset</ActionButton> : null}
-                        {onViewCertificate ? <ActionButton variant="warning" size="sm" onClick={onViewCertificate}>Certificate</ActionButton> : null}
+                        {onResetTasks ? <ActionButton variant="ghost" size="sm" onClick={onResetTasks}>{t('Start Over')}</ActionButton> : null}
+                        {onViewCertificate ? <ActionButton variant="warning" size="sm" onClick={onViewCertificate}>{t('Certificate')}</ActionButton> : null}
                     </footer>
                 ) : null}
             </section>
@@ -1154,15 +1180,16 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
     );
 }
 
-export function NPCInteractionPrompt({ visible, onInteract, npcName = 'Zoo Staff', isTouchDevice }) {
+export function NPCInteractionPrompt({ visible, onInteract, npcName = 'Zoo Helper', isTouchDevice }) {
+    useLanguage();
     if (!visible) return null;
 
     return (
         <div className="context-prompt pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+5.3rem)] right-[max(5.5rem,calc(env(safe-area-inset-right)+5.5rem))] z-75 flex items-end">
             <SurfacePanel className="pointer-events-auto flex max-w-44 items-center gap-2 border-amber-200 bg-[#fff8df]/95 p-1 shadow-lg" data-ui-panel="true">
-                <span className="min-w-0 flex-1 truncate pl-2 text-[11px] font-bold text-slate-600">{npcName || 'Zoo Ranger'}</span>
-                <ActionButton variant="warning" className="shrink-0" onClick={onInteract} aria-label={`Talk to ${npcName}`}>
-                    <span aria-hidden="true">●</span> Talk{!isTouchDevice ? ' (T)' : ''}
+                <span className="min-w-0 flex-1 truncate pl-2 text-[11px] font-bold text-slate-600">{npcName ? t(npcName) : t('Zoo Ranger')}</span>
+                <ActionButton variant="warning" className="shrink-0" onClick={onInteract} aria-label={t('Talk to {name}', { name: npcName })}>
+                    <span aria-hidden="true">●</span> {t('Talk')}{!isTouchDevice ? ' (T)' : ''}
                 </ActionButton>
             </SurfacePanel>
         </div>
@@ -1170,10 +1197,11 @@ export function NPCInteractionPrompt({ visible, onInteract, npcName = 'Zoo Staff
 }
 
 export function ContextActionPrompt({ visible, label, detail, onInteract, keyboardKey = 'E' }) {
+    useLanguage();
     if (!visible) return null;
     return (
         <div className="context-prompt pointer-events-none absolute bottom-[calc(env(safe-area-inset-bottom)+5.3rem)] right-[max(5.5rem,calc(env(safe-area-inset-right)+5.5rem))] z-75 flex flex-col items-end">
-            {detail ? <span className="mb-1 max-w-44 rounded-xl bg-emerald-950/90 px-3 py-1 text-center text-[11px] font-bold text-white">{detail}</span> : null}
+            {detail ? <span className="mb-1 max-w-44 rounded-xl bg-emerald-950/90 px-3 py-1 text-center text-[11px] font-bold text-white">{t(detail)}</span> : null}
             <button
                 type="button"
                 data-ui-button="true"
@@ -1181,13 +1209,14 @@ export function ContextActionPrompt({ visible, label, detail, onInteract, keyboa
                 onClick={onInteract}
                 className="pointer-events-auto min-h-11 min-w-24 rounded-xl border-2 border-amber-200 bg-amber-400 px-3 py-2 text-sm font-black text-amber-950 shadow-[0_4px_0_0_#92400e] active:translate-y-1 active:shadow-none touch-none"
             >
-                {label} <span className="hidden min-[700px]:inline">({keyboardKey})</span>
+                {t(label)} <span className="hidden min-[700px]:inline">({keyboardKey})</span>
             </button>
         </div>
     );
 }
 
 export function NPCDialogueModal({ isOpen, npcName, npcRole, message, dialogueProgress, onAdvance }) {
+    useLanguage();
     const openedAtRef = useRef(0);
 
     useEffect(() => {
@@ -1222,18 +1251,19 @@ export function NPCDialogueModal({ isOpen, npcName, npcRole, message, dialoguePr
             className="fixed inset-0 z-120 flex cursor-pointer items-end justify-center bg-transparent px-[max(1rem,env(safe-area-inset-left))] pb-[calc(env(safe-area-inset-bottom)+clamp(4.75rem,12dvh,7rem))] text-center touch-none select-none"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={advance}
-            aria-label={`${npcName || 'Ranger'} dialogue. Tap to continue.`}
+            aria-label={t('{name} is talking. Tap to read more.', { name: npcName || t('Ranger') })}
         >
             <span className="mb-2 block w-full max-w-3xl px-3 py-2 text-white [text-shadow:0_2px_4px_rgb(0_0_0),0_0_12px_rgb(0_0_0)]">
-                <span className="block text-[11px] font-black uppercase tracking-wide text-amber-300 sm:text-xs">{npcName || 'Zoo Ranger'}{npcRole ? ` - ${npcRole}` : ''}</span>
-                <span className="mt-1 block text-base font-black leading-snug sm:text-xl">{message}</span>
-                <span className="mt-1 block text-[11px] font-bold text-white/90">{dialogueProgress} | Tap or press Enter to continue</span>
+                <span className="block text-[11px] font-black uppercase tracking-wide text-amber-300 sm:text-xs">{npcName || t('Zoo Ranger')}{npcRole ? ` - ${t(npcRole)}` : ''}</span>
+                <span className="mt-1 block text-base font-black leading-snug sm:text-xl">{t(message)}</span>
+                <span className="mt-1 block text-[11px] font-bold text-white/90">{dialogueProgress} | {t('Tap to read more')}</span>
             </span>
         </button>
     );
 }
 
 export function FeedingSuccessNotification({ visible, animalName, onHide }) {
+    useLanguage();
     useEffect(() => {
         if (!visible) return undefined;
         const id = window.setTimeout(() => onHide?.(), 1900);
@@ -1245,24 +1275,25 @@ export function FeedingSuccessNotification({ visible, animalName, onHide }) {
     return (
         <div className="ui-toast pointer-events-none absolute inset-x-0 z-90 flex justify-center px-3">
             <SurfacePanel className="kids-slide-up rounded-full border-emerald-200 bg-emerald-50 px-4 py-2 text-center">
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">Animal fed successfully</p>
-                <p className="text-sm font-bold text-emerald-900">{animalName || 'Animal'} is happy!</p>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">{t('Yum! Animal fed!')}</p>
+                <p className="text-sm font-bold text-emerald-900">{t('{animal} is happy!', { animal: t(animalName || 'Animal') })}</p>
             </SurfacePanel>
         </div>
     );
 }
 
 export function AllAnimalsCelebration({ visible, onClose, onViewCertificate, onReplay }) {
+    useLanguage();
     return (
         <ModalShell
             isOpen={visible}
             onClose={onClose}
             title="All Animals Are Fed!"
             size="md"
-            footer={<div className="grid grid-cols-2 gap-2 min-[568px]:grid-cols-3"><ActionButton variant="secondary" onClick={onClose}>Continue</ActionButton><ActionButton variant="primary" onClick={onViewCertificate}>Certificate</ActionButton><ActionButton variant="warning" onClick={onReplay}>Replay</ActionButton></div>}
+            footer={<div className="grid grid-cols-2 gap-2 min-[568px]:grid-cols-3"><ActionButton variant="secondary" onClick={onClose}>{t('Keep Playing')}</ActionButton><ActionButton variant="primary" onClick={onViewCertificate}>{t('Certificate')}</ActionButton><ActionButton variant="warning" onClick={onReplay}>{t('Play Again')}</ActionButton></div>}
         >
             <div className="space-y-3 text-center">
-                <p className="text-sm font-semibold text-slate-700">Great work, explorer. Every animal in Bulusan Zootopia Adventure has been cared for.</p>
+                <p className="text-sm font-semibold text-slate-700">{t('Great job, explorer! You fed every animal in Bulusan Zootopia.')}</p>
             </div>
         </ModalShell>
     );
@@ -1290,16 +1321,16 @@ function downloadCertificate(playerName, totalAnimals, dateText) {
     ctx.fillText('BULUSAN ZOOTOPIA ADVENTURE', 800, 200);
     ctx.fillStyle = '#0f172a';
     ctx.font = '900 84px sans-serif';
-    ctx.fillText('Awarded To', 800, 380);
+    ctx.fillText(t('Given to'), 800, 380);
     ctx.fillStyle = '#047857';
     ctx.font = '900 100px sans-serif';
     ctx.fillText(playerName, 800, 560, 1300);
     ctx.fillStyle = '#334155';
     ctx.font = '600 44px sans-serif';
-    ctx.fillText(`For feeding all ${totalAnimals} animals and completing the zoo mission.`, 800, 720, 1400);
+    ctx.fillText(t('For feeding all {total} animals and finishing the zoo adventure.', { total: totalAnimals }), 800, 720, 1400);
     ctx.fillStyle = '#64748b';
     ctx.font = '700 34px sans-serif';
-    ctx.fillText(`Issued ${dateText}`, 800, 900);
+    ctx.fillText(t('Date: {date}', { date: dateText }), 800, 900);
     const link = document.createElement('a');
     link.download = 'bulusan-zootopia-certificate.png';
     link.href = canvas.toDataURL('image/png');
@@ -1307,24 +1338,25 @@ function downloadCertificate(playerName, totalAnimals, dateText) {
 }
 
 export function CertificateModal({ isOpen, onClose, playerName = 'Explorer', totalAnimals = 0 }) {
+    useLanguage();
     const today = useMemo(() => new Date().toLocaleDateString(), []);
 
     return (
         <ModalShell
             isOpen={isOpen}
             onClose={onClose}
-            title="Completion Certificate"
+            title="Your Certificate"
             size="lg"
-            footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onClose}>Close</ActionButton><ActionButton variant="primary" onClick={() => downloadCertificate(playerName, totalAnimals, today)}>Save Image</ActionButton></div>}
+            footer={<div className="flex justify-end gap-2"><ActionButton variant="secondary" onClick={onClose}>{t('Close')}</ActionButton><ActionButton variant="primary" onClick={() => downloadCertificate(playerName, totalAnimals, today)}>{t('Save Picture')}</ActionButton></div>}
         >
             <div className="rounded-2xl border-2 border-amber-300 bg-linear-to-br from-amber-50 to-orange-50 p-3 text-center shadow-inner">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Bulusan Zootopia Adventure</p>
-                <h3 className="mt-2 text-2xl font-black text-slate-900">Awarded To</h3>
+                <h3 className="mt-2 text-2xl font-black text-slate-900">{t('Given to')}</h3>
                 <p className="mt-2 text-xl font-black text-emerald-700">{playerName}</p>
                 <p className="mt-3 text-sm font-semibold text-slate-700">
-                    For feeding all {totalAnimals} animals and completing the zoo mission.
+                    {t('For feeding all {total} animals and finishing the zoo adventure.', { total: totalAnimals })}
                 </p>
-                <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Issued {today}</p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{t('Date: {date}', { date: today })}</p>
             </div>
 
         </ModalShell>
@@ -1337,8 +1369,8 @@ export function QuitModal({ isOpen, onConfirm, onCancel }) {
             isOpen={isOpen}
             onConfirm={onConfirm}
             onCancel={onCancel}
-            title="Quit Game?"
-            message="You can always return and continue feeding tasks from where you left off."
+            title="Go to the Main Menu?"
+            message="You can play again any time. Your game is saved."
             confirmLabel="Quit"
             confirmVariant="danger"
         />
@@ -1351,9 +1383,9 @@ export function ResetTasksModal({ isOpen, onConfirm, onCancel }) {
             isOpen={isOpen}
             onConfirm={onConfirm}
             onCancel={onCancel}
-            title="Reset All Tasks?"
-            message="This resets all 30 story tasks, mission items, observations, story photos, feeding tasks, reward, celebration, and certificate. Your player, settings, controls, saved position, and Animal Book discoveries stay saved."
-            confirmLabel="Reset"
+            title="Start the Tasks Again?"
+            message="All 30 tasks will start over. You keep your name, your settings and your Animal Book."
+            confirmLabel="Start Over"
             confirmVariant="warning"
         />
     );
@@ -1391,7 +1423,7 @@ export function JumpButton({ jumpRef, isTouchDevice }) {
                 type="button"
                 className="pointer-events-auto inline-flex h-16 w-16 items-center justify-center rounded-full border border-white/45 bg-amber-400/95 text-sm font-black uppercase tracking-[0.08em] text-slate-900 shadow-lg active:scale-95 sm:h-16 sm:w-16 sm:text-sm touch-manipulation"
             >
-                Jump
+                {t('Jump')}
             </button>
         </div>
     );
@@ -1408,10 +1440,11 @@ export function HoldToFeedControl({
     onStart,
     onEnd,
 }) {
+    useLanguage();
     if (!visible) return null;
 
     const percentage = Math.round(Math.max(0, Math.min(1, progress)) * 100);
-    const label = completed ? 'Fed!' : disabled ? 'Need food' : isHolding ? 'Feeding...' : 'Hold to Feed';
+    const label = completed ? t('Fed!') : disabled ? t('Need food') : isHolding ? t('Feeding...') : t('Hold to Feed');
 
     const handlePressStart = (event) => {
         if (disabled || completed) return;
@@ -1433,17 +1466,17 @@ export function HoldToFeedControl({
         <div className="pointer-events-none absolute left-[75%] top-[57%] z-70 -translate-x-1/2 -translate-y-1/2">
             <div className="absolute bottom-full left-1/2 mb-1.5 flex w-max max-w-48 -translate-x-1/2 flex-col items-center justify-center rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/90 px-3 py-1 text-center text-white shadow-xl backdrop-blur-md">
                 <span className="text-[11px] font-black uppercase tracking-wider text-amber-300">
-                    {animalName ? `${animalName}` : 'Animal'}
+                    {animalName ? t(animalName) : t('Animal')}
                 </span>
                 <span className="text-[11px] font-extrabold text-emerald-100">
                     {label}
                 </span>
-                {message ? <span className="mt-0.5 text-[11px] font-medium leading-snug text-slate-200">{message}</span> : null}
+                {message ? <span className="mt-0.5 text-[11px] font-medium leading-snug text-slate-200">{t(message)}</span> : null}
             </div>
             <button
                 type="button"
                 data-ui-button="true"
-                aria-label={`${label}${animalName ? ` ${animalName}` : ''}`}
+                aria-label={`${label}${animalName ? ` ${t(animalName)}` : ''}`}
                 onContextMenu={(e) => e.preventDefault()}
                 onPointerDown={handlePressStart}
                 onPointerUp={handlePressEnd}
@@ -1469,13 +1502,14 @@ export function HoldToFeedControl({
 }
 
 export function AnimalCaution({ visible }) {
+    useLanguage();
     if (!visible) return null;
 
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.2rem)] z-70 flex justify-center px-3 sm:bottom-24">
             <div className="rounded-2xl border-2 border-red-200 bg-red-950/90 px-4 py-2 text-center text-white shadow-xl">
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-amber-300">Caution: Dangerous Animal</p>
-                <p className="mt-1 text-[11px] font-bold">Stay back. Do not feed the tiger.</p>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-amber-300">{t('Be careful: Dangerous Animal')}</p>
+                <p className="mt-1 text-[11px] font-bold">{t('Stay back. Do not feed the tiger.')}</p>
             </div>
         </div>
     );
