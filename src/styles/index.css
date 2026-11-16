@@ -662,3 +662,389 @@ select:focus-visible,
         color: var(--base-gradient-color);
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Animal Book: a ring-bound field journal. Drawn on a fixed 960x540 stage that
+   AnimalBook.jsx scales to fit the window.
+   --------------------------------------------------------------------------- */
+.zb-backdrop {
+    background: radial-gradient(ellipse at 50% 40%, rgba(60, 46, 32, 0.92), rgba(22, 16, 11, 0.97));
+    font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', serif;
+}
+
+.zb-stage {
+    position: relative;
+    flex: none;
+    transform-origin: center center;
+    color: #3a2a18;
+}
+
+.zb-cover {
+    position: absolute;
+    inset: 38px 8px 6px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #2c5a55, #1c403d);
+    box-shadow: inset 0 0 0 3px #d2a24a33, 0 24px 40px -10px rgba(0, 0, 0, 0.7);
+}
+
+.zb-cover::before,
+.zb-cover::after {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border: 4px solid #d6a84f;
+    border-radius: 6px;
+}
+
+.zb-cover::before { left: 8px; bottom: 8px; border-top: 0; border-right: 0; }
+.zb-cover::after { right: 8px; bottom: 8px; border-top: 0; border-left: 0; }
+
+.zb-page {
+    position: absolute;
+    top: 58px;
+    bottom: 26px;
+    padding: 22px 26px 40px;
+    background:
+        radial-gradient(ellipse at 20% 15%, rgba(255, 255, 255, 0.35), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.035) 0 2px, transparent 2px 5px),
+        #ead9a4;
+    box-shadow: inset 0 0 28px rgba(110, 80, 30, 0.28), 0 3px 0 #b99a5a;
+}
+
+.zb-page--left {
+    left: 38px;
+    width: 432px;
+    border-radius: 14px 4px 4px 14px;
+}
+
+.zb-page--right {
+    left: 490px;
+    width: 432px;
+    border-radius: 4px 14px 14px 4px;
+    background:
+        radial-gradient(ellipse at 80% 12%, rgba(255, 255, 255, 0.4), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(120, 90, 40, 0.035) 0 2px, transparent 2px 5px),
+        #efe1b2;
+}
+
+.zb-title {
+    margin: 0;
+    font-size: 34px;
+    font-style: italic;
+    font-weight: 700;
+    line-height: 1.1;
+    border-bottom: 2px solid rgba(58, 42, 24, 0.45);
+    padding-bottom: 4px;
+}
+
+.zb-latin {
+    margin: 4px 0 0;
+    font-size: 15px;
+    font-style: italic;
+    color: #7a6140;
+}
+
+.zb-spread {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.zb-photo {
+    position: relative;
+    flex: none;
+    width: 214px;
+    height: 214px;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    background: #f6ecc9;
+    border: 1px solid rgba(80, 60, 30, 0.25);
+    box-shadow: 0 6px 14px -6px rgba(60, 40, 10, 0.55);
+    transform: rotate(-1.6deg);
+}
+
+.zb-photo-img {
+    width: 92%;
+    height: 92%;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.zb-tape {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 64px;
+    height: 20px;
+    transform: translateX(-50%) rotate(2deg);
+    background: rgba(210, 190, 120, 0.72);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.zb-stamp {
+    position: absolute;
+    right: -10px;
+    bottom: -8px;
+    padding: 4px 12px;
+    border: 3px solid #2f7a45;
+    border-radius: 999px;
+    color: #2f7a45;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+    transform: rotate(-9deg);
+    background: rgba(246, 236, 201, 0.9);
+}
+
+.zb-facts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 7px;
+    font-size: 17px;
+    line-height: 1.22;
+}
+
+.zb-facts li {
+    position: relative;
+    padding-left: 15px;
+}
+
+.zb-facts li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #3a2a18;
+}
+
+.zb-facts b { font-weight: 800; }
+
+.zb-note {
+    margin: 0;
+    font-style: italic;
+    font-size: 16px;
+    color: #6b4a2a;
+}
+
+.zb-note--found {
+    margin-top: 16px;
+    font-size: 19px;
+    transform: rotate(-1.5deg);
+}
+
+.zb-note--count {
+    margin-top: 4px;
+    font-size: 15px;
+    color: #7a6140;
+}
+
+.zb-heading {
+    margin: 0;
+    font-size: 27px;
+    font-style: italic;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(58, 42, 24, 0.4);
+    display: inline-block;
+}
+
+.zb-heading--small {
+    margin-top: 12px;
+    font-size: 20px;
+}
+
+.zb-fact {
+    margin: 8px 0 0;
+    font-size: 19px;
+    line-height: 1.28;
+}
+
+.zb-about {
+    margin: 6px 0 0;
+    font-size: 16px;
+    line-height: 1.28;
+    color: #55401f;
+}
+
+.zb-card {
+    margin-top: 14px;
+    padding: 8px 10px 10px;
+    background: #f8efce;
+    border: 1px solid rgba(80, 60, 30, 0.28);
+    box-shadow: 0 8px 16px -8px rgba(50, 35, 10, 0.6);
+    transform: rotate(0.8deg);
+}
+
+.zb-card-title {
+    margin: 0 0 6px;
+    text-align: center;
+    font-size: 16px;
+    font-style: italic;
+    font-weight: 700;
+    color: #6b4a2a;
+}
+
+.zb-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.zb-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    padding: 2px;
+    border: 2px solid rgba(80, 60, 30, 0.22);
+    border-radius: 8px;
+    background: #fffaf0;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.zb-thumb.is-selected {
+    border-color: #b85a2e;
+    box-shadow: 0 0 0 2px #b85a2e55;
+}
+
+.zb-thumb.is-unfound .zb-thumb-img {
+    filter: grayscale(0.65) brightness(0.93);
+    opacity: 0.8;
+}
+
+.zb-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.zb-thumb-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #2f7a45;
+    color: #fff;
+    font: 800 13px/1 system-ui, sans-serif;
+}
+
+.zb-thumb-badge--lock { background: #8a7456; }
+
+.zb-tabs {
+    position: absolute;
+    top: 0;
+    left: 70px;
+    z-index: 3;
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.zb-tab {
+    width: 38px;
+    height: 44px;
+    padding-bottom: 6px;
+    display: grid;
+    place-items: end center;
+    border: 0;
+    border-radius: 6px 6px 3px 3px;
+    background: var(--tab);
+    box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.4);
+    font-size: 17px;
+    cursor: pointer;
+    transform: translateY(14px);
+    transition: transform 0.18s ease;
+    touch-action: manipulation;
+}
+
+.zb-tab.is-active { transform: translateY(2px); height: 56px; }
+
+.zb-rings {
+    position: absolute;
+    left: 454px;
+    top: 74px;
+    bottom: 40px;
+    width: 52px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    pointer-events: none;
+}
+
+.zb-ring {
+    width: 56px;
+    height: 44px;
+    border-radius: 50%;
+    border: 7px solid #c08038;
+    background: transparent;
+    box-shadow: inset 0 0 0 2px #e6b068, 0 2px 4px rgba(0, 0, 0, 0.45);
+    clip-path: inset(-10px -10px -10px -10px);
+}
+
+.zb-arrow {
+    position: absolute;
+    top: 50%;
+    margin-top: -10px;
+    z-index: 5;
+    width: 44px;
+    height: 44px;
+    border: 3px solid #6b4a2a;
+    border-radius: 50%;
+    background: #f6e6b0;
+    color: #4b3216;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #6b4a2a;
+    touch-action: manipulation;
+}
+
+.zb-arrow:active { transform: translateY(2px); box-shadow: 0 1px 0 #6b4a2a; }
+.zb-arrow--prev { left: -2px; }
+.zb-arrow--next { right: -2px; }
+
+.zb-counter {
+    position: absolute;
+    left: 50%;
+    bottom: 44px;
+    z-index: 5;
+    margin: 0;
+    transform: translateX(-50%);
+    padding: 3px 14px;
+    border-radius: 999px;
+    background: #f6e6b0;
+    border: 2px solid #6b4a2a;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.zb-close {
+    position: absolute;
+    top: 46px;
+    right: 14px;
+    z-index: 6;
+    width: 42px;
+    height: 42px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: #e5484d;
+    color: #fff;
+    font: 800 26px/1 system-ui, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #9f1239;
+    touch-action: manipulation;
+}
