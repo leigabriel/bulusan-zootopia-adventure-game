@@ -424,7 +424,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
     };
 
     const sectionTitles = {
-        graphics: 'Pictures',
+        graphics: 'Graphics',
         audio: 'Sound',
         sensitivity: 'Look Speed',
         perspective: 'Camera View',
@@ -443,7 +443,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                     {activeSection === 'graphics' ? (
                         <div className="grid flex-1 content-center gap-3">
                             <SelectRow
-                                label="Picture Quality"
+                                label="Graphics Quality"
                                 options={[
                                     { label: 'Low', value: 'low' },
                                     { label: 'Medium', value: 'medium' },
@@ -529,7 +529,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
 
     const categories = [
         ...(inGame ? [{ id: 'resume', label: 'Back to Game', icon: '▶', className: 'border-emerald-400 bg-emerald-500 text-white' }] : []),
-        { id: 'graphics', label: 'Pictures', icon: '▣', className: 'border-sky-200 bg-white text-slate-800' },
+        { id: 'graphics', label: 'Graphics', icon: '▣', className: 'border-sky-200 bg-white text-slate-800' },
         { id: 'audio', label: 'Sound', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
         { id: 'sensitivity', label: 'Look Speed', icon: '↔', className: 'border-amber-200 bg-white text-slate-800' },
         { id: 'perspective', label: 'Camera View', icon: '◉', className: 'border-teal-200 bg-white text-slate-800' },
