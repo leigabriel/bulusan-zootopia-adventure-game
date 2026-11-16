@@ -2126,10 +2126,9 @@ function MiniZooGame() {
         }
     }, [completeStoryTask, showMissionNotice, updateMissionProgress]);
     const savePhoto = useCallback(async () => {
-        if (!photoPreview) return;
-        const result = await savePhotoToDevice(photoPreview);
-        showMissionNotice(result.message);
-    }, [photoPreview, showMissionNotice]);
+        if (!photoPreview) return null;
+        return savePhotoToDevice(photoPreview);
+    }, [photoPreview]);
     const handleResetTasks = useCallback(() => {
         setShowResetTasksModal(true);
     }, []);
