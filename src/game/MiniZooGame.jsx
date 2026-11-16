@@ -2828,6 +2828,8 @@ function MiniZooGame() {
                             onTasksClick={handleTasksClick}
                             onBook={openBook}
                             onCamera={handleOpenCameraView}
+                            cameraMode={cameraMode}
+                            onCycleCamera={cycleCameraMode}
                             completedTasks={completedCount}
                             totalTasks={totalCount}
                             isTouchDevice={isTouchDevice}
