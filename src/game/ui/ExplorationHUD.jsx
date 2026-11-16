@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ActionButton, ModalShell } from './UIComponents.jsx';
 import { t, useLanguage } from '../i18n/index.js';
 
-export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToast = false }) {
+export function CameraModeOverlay({ isOpen, onClose, onCapture }) {
     useLanguage();
     const cameraImgRef = useRef(null);
 
@@ -37,11 +37,6 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
                     <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-white">
                         {t('Camera')}
                     </span>
-                    {photoCapturedToast && (
-                        <span className="ml-2 rounded-lg bg-emerald-500 px-2 py-0.5 text-[11px] font-black text-white animate-bounce">
-                            {t('Photo saved!')}
-                        </span>
-                    )}
                 </div>
                 <button
                     type="button"
@@ -89,23 +84,40 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture, photoCapturedToa
     );
 }
 
+// Shows the photo that was just taken. Nothing is saved until the player
+// presses Save; the result of saving is shown right here.
 export function CameraPreview({ dataUrl, onSave, onRetake, onClose }) {
     useLanguage();
+    const [status, setStatus] = useState({ photo: '', saving: false, result: null });
     if (!dataUrl) return null;
+    const current = status.photo === dataUrl ? status : { photo: dataUrl, saving: false, result: null };
+
+    const handleSave = async () => {
+        if (current.saving) return;
+        setStatus({ photo: dataUrl, saving: true, result: null });
+        const result = await onSave?.();
+        setStatus({ photo: dataUrl, saving: false, result: result || null });
+    };
+
     return (
         <ModalShell
             isOpen={true}
             onClose={onClose}
             title="Your Zoo Photo"
             size="md"
-            footer={<div className="grid grid-cols-3 gap-2"><ActionButton size="sm" onClick={onSave}>{t('Save')}</ActionButton><ActionButton size="sm" variant="secondary" onClick={onRetake}>{t('Try Again')}</ActionButton><ActionButton size="sm" variant="secondary" onClick={onClose}>{t('Close')}</ActionButton></div>}
+            footer={<div className="grid grid-cols-3 gap-2"><ActionButton size="sm" onClick={handleSave} disabled={current.saving}>{current.saving ? t('Saving...') : t('Save')}</ActionButton><ActionButton size="sm" variant="secondary" onClick={onRetake}>{t('Try Again')}</ActionButton><ActionButton size="sm" variant="secondary" onClick={onClose}>{t('Close')}</ActionButton></div>}
         >
-            <div className="flex justify-center w-full">
+            <div className="flex w-full flex-col items-center gap-2">
                 <img
                     src={dataUrl}
                     alt={t('Your Zoo Photo')}
-                    className="max-h-[42dvh] w-auto max-w-full rounded-xl shadow-2xl border-2 border-amber-100/60 transform hover:scale-[1.02] transition-transform duration-300"
+                    className="max-h-[42dvh] w-auto max-w-full rounded-xl shadow-2xl border-2 border-amber-100/60"
                 />
+                {current.result ? (
+                    <p role="status" className={`text-center text-sm font-black ${current.result.ok ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {t(current.result.message)}
+                    </p>
+                ) : null}
             </div>
         </ModalShell>
     );
