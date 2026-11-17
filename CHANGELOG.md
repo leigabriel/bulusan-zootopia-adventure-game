@@ -5,10 +5,21 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.7** (version code 28, released 2026-11-17)
+**Current version: 3.8** (version code 29, released 2026-11-17)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.8 (2026-11-17)
+
+Version code 29.
+
+### Added
+- menu: Add mint meadow background picture
+
+### Changed
+- menu: Add sun rays, clouds, falling leaves and bobbing animals to menu scene
+- menu: Replace flat sky and hills with layered meadow scene
 
 ## 3.7 (2026-11-17)
 
