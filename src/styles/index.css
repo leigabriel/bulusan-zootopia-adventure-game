@@ -160,13 +160,11 @@
 .sz-icon-btn--close {
     width: var(--sz-target);
     height: var(--sz-target);
-    border-color: var(--sz-coral-deep);
-    background: var(--sz-coral);
-    color: #fff;
-    font-size: 26px;
-    line-height: 1;
-    box-shadow: 0 4px 0 0 var(--sz-coral-deep);
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
 }
+.sz-icon-btn--close img { width: 100%; height: 100%; }
 
 .sz-chip {
     display: inline-flex;
