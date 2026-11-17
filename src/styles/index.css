@@ -560,6 +560,101 @@ select:focus-visible,
     padding-right: max(var(--ui-edge-gap), env(safe-area-inset-right));
 }
 .menu-title-wrap { transform: scale(.65); }
+/* Main menu scene */
+.menu-scene {
+    background:
+        linear-gradient(180deg, #6fd3ff 0%, #a9ecf2 34%, rgba(176, 248, 208, 0) 64%),
+        url('/images/menu/background-green.webp') center bottom / cover no-repeat,
+        #b0f8d0;
+    overflow: hidden;
+}
+.menu-sun-rays {
+    position: absolute;
+    left: 50%;
+    top: -60vmax;
+    width: 120vmax;
+    height: 120vmax;
+    margin-left: -60vmax;
+    background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.26) 0 7deg, rgba(255, 255, 255, 0) 7deg 20deg);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0, transparent 52%);
+    mask-image: radial-gradient(circle at 50% 50%, #000 0, transparent 52%);
+    animation: menu-spin 90s linear infinite;
+}
+.menu-sun-glow {
+    position: absolute;
+    left: 50%;
+    top: -18%;
+    width: 80vmax;
+    height: 50vmax;
+    transform: translateX(-50%);
+    background: radial-gradient(circle at 50% 50%, rgba(255, 244, 187, 0.85), rgba(255, 244, 187, 0) 62%);
+}
+.menu-cloud {
+    position: absolute;
+    height: clamp(22px, 6dvh, 46px);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 6px 0 rgba(160, 215, 235, 0.5);
+}
+.menu-cloud::before,
+.menu-cloud::after {
+    content: '';
+    position: absolute;
+    bottom: 55%;
+    border-radius: 50%;
+    background: inherit;
+}
+.menu-cloud::before { left: 16%; width: 34%; height: 150%; }
+.menu-cloud::after { left: 44%; width: 28%; height: 115%; }
+.menu-cloud--a { top: 12%; left: 5%; width: clamp(90px, 16vw, 200px); animation: menu-drift-x 26s ease-in-out infinite alternate; }
+.menu-cloud--b { top: 22%; right: 6%; width: clamp(110px, 20vw, 250px); animation: menu-drift-x 32s ease-in-out infinite alternate-reverse; }
+.menu-cloud--c { top: 6%; left: 58%; width: clamp(70px, 11vw, 140px); opacity: 0.8; animation: menu-drift-x 38s ease-in-out infinite alternate; }
+.menu-leaf {
+    position: absolute;
+    top: -6%;
+    width: 12px;
+    height: 12px;
+    border-radius: 0 100% 0 100%;
+    background: #5fbf6d;
+    opacity: 0.75;
+    animation: menu-fall 14s linear infinite;
+}
+.menu-leaf--0 { left: 12%; animation-delay: 0s; }
+.menu-leaf--1 { left: 28%; animation-delay: -4s; background: #f7a8c4; width: 10px; height: 10px; }
+.menu-leaf--2 { left: 44%; animation-delay: -9s; animation-duration: 17s; }
+.menu-leaf--3 { left: 63%; animation-delay: -2s; background: #ffd95e; }
+.menu-leaf--4 { left: 79%; animation-delay: -7s; animation-duration: 16s; background: #f7a8c4; }
+.menu-leaf--5 { left: 92%; animation-delay: -11s; }
+.menu-animal {
+    position: absolute;
+    bottom: clamp(56px, 12dvh, 120px);
+    height: auto;
+    filter: drop-shadow(0 8px 6px rgba(20, 70, 50, 0.35));
+    transform-origin: 50% 100%;
+    animation: menu-bob 3.6s ease-in-out infinite;
+}
+.menu-animal--alpaca { left: clamp(6px, 4vw, 70px); width: clamp(64px, 17dvh, 150px); }
+.menu-animal--rabbit { left: clamp(70px, 14vw, 230px); width: clamp(48px, 11dvh, 100px); animation-delay: -1.2s; }
+.menu-animal--tiger { right: clamp(6px, 3vw, 60px); width: clamp(90px, 24dvh, 210px); animation-delay: -0.6s; }
+.menu-animal--parrot { right: clamp(100px, 17vw, 280px); width: clamp(44px, 10dvh, 90px); animation-delay: -2s; }
+@keyframes menu-spin { to { transform: rotate(360deg); } }
+@keyframes menu-drift-x { from { transform: translateX(-3vw); } to { transform: translateX(3vw); } }
+@keyframes menu-fall {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    50% { transform: translate3d(26px, 55dvh, 0) rotate(180deg); }
+    100% { transform: translate3d(-10px, 110dvh, 0) rotate(360deg); }
+}
+@keyframes menu-bob {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    50% { transform: translateY(-5px) scale(1.02, 0.98); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .menu-sun-rays, .menu-cloud, .menu-leaf, .menu-animal { animation: none; }
+}
+@media (max-height: 430px) {
+    .menu-animal--rabbit, .menu-animal--parrot { display: none; }
+}
+
 .gb-pressed { display: none; }
 button:active > .gb-normal,
 button:active .gb-normal { display: none; }
