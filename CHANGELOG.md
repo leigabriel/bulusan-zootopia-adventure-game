@@ -5,10 +5,19 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.4** (version code 25, released 2026-11-16)
+**Current version: 3.5** (version code 26, released 2026-11-17)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.5 (2026-11-17)
+
+Version code 26.
+
+### Removed
+- book: Drop category tabs, rings and punched holes
+- book: Drop unused ring positions
+- book: Drop tab, ring and hole styles and widen page padding
 
 ## 3.4 (2026-11-16)
 
