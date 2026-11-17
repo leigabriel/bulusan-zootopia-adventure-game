@@ -14,9 +14,9 @@ import {
     shouldCompleteTurn,
 } from './bookMath.js';
 
-// A field journal shaped like a real ring-bound book. Two covers lie under a
-// two-page spread, the pages have a visible stack of paper at their outer
-// edges, and the rings pass through punched holes at the spine. Turning a page
+// A field journal shaped like a real book. Two covers lie under a
+// two-page spread and the pages have a visible stack of paper at their outer
+// edges. Turning a page
 // swings one leaf around the spine. The leaf is cut into thin strips that
 // bend a little while it moves, so it curls instead of staying flat.
 //
@@ -24,7 +24,7 @@ import {
 // and the animal picker on the right page. Leaf i has the right page of spread
 // i on its front and the left page of spread i + 1 on its back.
 
-const { STAGE_W, STAGE_H, SPINE_X, PAGE_W, PAGE_H, PAGE_TOP, STRIPS, RING_YS } = BOOK;
+const { STAGE_W, STAGE_H, SPINE_X, PAGE_W, PAGE_H, PAGE_TOP, STRIPS } = BOOK;
 
 function useStageScale() {
     const read = () => {
@@ -83,8 +83,7 @@ const Thumb = memo(function Thumb({ entry, selected, found, fed, onPick }) {
     );
 });
 
-// One printed page. `side` decides which half of the spread it is. The punched
-// holes sit where the rings go through.
+// One printed page. `side` decides which half of the spread it is.
 const Sheet = memo(function Sheet({ side, entryName, foundSet, fedSet, interactive, onPick, language }) {
     const entry = ANIMAL_METADATA.find((item) => item.name === entryName) || ANIMAL_METADATA[0];
     const found = foundSet.has(entry.name);
@@ -101,7 +100,6 @@ const Sheet = memo(function Sheet({ side, entryName, foundSet, fedSet, interacti
 
     return (
         <div className={`zb-sheet zb-sheet--${side}`} data-language={language} aria-hidden={interactive ? undefined : 'true'}>
-            {RING_YS.map((y) => <span key={y} className="zb-hole" style={{ top: y }} />)}
             {side === 'left' ? (
                 <div className="zb-content">
                     <h2 className="zb-title">{t(entry.name)}</h2>
@@ -336,7 +334,6 @@ function AnimalBookPages({ onClose, discoveredAnimals = [], fedAnimals = {}, onP
         }
     };
 
-    const category = BOOK_CATEGORIES.find((item) => item.id === entry.category) || BOOK_CATEGORIES[0];
     const lo = turn ? turn.lo : spread;
     const hi = turn ? turn.hi : spread;
     const theta = turn ? turn.theta : 0;
@@ -359,25 +356,6 @@ function AnimalBookPages({ onClose, discoveredAnimals = [], fedAnimals = {}, onP
     return (
         <div className="zb-backdrop fixed inset-0 z-120 flex items-center justify-center touch-none" data-ui-modal="true" role="dialog" aria-modal="true" aria-label={t('Animal Book')}>
             <div className="zb-stage" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}>
-                {/* Ribbon tabs poking out of the top of the book */}
-                <div className="zb-tabs" role="tablist" aria-label={t('Kinds of animals')}>
-                    {BOOK_CATEGORIES.map((item) => (
-                        <button
-                            key={item.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={item.id === category.id}
-                            className={`zb-tab${item.id === category.id ? ' is-active' : ''}`}
-                            style={{ '--tab': item.color }}
-                            onClick={() => pick(entries.find((animal) => animal.category === item.id).name)}
-                            title={t(item.label)}
-                            data-ui-button="true"
-                        >
-                            <span aria-hidden="true">{item.icon}</span>
-                        </button>
-                    ))}
-                </div>
-
                 <div
                     className="zb-book"
                     style={{ '--spine': `${SPINE_X}px`, '--page-w': `${PAGE_W}px`, '--page-h': `${PAGE_H}px`, '--page-top': `${PAGE_TOP}px` }}
@@ -421,11 +399,6 @@ function AnimalBookPages({ onClose, discoveredAnimals = [], fedAnimals = {}, onP
                             />
                         </div>
                     ) : null}
-
-                    {/* Rings: they pass through the holes on both pages */}
-                    <div className="zb-rings" aria-hidden="true">
-                        {RING_YS.map((y) => <span key={y} className="zb-ring" style={{ top: y }} />)}
-                    </div>
                 </div>
 
                 <button type="button" className="zb-arrow zb-arrow--prev" onClick={() => step(-1)} disabled={spread === 0 || Boolean(turn)} aria-label={t('Previous page')} data-ui-button="true">&#10094;</button>

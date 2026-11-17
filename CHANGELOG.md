@@ -5,10 +5,46 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.4** (version code 25, released 2026-11-16)
+**Current version: 3.7** (version code 28, released 2026-11-17)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.7 (2026-11-17)
+
+Version code 28.
+
+### Added
+- ui: Add sound, look, view, controls, language, phone, check and trophy grass icons
+
+### Changed
+- ui: Make close buttons plain so the grass x icon shows alone
+- ui: Use grass x icon on modal and side sheet close buttons
+- ui: Use grass icons in pause menu, guide cards, task checks, arrows and camera view button
+- guide: Use grass icons for control cards
+- camera: Use grass x icon on camera close button
+
+## 3.6 (2026-11-17)
+
+Version code 27.
+
+### Added
+- ui: Add grass menu button icons with pressed versions
+- ui: Add grass icon that swaps to its pressed picture
+
+### Changed
+- ui: Show pressed grass icon while its button is held
+- ui: Use grass icons for menu, guide, player, credits, tasks and camera buttons
+- camera: Use grass camera icon on take photo button
+
+## 3.5 (2026-11-17)
+
+Version code 26.
+
+### Removed
+- book: Drop category tabs, rings and punched holes
+- book: Drop unused ring positions
+- book: Drop tab, ring and hole styles and widen page padding
 
 ## 3.4 (2026-11-16)
 

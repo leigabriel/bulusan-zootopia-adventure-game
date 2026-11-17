@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { cx } from './UIComponents.jsx';
+import { GrassIcon, cx } from './UIComponents.jsx';
 import { t, useLanguage } from '../i18n/index.js';
 
 // Kid-friendly "how do I play" guide with separate pages for a computer
@@ -24,7 +24,9 @@ function Key({ children, wide = false }) {
     );
 }
 
-// Simple line icons (no emoji) so they look the same on every device.
+// Grass pack icons stand for each action. The book has no match in the pack, so it keeps a line drawing.
+const GRASS = { mouse: 'controls', zoom: 'view', stick: 'controls', swipe: 'look', pinch: 'phone', camera: 'camera', tasks: 'tasks' };
+
 const ICONS = {
     mouse: <><rect x="8" y="3" width="12" height="22" rx="6" /><path d="M14 3v9M8 12h12" /></>,
     zoom: <><circle cx="12" cy="12" r="7" /><path d="M17.5 17.5L24 24M9 12h6M12 9v6" /></>,
@@ -37,6 +39,7 @@ const ICONS = {
 };
 
 function Icon({ name }) {
+    if (GRASS[name]) return <GrassIcon name={GRASS[name]} className="h-11 w-11 object-contain" />;
     return (
         <svg viewBox="0 0 28 28" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700" aria-hidden="true">
             {ICONS[name]}

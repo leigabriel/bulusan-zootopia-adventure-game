@@ -9,8 +9,6 @@ export const BOOK = {
     PAGE_H: 440,
     PAGE_TOP: 70,
     STRIPS: 8,
-    // Ring and punched-hole centres, measured down from the top of a page.
-    RING_YS: [62, 172, 282, 392],
     MAX_STACK: 12,
     MIN_STACK: 2,
     MAX_CURL_DEG: 4.5,

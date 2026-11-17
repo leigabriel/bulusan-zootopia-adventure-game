@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ActionButton, ModalShell } from './UIComponents.jsx';
+import { ActionButton, GrassIcon, ModalShell } from './UIComponents.jsx';
 import { t, useLanguage } from '../i18n/index.js';
 
 export function CameraModeOverlay({ isOpen, onClose, onCapture }) {
@@ -42,10 +42,10 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture }) {
                     type="button"
                     onClick={onClose}
                     data-ui-button="true"
-                    className="ui-close-button flex items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95 pointer-events-auto cursor-pointer"
+                    className="ui-close-button flex items-center justify-center transition-transform active:scale-95 pointer-events-auto cursor-pointer"
                     aria-label={t('Close')}
                 >
-                    &times;
+                    <GrassIcon name="quit" className="h-full w-full object-contain" />
                 </button>
             </div>
 
@@ -70,11 +70,7 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture }) {
                     className="ui-button-primary group relative flex items-center justify-center gap-2 rounded-2xl bg-linear-to-b from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 px-6 text-white font-black text-base shadow-[0_6px_0_0_#9f1239] hover:shadow-[0_4px_0_0_#9f1239] active:shadow-none active:translate-y-1.5 transition-all pointer-events-auto cursor-pointer border-2 border-rose-300/80"
                     aria-label={t('Take Photo')}
                 >
-                    <img
-                        src="/ui-buttons/camera-button.png"
-                        alt=""
-                        className="h-7 w-7 object-contain group-hover:scale-110 transition-transform pointer-events-none"
-                    />
+                    <GrassIcon name="camera" className="h-7 w-7 object-contain group-hover:scale-110 transition-transform pointer-events-none" />
                     <span className="tracking-widest uppercase drop-shadow">
                         {t('TAKE PHOTO')}
                     </span>

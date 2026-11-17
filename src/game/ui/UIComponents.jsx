@@ -245,7 +245,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
             >
                 <div className="ui-modal-header sz-card-header shrink-0">
                     {title ? <h2 id={titleId} className="ui-modal-title sz-title truncate uppercase">{t(title)}</h2> : <span />}
-                    {showClose ? <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button> : null}
+                    {showClose ? <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0"><GrassIcon name="quit" /></button> : null}
                 </div>
                 <div className="ui-modal-body min-h-0 flex-1 overflow-y-auto" data-ui-scrollable="true">
                     {children}
@@ -284,13 +284,24 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
                 <div className="flex h-full flex-col">
                     <div className="sz-card-header">
                         <h3 className="sz-title uppercase">{t(title)}</h3>
-                        <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close">&times;</button>
+                        <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close"><GrassIcon name="quit" /></button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-ui-scrollable="true">
                         {children}
                     </div>
                 </div>
             </aside>
+        </>
+    );
+}
+
+// Grass button icon with its Pressed picture. Both pictures sit in the page and
+// CSS shows the pressed one while the parent button is held down.
+export function GrassIcon({ name, alt = '', className = '' }) {
+    return (
+        <>
+            <img src={`/ui-buttons/grass/${name}.png`} alt={alt} className={`gb-normal ${className}`} draggable="false" />
+            <img src={`/ui-buttons/grass/${name}-pressed.png`} alt="" aria-hidden="true" className={`gb-pressed ${className}`} draggable="false" />
         </>
     );
 }
