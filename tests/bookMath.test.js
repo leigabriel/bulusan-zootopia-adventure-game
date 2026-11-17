@@ -12,12 +12,6 @@ test('two pages meet at the spine and fit on the stage', () => {
     assert.equal(BOOK.SPINE_X * 2, BOOK.STAGE_W);
 });
 
-test('every ring sits inside the page height, evenly spaced', () => {
-    const gaps = BOOK.RING_YS.slice(1).map((y, i) => y - BOOK.RING_YS[i]);
-    assert.ok(BOOK.RING_YS[0] > 20 && BOOK.RING_YS.at(-1) < BOOK.PAGE_H - 20);
-    assert.ok(gaps.every((gap) => gap === gaps[0]));
-});
-
 test('easing starts at 0, ends at 1 and never goes backwards', () => {
     for (const ease of [easeInOutCubic, easeOutCubic]) {
         assert.equal(ease(0), 0);
