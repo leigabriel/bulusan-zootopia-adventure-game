@@ -42,10 +42,10 @@ export function CameraModeOverlay({ isOpen, onClose, onCapture }) {
                     type="button"
                     onClick={onClose}
                     data-ui-button="true"
-                    className="ui-close-button flex items-center justify-center rounded-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl shadow-[0_4px_0_0_#9f1239] transition-transform active:scale-95 pointer-events-auto cursor-pointer"
+                    className="ui-close-button flex items-center justify-center transition-transform active:scale-95 pointer-events-auto cursor-pointer"
                     aria-label={t('Close')}
                 >
-                    &times;
+                    <GrassIcon name="quit" className="h-full w-full object-contain" />
                 </button>
             </div>
 
