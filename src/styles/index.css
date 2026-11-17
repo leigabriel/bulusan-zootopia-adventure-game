@@ -562,6 +562,11 @@ select:focus-visible,
     padding-right: max(var(--ui-edge-gap), env(safe-area-inset-right));
 }
 .menu-title-wrap { transform: scale(.65); }
+.gb-pressed { display: none; }
+button:active > .gb-normal,
+button:active .gb-normal { display: none; }
+button:active > .gb-pressed,
+button:active .gb-pressed { display: inline; }
 .menu-primary-icon { width: clamp(32px, 6dvh, 44px); height: clamp(32px, 6dvh, 44px); }
 .menu-primary-label { font-size: clamp(17px, 4.8dvh, 24px); letter-spacing: .08em; }
 .wooden-title { max-height: 38dvh; }
