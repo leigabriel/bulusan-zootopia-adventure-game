@@ -712,22 +712,22 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
         <div
             onPointerDownCapture={onMenuInteraction}
             className={cx(
-                "main-menu fixed inset-0 z-40 flex flex-col items-center justify-between overflow-hidden select-none touch-none bg-emerald-900 transition-all duration-400 ease-in-out py-3 px-4",
+                "main-menu fixed inset-0 z-40 flex flex-col items-center justify-between overflow-hidden select-none touch-none bg-[#b0f8d0] transition-all duration-400 ease-in-out py-3 px-4",
                 starting ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
             )}
         >
-            {/* Background Hills and Sky */}
-            <div className="absolute -inset-x-20 inset-y-0 z-0 bg-linear-to-b from-[#70e0ff] via-[#a2d2ff] to-[#c6fe69] pointer-events-none" aria-hidden="true">
-                <div className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[120vw] h-[60vh] rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.4)_0%,rgba(255,255,255,0)_70%)] animate-pulse" />
-
-                {/* Floating Clouds */}
-                <div className="absolute top-[5%] left-[6%] w-20 sm:w-36 h-6 sm:h-10 bg-white/70 rounded-full blur-[0.5px] animate-[kids-float_6s_ease-in-out_infinite]" />
-                <div className="absolute top-[9%] right-[8%] w-28 sm:w-48 h-8 sm:h-12 bg-white/60 rounded-full blur-[0.5px] animate-[kids-float_8s_ease-in-out_infinite_1s]" />
-
-                {/* Rolling Green Hills */}
-                <div className="absolute bottom-0 w-full h-[42%] bg-[#c6fe69] rounded-t-[100%] scale-[1.7] translate-y-1/3 shadow-[0_-12px_24px_rgba(0,0,0,0.05)]" />
-                <div className="absolute bottom-0 w-full h-[27%] bg-[#70e000] rounded-t-[100%] scale-[1.4] translate-y-1/4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]" />
-                <div className="absolute bottom-0 w-full h-[14%] bg-[#38b000] rounded-t-[100%] scale-[1.2] translate-y-1/4 shadow-[0_-8px_16px_rgba(0,0,0,0.05)]" />
+            {/* Background: mint meadow with bush corners, sunny sky, drifting clouds and leaves, zoo friends peeking in */}
+            <div className="menu-scene pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+                <div className="menu-sun-rays" />
+                <div className="menu-sun-glow" />
+                <div className="menu-cloud menu-cloud--a" />
+                <div className="menu-cloud menu-cloud--b" />
+                <div className="menu-cloud menu-cloud--c" />
+                {[0, 1, 2, 3, 4, 5].map((n) => <span key={n} className={`menu-leaf menu-leaf--${n}`} />)}
+                <img className="menu-animal menu-animal--alpaca" src="/images/animals/alpaca.webp" alt="" draggable="false" />
+                <img className="menu-animal menu-animal--rabbit" src="/images/animals/rabbit.webp" alt="" draggable="false" />
+                <img className="menu-animal menu-animal--tiger" src="/images/animals/bengal-tiger.webp" alt="" draggable="false" />
+                <img className="menu-animal menu-animal--parrot" src="/images/animals/parrot.webp" alt="" draggable="false" />
             </div>
 
             {/* Main Interface Content Container */}
