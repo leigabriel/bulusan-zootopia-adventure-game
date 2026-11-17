@@ -294,3 +294,14 @@ export function SideSheet({ isOpen, onClose, title, side = 'left', children }) {
         </>
     );
 }
+
+// Grass button icon with its Pressed picture. Both pictures sit in the page and
+// CSS shows the pressed one while the parent button is held down.
+export function GrassIcon({ name, alt = '', className = '' }) {
+    return (
+        <>
+            <img src={`/ui-buttons/grass/${name}.png`} alt={alt} className={`gb-normal ${className}`} draggable="false" />
+            <img src={`/ui-buttons/grass/${name}-pressed.png`} alt="" aria-hidden="true" className={`gb-pressed ${className}`} draggable="false" />
+        </>
+    );
+}
