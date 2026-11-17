@@ -664,7 +664,7 @@ select:focus-visible,
 }
 
 /* ---------------------------------------------------------------------------
-   Animal Book: a ring-bound field journal built like a real book. Drawn on a
+   Animal Book: a field journal built like a real book. Drawn on a
    fixed 960x556 stage that AnimalBook.jsx scales to fit the window. Sizes match
    BOOK in bookMath.js: spine at 480px, pages 426x440, pages start 70px down.
    --------------------------------------------------------------------------- */
@@ -693,7 +693,7 @@ select:focus-visible,
 
 .zb-book:active { cursor: grabbing; }
 
-/* Covers: two boards that meet at a hinge under the rings. */
+/* Covers: two boards that meet at a hinge. */
 .zb-board {
     position: absolute;
     top: calc(var(--page-top) - 18px);
@@ -805,26 +805,13 @@ select:focus-visible,
     box-shadow: inset 26px 0 26px -18px rgba(70, 45, 10, 0.55), inset 0 0 22px rgba(110, 80, 30, 0.22);
 }
 
-.zb-hole {
-    position: absolute;
-    width: 22px;
-    height: 14px;
-    margin-top: -7px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 40%, #2a1d0e, #4a3519);
-    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.zb-sheet--left .zb-hole { right: 19px; }
-.zb-sheet--right .zb-hole { left: 19px; }
-
 .zb-content {
     position: absolute;
     inset: 0;
-    padding: 26px 56px 22px 30px;
+    padding: 26px 40px 22px 32px;
 }
 
-.zb-sheet--right .zb-content { padding: 26px 30px 22px 56px; }
+.zb-sheet--right .zb-content { padding: 26px 32px 22px 40px; }
 
 /* Where the two pages meet, and the shadow a leaf casts on the page beneath */
 .zb-gutter {
@@ -897,44 +884,6 @@ select:focus-visible,
     background: #1e1204;
     pointer-events: none;
 }
-
-/* Rings: each one passes through a punched hole on both pages. */
-.zb-rings {
-    position: absolute;
-    left: var(--spine);
-    top: var(--page-top);
-    z-index: 4;
-    pointer-events: none;
-}
-
-.zb-ring {
-    position: absolute;
-    left: -39px;
-    width: 78px;
-    height: 34px;
-    margin-top: -17px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    border: 6px solid #b9722d;
-    border-color: #f3c987 #a8621f #7a4616 #c98a3d;
-    background: transparent;
-    box-shadow: 0 3px 4px rgba(0, 0, 0, 0.5), inset 0 2px 2px rgba(0, 0, 0, 0.4);
-}
-
-.zb-ring::before,
-.zb-ring::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 22px;
-    height: 14px;
-    margin-top: -7px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 40%, rgba(20, 12, 4, 0.55), transparent 70%);
-}
-
-.zb-ring::before { left: -2px; }
-.zb-ring::after { right: -2px; }
 
 .zb-title {
     margin: 0;
@@ -1150,35 +1099,6 @@ select:focus-visible,
 }
 
 .zb-thumb-badge--lock { background: #8a7456; }
-
-.zb-tabs {
-    position: absolute;
-    top: 0;
-    left: 70px;
-    z-index: 2;
-    display: flex;
-    gap: 14px;
-    align-items: flex-end;
-}
-
-.zb-tab {
-    width: 38px;
-    height: 46px;
-    padding-bottom: 6px;
-    display: grid;
-    place-items: end center;
-    border: 0;
-    border-radius: 6px 6px 3px 3px;
-    background: var(--tab);
-    box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.4);
-    font-size: 17px;
-    cursor: pointer;
-    transform: translateY(14px);
-    transition: transform 0.18s ease;
-    touch-action: manipulation;
-}
-
-.zb-tab.is-active { transform: translateY(4px); height: 58px; }
 
 .zb-arrow {
     position: absolute;
