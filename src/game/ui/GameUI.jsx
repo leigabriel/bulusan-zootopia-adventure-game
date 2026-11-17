@@ -143,10 +143,10 @@ function HowToPlayContent() {
     const usesTouchControls = Capacitor.isNativePlatform() || /android/i.test(navigator.userAgent || '');
     const pages = usesTouchControls
         ? [
-             { label: 'Move', color: 'text-emerald-600', icon: '🕹️', iconClass: 'bg-emerald-100', text: 'Slide the round stick to walk.' },
-             { label: 'Look and jump', color: 'text-amber-600', icon: '👆', iconClass: 'bg-amber-100', text: 'Slide your finger to look around. Tap Jump to hop.' },
-             { label: 'Care for animals', color: 'text-sky-600', icon: '🍎', iconClass: 'bg-sky-100', text: 'Walk up to a friendly animal. Press and hold Feed.' },
-             { label: 'Meet the ranger', color: 'text-emerald-700', icon: '🏅', iconClass: 'bg-lime-100', text: 'Tap Talk near a ranger. Finish tasks to win a prize.' },
+             { label: 'Move', color: 'text-emerald-600', icon: <GrassIcon name="controls" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Slide the round stick to walk.' },
+             { label: 'Look and jump', color: 'text-amber-600', icon: <GrassIcon name="phone" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Slide your finger to look around. Tap Jump to hop.' },
+             { label: 'Care for animals', color: 'text-sky-600', icon: <GrassIcon name="character" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Walk up to a friendly animal. Press and hold Feed.' },
+             { label: 'Meet the ranger', color: 'text-emerald-700', icon: <GrassIcon name="trophy" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Tap Talk near a ranger. Finish tasks to win a prize.' },
         ]
         : [
              { label: 'Move and look', color: 'text-emerald-600', icon: 'WASD', iconClass: 'bg-emerald-100 text-xs', text: 'Press W A S D to walk. Drag the mouse to look around.' },
@@ -528,14 +528,14 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
     }
 
     const categories = [
-        ...(inGame ? [{ id: 'resume', label: 'Back to Game', icon: '▶', className: 'border-emerald-400 bg-emerald-500 text-white' }] : []),
-        { id: 'graphics', label: 'Graphics', icon: '▣', className: 'border-sky-200 bg-white text-slate-800' },
-        { id: 'audio', label: 'Sound', icon: '♪', className: 'border-violet-200 bg-white text-slate-800' },
-        { id: 'sensitivity', label: 'Look Speed', icon: '↔', className: 'border-amber-200 bg-white text-slate-800' },
-        { id: 'perspective', label: 'Camera View', icon: '◉', className: 'border-teal-200 bg-white text-slate-800' },
-        { id: 'controls', label: 'Controls', icon: '✥', className: 'border-lime-200 bg-white text-slate-800' },
-        { id: 'language', label: 'Language', icon: 'Aあ', className: 'border-pink-200 bg-white text-slate-800' },
-        ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit', icon: '×', className: 'border-rose-200 bg-rose-50 text-rose-700' }] : []),
+        ...(inGame ? [{ id: 'resume', label: 'Back to Game', icon: <GrassIcon name="play" className="h-8 w-8 object-contain" />, className: 'border-emerald-400 bg-emerald-500 text-white' }] : []),
+        { id: 'graphics', label: 'Graphics', icon: <GrassIcon name="phone" className="h-8 w-8 object-contain" />, className: 'border-sky-200 bg-white text-slate-800' },
+        { id: 'audio', label: 'Sound', icon: <GrassIcon name="sound" className="h-8 w-8 object-contain" />, className: 'border-violet-200 bg-white text-slate-800' },
+        { id: 'sensitivity', label: 'Look Speed', icon: <GrassIcon name="look" className="h-8 w-8 object-contain" />, className: 'border-amber-200 bg-white text-slate-800' },
+        { id: 'perspective', label: 'Camera View', icon: <GrassIcon name="view" className="h-8 w-8 object-contain" />, className: 'border-teal-200 bg-white text-slate-800' },
+        { id: 'controls', label: 'Controls', icon: <GrassIcon name="controls" className="h-8 w-8 object-contain" />, className: 'border-lime-200 bg-white text-slate-800' },
+        { id: 'language', label: 'Language', icon: <GrassIcon name="language" className="h-8 w-8 object-contain" />, className: 'border-pink-200 bg-white text-slate-800' },
+        ...(inGame && onQuit ? [{ id: 'quit', label: 'Quit', icon: <GrassIcon name="quit" className="h-8 w-8 object-contain" />, className: 'border-rose-200 bg-rose-50 text-rose-700' }] : []),
     ];
 
     return (
@@ -556,7 +556,7 @@ function SettingsModal({ isOpen, onClose, onQuit, cameraMode, onCameraModeChange
                                 category.className
                             )}
                         >
-                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100/80 text-base" aria-hidden="true">{category.icon}</span>
+                            <span className="grid h-9 w-9 shrink-0 place-items-center" aria-hidden="true">{category.icon}</span>
                             <span className="min-w-0 flex-1">{t(category.label)}</span>
                             {category.id !== 'resume' && category.id !== 'quit' ? <span aria-hidden="true">›</span> : null}
                         </button>
@@ -914,11 +914,7 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
 };
 
 function DirectionArrow({ direction }) {
-    return (
-        <svg viewBox="0 0 24 24" className={cx('sz-nudge h-6 w-6 shrink-0', direction < 0 ? '-scale-x-100' : '')} aria-hidden="true">
-            <path d="M5 12h12m-5-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
+    return <GrassIcon name="play" className={cx('sz-nudge h-7 w-7 shrink-0 object-contain', direction < 0 ? '-scale-x-100' : '')} />;
 }
 
 /**
@@ -1013,7 +1009,7 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                                         onToggleGuidance={onToggleGuidance}
                                         onOpenTasks={onTasksClick}
                                     />
-                                    <button type="button" data-ui-button="true" onClick={() => setCardVisible(false)} aria-label={t('Hide current task')} className="sz-icon-btn sz-icon-btn--round h-9! w-9! min-h-0! text-base!">&times;</button>
+                                    <button type="button" data-ui-button="true" onClick={() => setCardVisible(false)} aria-label={t('Hide current task')} className="sz-icon-btn sz-icon-btn--round h-9! w-9! min-h-0! text-base!"><GrassIcon name="quit" className="h-7! w-7!" /></button>
                                 </>
                             ) : (
                                 <button type="button" data-ui-button="true" onClick={() => setCardVisible(true)} aria-label={t('Show current task')} className="sz-mission flex min-h-12 items-center gap-2 px-2.5 py-1">
@@ -1039,17 +1035,7 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                         title={cameraMode === 'first' ? t('First Person (my eyes)') : t('Third Person (from behind)')}
                         data-ui-button="true"
                     >
-                        {cameraMode === 'first' ? (
-                            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
-                                <circle cx="12" cy="12" r="3" />
-                            </svg>
-                        ) : (
-                            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="7" r="3" />
-                                <path d="M6 21v-3a6 6 0 0 1 12 0v3" />
-                            </svg>
-                        )}
+                        <GrassIcon name="view" className="h-7 w-7 object-contain" />
                         <span className="text-[14px] leading-none">{cameraMode === 'first' ? t('Eyes') : t('Behind')}</span>
                     </button>
                 </div>
@@ -1116,7 +1102,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                         <GrassIcon name="tasks" className="h-10 w-10 shrink-0 object-contain" />
                         <h2 className="sz-title truncate uppercase">{t('Adventure Tasks')}</h2>
                     </div>
-                    <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button>
+                    <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0"><GrassIcon name="quit" /></button>
                 </header>
 
                 <div className="sz-tabs shrink-0" role="tablist" aria-label={t('Task type')}>
@@ -1144,7 +1130,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                                     const state = task.completed ? 'done' : isActive ? 'active' : 'locked';
                                     return (
                                         <li key={task.id} className={cx('sz-row', `sz-row--${state}`)}>
-                                            <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : isActive ? '' : 'sz-badge--locked')}>{task.completed ? '✓' : task.number}</span>
+                                            <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : isActive ? '' : 'sz-badge--locked')}>{task.completed ? <GrassIcon name="check" className="h-5 w-5 object-contain" /> : task.number}</span>
                                             <span className="min-w-0 flex-1">{t(task.title)}</span>
                                             <span className="sz-label shrink-0">{task.completed ? t('Done') : isActive ? t('Now') : ''}</span>
                                         </li>
@@ -1157,7 +1143,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
                             {tasks.map((task, index) => (
                                 <li key={task.id}>
                                     <button type="button" data-ui-button="true" onClick={() => onTaskClick?.(task)} className={cx('sz-row w-full text-left', task.completed ? 'sz-row--done' : '')}>
-                                        <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : '')}>{task.completed ? '✓' : index + 1}</span>
+                                        <span className={cx('sz-badge', task.completed ? 'sz-badge--done' : '')}>{task.completed ? <GrassIcon name="check" className="h-5 w-5 object-contain" /> : index + 1}</span>
                                         <span className={cx('min-w-0 flex-1', task.completed && 'opacity-70')}>{t(task.name)}</span>
                                         <span className="sz-label shrink-0">{task.completed ? t('Fed') : t('Feed')}</span>
                                     </button>
@@ -1493,7 +1479,7 @@ export function HoldToFeedControl({
                     aria-hidden="true"
                 />
                 <span className="absolute inset-1 rounded-full bg-emerald-950/90" aria-hidden="true" />
-                {completed ? <span className="relative z-10 text-3xl font-black text-white">✓</span> : <img className="relative z-10 h-9 w-9 pointer-events-none" src="/ui-buttons/feed-button.png" alt="" />}
+                {completed ? <GrassIcon name="check" className="relative z-10 h-9 w-9 object-contain" /> : <img className="relative z-10 h-9 w-9 pointer-events-none" src="/ui-buttons/feed-button.png" alt="" />}
             </button>
         </div>
     );
