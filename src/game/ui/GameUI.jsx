@@ -4,7 +4,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import * as THREE from 'three';
 import { resolveAssetUrl } from '../utils/localAssets.js';
-import { ActionButton, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
+import { ActionButton, GrassIcon, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
 import { ControlsContent } from './ControlsGuide.jsx';
@@ -748,7 +748,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         disabled={starting}
                         className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
                     >
-                        <img src="/ui-buttons/play-button.png" alt={t('Play')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <GrassIcon name="play" alt={t('Play')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
                             {t('PLAY')}
                         </span>
@@ -760,7 +760,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         onClick={() => setSettingsOpen(true)}
                         className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                        <img src="/ui-buttons/settings-button.png" alt={t('Settings')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <GrassIcon name="settings" alt={t('Settings')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
                             {t('SETTINGS')}
                         </span>
@@ -772,7 +772,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         onClick={() => setShowExitConfirm(true)}
                         className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                     >
-                        <img src="/ui-buttons/quit-button.png" alt={t('Quit')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                        <GrassIcon name="quit" alt={t('Quit')} className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
                             {t('QUIT')}
                         </span>
@@ -791,7 +791,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
                         title={t('How To Play')}
                     >
-                        <img src="/ui-buttons/how-to-play-button.png" alt={t('How To Play')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
+                        <GrassIcon name="how-to-play" alt={t('How To Play')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
                         <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
                             {t('Guide')}
                         </span>
@@ -804,7 +804,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
                         title={t('Player Details')}
                     >
-                        <img src="/ui-buttons/character-button.png" alt={t('Player Details')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
+                        <GrassIcon name="character" alt={t('Player Details')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
                         <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
                             {t('Player')}
                         </span>
@@ -817,7 +817,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                         className="menu-secondary-button group relative flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 cursor-pointer transition-transform active:scale-90"
                         title={t('Credits')}
                     >
-                        <img src="/ui-buttons/credit-button.png" alt={t('Credits')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
+                        <GrassIcon name="credits" alt={t('Credits')} className="h-8 w-8 sm:h-11 sm:w-11 object-contain group-hover:scale-110 transition-transform drop-shadow-md" />
                         <span className="text-[11px] font-black uppercase tracking-wide text-emerald-950 drop-shadow-xs">
                             {t('Credits')}
                         </span>
@@ -974,8 +974,6 @@ const WEBSITE_URL = 'https://bulusanzoo.com';
 
 export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, cameraMode = 'third', onCycleCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
     useLanguage();
-    const menuIcon = '/ui-buttons/settings-button.png';
-    const taskIcon = '/ui-buttons/task-list-button.png';
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
     const [taskCardVisible, setTaskCardVisible] = useState(() => {
         try { return localStorage.getItem('zoo-task-card-visible') !== '0'; } catch { return true; }
@@ -994,7 +992,7 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                 <div className="flex min-w-0 flex-col items-start gap-2">
                     <div className="pointer-events-auto flex min-w-0 items-center gap-2" data-ui-hud="true">
                         <button type="button" onClick={onMenuClick} className="sz-icon-btn" aria-label={t('Menu')} data-ui-button="true">
-                            <img src={menuIcon} alt="" />
+                            <GrassIcon name="settings" />
                         </button>
                         <button type="button" onClick={onPlayerDetails} aria-label={t('Player Details')} className="hud-player-pill sz-card flex min-h-12 min-w-0 items-center gap-2 rounded-2xl! px-3 shadow-none! active:scale-95" data-ui-button="true">
                             <span className="h-3 w-3 shrink-0 rounded-full bg-(--sz-green)" />
@@ -1031,7 +1029,7 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                 {/* Right: tasks */}
                 <div className="pointer-events-auto flex flex-col items-end gap-2" data-ui-hud="true">
                     <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label={t('Tasks')} data-ui-button="true" data-sfx-self="true">
-                        <img src={taskIcon} alt="" />
+                        <GrassIcon name="tasks" />
                     </button>
                     <button
                         type="button"
@@ -1064,7 +1062,7 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                     <span className="text-[14px] leading-none">{t('Book')}</span>
                 </button>
                 <button type="button" onClick={onCamera} className="sz-icon-btn w-[72px]!" aria-label={t('Take a photo')} data-ui-button="true">
-                    <img src="/ui-buttons/camera-button.png" alt="" />
+                    <GrassIcon name="camera" />
                     <span className="text-[14px] leading-none">{t('Photo')}</span>
                 </button>
             </div>
@@ -1115,7 +1113,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
             )}>
                 <header className="sz-card-header shrink-0">
                     <div className="flex min-w-0 items-center gap-3">
-                        <img src="/ui-buttons/task-list-button.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
+                        <GrassIcon name="tasks" className="h-10 w-10 shrink-0 object-contain" />
                         <h2 className="sz-title truncate uppercase">{t('Adventure Tasks')}</h2>
                     </div>
                     <button type="button" data-ui-button="true" onClick={onClose} aria-label={t('Close')} className="sz-icon-btn sz-icon-btn--round sz-icon-btn--close shrink-0">&times;</button>
