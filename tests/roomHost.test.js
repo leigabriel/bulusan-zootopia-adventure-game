@@ -42,3 +42,28 @@ test('host closes a socket that sends a bad hello', () => {
     assert.equal(s.closed, CLOSE.BAD_HELLO);
     assert.equal(host.size, 0);
 });
+
+// The Workers runtime throws "Illegal invocation" when a timer is called as a
+// method of another object, which the default timers used to do.
+test('host interval is called on the global object, like the Workers runtime', () => {
+    const realSetInterval = globalThis.setInterval;
+    const realClearInterval = globalThis.clearInterval;
+    globalThis.setInterval = function (fn, ms) {
+        if (this !== globalThis) throw new TypeError('Illegal invocation');
+        return realSetInterval(fn, ms);
+    };
+    globalThis.clearInterval = function (id) {
+        if (this !== globalThis) throw new TypeError('Illegal invocation');
+        return realClearInterval(id);
+    };
+    try {
+        const host = new RoomHost({ name: 'zoo-1' });
+        const id = host.open(fakeSocket());
+        assert.notEqual(host.timer, null);
+        host.close(id);
+        assert.equal(host.timer, null);
+    } finally {
+        globalThis.setInterval = realSetInterval;
+        globalThis.clearInterval = realClearInterval;
+    }
+});
