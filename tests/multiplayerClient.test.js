@@ -101,3 +101,29 @@ test('a dead server gives an error status instead of a crash', async () => {
     assert.equal(client.isOnline, false);
     assert.ok(CLOSE.FULL);
 });
+
+// Browsers throw "Illegal invocation" when a timer is called as a method of
+// another object, which the default setTimeout implementation used to do.
+test('reconnect timers are called on the global object, like a browser', () => {
+    const realSetTimeout = globalThis.setTimeout;
+    const realClearTimeout = globalThis.clearTimeout;
+    globalThis.setTimeout = function (fn, ms) {
+        if (this !== globalThis) throw new TypeError('Illegal invocation');
+        return realSetTimeout(fn, ms);
+    };
+    globalThis.clearTimeout = function (id) {
+        if (this !== globalThis) throw new TypeError('Illegal invocation');
+        return realClearTimeout(id);
+    };
+    try {
+        const client = new MultiplayerClient({ url: 'ws://localhost:1/join', nick: 'Brave Parrot 7', character: 'boy', WebSocketImpl: WebSocket });
+        client.handleClose(1006);
+        assert.equal(client.status, STATUS.CONNECTING);
+        assert.equal(client.retry, 1);
+        client.close();
+        assert.equal(client.status, STATUS.IDLE);
+    } finally {
+        globalThis.setTimeout = realSetTimeout;
+        globalThis.clearTimeout = realClearTimeout;
+    }
+});
