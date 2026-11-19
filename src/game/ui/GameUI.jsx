@@ -7,6 +7,7 @@ import { resolveAssetUrl } from '../utils/localAssets.js';
 import { ActionButton, GrassIcon, ModalShell, PaginationControls, SurfacePanel, cx, useModalTransition } from './UIComponents.jsx';
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
+import { TogetherSetupModal } from './TogetherUI.jsx';
 import { ControlsContent } from './ControlsGuide.jsx';
 import { DEFAULT_SETTINGS, getSettings, saveSettings } from '../utils/storage.js';
 import { LANGUAGES, getLanguage, setLanguage, t, useLanguage } from '../i18n/index.js';
@@ -629,7 +630,7 @@ export function PlayerDetailsModal({ isOpen, onClose, onSave, required = false }
 
 // REDESIGNED MAIN MENU - REAL 3D BUTTONS & AESTHETIC BUSHES
 
-export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible }) {
+export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, onProfileSaved, isVisible }) {
     useLanguage();
     const [starting, setStarting] = useState(false);
     const [howToPlayOpen, setHowToPlayOpen] = useState(false);
@@ -638,6 +639,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
     const [playerDetailsOpen, setPlayerDetailsOpen] = useState(false);
     const [profileRequired, setProfileRequired] = useState(false);
     const startAfterProfileRef = useRef(false);
+    const [togetherOpen, setTogetherOpen] = useState(false);
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     useEffect(() => {
@@ -697,10 +699,30 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
         onStart();
     }, [onStart]);
 
+    const handleTogetherClick = useCallback(() => {
+        if (!isPlayerProfileComplete()) {
+            startAfterProfileRef.current = 'together';
+            setProfileRequired(true);
+            setPlayerDetailsOpen(true);
+            return;
+        }
+        setTogetherOpen(true);
+    }, []);
+
+    const handleTogetherStart = useCallback((nick) => {
+        setTogetherOpen(false);
+        playGameButtonSfx('confirm');
+        setStarting(true);
+        onStartTogether?.(nick);
+    }, [onStartTogether]);
+
     const handleProfileSaved = useCallback((profile) => {
         onProfileSaved?.(profile);
-        if (startAfterProfileRef.current) {
-            startAfterProfileRef.current = false;
+        const pending = startAfterProfileRef.current;
+        startAfterProfileRef.current = false;
+        if (pending === 'together') {
+            setTogetherOpen(true);
+        } else if (pending) {
             setStarting(true);
             onStart();
         }
@@ -753,6 +775,21 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
                             {t('PLAY')}
                         </span>
                     </button>
+
+                    {/* PLAY TOGETHER: only shown when a room server is set up */}
+                    {onStartTogether ? (
+                        <button
+                            type="button"
+                            onClick={handleTogetherClick}
+                            disabled={starting}
+                            className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                            <GrassIcon name="character" alt="" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
+                            <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
+                                {t('PLAY TOGETHER')}
+                            </span>
+                        </button>
+                    ) : null}
 
                     {/* SETTINGS */}
                     <button
@@ -831,6 +868,7 @@ export function MainMenu({ onStart, onMenuInteraction, onProfileSaved, isVisible
             </div>
 
             {/* Modals */}
+            {onStartTogether ? <TogetherSetupModal isOpen={togetherOpen} onClose={() => setTogetherOpen(false)} onStart={handleTogetherStart} /> : null}
             <ModalShell isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="How To Play" size="md">
                 <HowToPlayContent />
             </ModalShell>
