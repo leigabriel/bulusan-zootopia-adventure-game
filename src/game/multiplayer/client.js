@@ -18,13 +18,15 @@ const NO_RETRY = new Set([CLOSE.FULL, CLOSE.BAD_HELLO, CLOSE.KICKED, CLOSE.TOO_M
 // local player's position about ten times a second and tells the game what
 // happens through the `on*` callbacks. The game keeps working if it fails.
 export class MultiplayerClient {
-    constructor({ url, nick, character, WebSocketImpl = globalThis.WebSocket, setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout } = {}) {
+    constructor({ url, nick, character, WebSocketImpl = globalThis.WebSocket, setTimeoutImpl, clearTimeoutImpl } = {}) {
         this.url = url;
         this.nick = nick;
         this.character = character;
         this.WebSocketImpl = WebSocketImpl;
-        this.setTimeoutImpl = setTimeoutImpl;
-        this.clearTimeoutImpl = clearTimeoutImpl;
+        // Browsers reject `window.setTimeout` when it is called as a method of
+        // another object ("Illegal invocation"), so always call it on the global.
+        this.setTimeoutImpl = setTimeoutImpl || ((fn, ms) => globalThis.setTimeout(fn, ms));
+        this.clearTimeoutImpl = clearTimeoutImpl || ((id) => globalThis.clearTimeout(id));
 
         this.status = STATUS.IDLE;
         this.selfId = null;
