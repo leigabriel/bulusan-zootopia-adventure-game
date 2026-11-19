@@ -5,10 +5,41 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.8** (version code 29, released 2026-11-17)
+**Current version: 3.9** (version code 30, released 2026-11-19)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 3.9 (2026-11-19)
+
+Version code 30.
+
+### Added
+- multiplayer: Add shared protocol with list nicknames and fixed emotes
+- multiplayer: Add room rules with limits, clamping and report kick
+- multiplayer: Add socket host shared by worker and node server
+- multiplayer: Add client with throttled updates and reconnect
+- multiplayer: Add server url and saved nickname settings
+- multiplayer: Add smoothing helpers for remote players
+- multiplayer: Draw remote players with name tags and emote bubbles
+- multiplayer: Add session joining client and ghost players
+- server: Add cloudflare worker and durable object room
+- server: Add local ws dev server
+- ui: Add play together setup, players panel, mute and report
+- ui: Add play together button and setup modal to main menu
+- i18n: Add tagalog lines for play together
+- game: Join room, tick ghost players and show together hud
+
+### Changed
+- server: Add wrangler config with sqlite durable object
+- server: Add server package scripts
+- server: Add local test and cloudflare deploy steps
+- Add multiplayer url example
+- Add ws dev dependency and mp:dev script
+- ci: Pass play together server url to the android web build
+
+### Fixed
+- server: Allow adventuregame.bulusanzoo.com origin
 
 ## 3.8 (2026-11-17)
 
