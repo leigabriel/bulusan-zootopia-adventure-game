@@ -85,6 +85,9 @@ jobs:
           echo "Building version $version"
 
       - name: Build web app
+        env:
+          # Play Together server address. Set it under Settings > Variables > Actions.
+          VITE_MULTIPLAYER_URL: ${{ vars.VITE_MULTIPLAYER_URL }}
         run: npm run build
 
       - name: Decode keystore
