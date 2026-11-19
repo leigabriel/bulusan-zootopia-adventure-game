@@ -5,10 +5,18 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 3.9** (version code 30, released 2026-11-19)
+**Current version: 4.0** (version code 31, released 2026-11-19)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.0 (2026-11-19)
+
+Version code 31.
+
+### Fixed
+- multiplayer: Call reconnect timers on the global object
+- server: Call room snapshot interval on the global object
 
 ## 3.9 (2026-11-19)
 
