@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { App as CapacitorApp } from '@capacitor/app';
 import { savePhotoToDevice } from './utils/photoSave';
@@ -50,7 +50,10 @@ import { CameraModeOverlay, CameraPreview } from './ui/ExplorationHUD.jsx';
 import { AnimalBookModal } from './ui/AnimalBook.jsx';
 import { LoadingScreen } from '../components/loading-screen.jsx';
 import { cx } from './ui/UIComponents.jsx';
-import { t, useLanguage } from './i18n/index.js';
+import { t, useLanguage, getLanguage } from './i18n/index.js';
+import { TogetherSession } from './multiplayer/session.js';
+import { getMultiplayerUrl } from './multiplayer/config.js';
+import { TogetherHUD } from './ui/TogetherUI.jsx';
 
 import {
     getTasks,
@@ -490,6 +493,9 @@ function MiniZooGame() {
     const [, setLoadProgress] = useState(0);
     const [gameStarted, setGameStarted] = useState(false);
     const [showMenu, setShowMenu] = useState(true);
+    const togetherRef = useRef(null);
+    const [togetherInfo, setTogetherInfo] = useState(null);
+    const multiplayerUrl = useMemo(() => getMultiplayerUrl(), []);
 
     const isEnteringGameRef = useRef(false);
     const [isEnteringGame, setIsEnteringGame] = useState(false);
@@ -1496,6 +1502,17 @@ function MiniZooGame() {
                     state.playerMixer.update(dt);
                 }
 
+                if (togetherRef.current) {
+                    // Feet position, so other players stand on the same ground.
+                    const model = state.playerCharacter;
+                    const anchor = state.playerAnchor ? state.playerAnchor.position : camera.position;
+                    const feetY = model
+                        ? model.position.y - state.playerCharacterBaseYOffset - 0.02
+                        : (state.groundHeight ?? getTerrainHeight(anchor.x, anchor.z));
+                    const action = !state.isGrounded ? 'jump' : state.playerIsMoving ? 'run' : 'idle';
+                    togetherRef.current.tick(now, dt, { x: anchor.x, y: feetY, z: anchor.z }, state.yaw, action);
+                }
+
                 if (state.playerCharacter) {
                     const moving = state.playerIsMoving && state.isGrounded;
                     // The trail returns the water depth; dust puffs only appear on dry land.
@@ -1809,6 +1826,8 @@ function MiniZooGame() {
 
             state.cleanup = () => {
                 state.initialized = false;
+                togetherRef.current?.stop();
+                togetherRef.current = null;
                 if (state.animationId) cancelAnimationFrame(state.animationId);
                 window.removeEventListener('resize', handleResize);
                 cleanupKeyboard();
@@ -1882,7 +1901,30 @@ function MiniZooGame() {
         }
     }, [checkNearbyAnimals, checkNearbyStaff, clearFeedingTimer, disposePlayerCharacter, getRiverAudio, getRiverStepAudio, getRunAudio, playPlayerAction]);
 
-    const handleStartGame = useCallback(() => {
+    const stopTogether = useCallback(() => {
+        togetherRef.current?.stop();
+        togetherRef.current = null;
+        setTogetherInfo(null);
+    }, []);
+
+    const startTogether = useCallback((nick, character) => {
+        const state = gameStateRef.current;
+        if (!state.scene || !multiplayerUrl) return;
+        togetherRef.current?.stop();
+        const session = new TogetherSession({
+            scene: state.scene,
+            url: multiplayerUrl,
+            nick,
+            character,
+            getLanguage,
+            onChange: setTogetherInfo,
+        });
+        togetherRef.current = session;
+        setTogetherInfo(session.snapshot());
+        session.start();
+    }, [multiplayerUrl]);
+
+    const handleStartGame = useCallback((options = {}) => {
         if (isEnteringGameRef.current) return;
         isEnteringGameRef.current = true;
         setIsEnteringGame(true);
@@ -1921,6 +1963,10 @@ function MiniZooGame() {
             playAmbience();
             playMusic();
 
+            // Only a nickname from the list and the character go online. The
+            // real player name stays on this device.
+            if (options.nick) startTogether(options.nick, profile.gender);
+
             setTimeout(() => {
                 setEnterFadeActive(false);
                 setTimeout(() => {
@@ -1930,7 +1976,8 @@ function MiniZooGame() {
                 }, 400);
             }, 250);
         }, 380);
-    }, [playAmbience, playMusic, handleSelectCharacter]);
+    }, [playAmbience, playMusic, handleSelectCharacter, startTogether]);
+    const handleStartTogether = useCallback((nick) => handleStartGame({ nick }), [handleStartGame]);
 
     const handleProfileSaved = useCallback((profile) => {
         setPlayerName(profile.name);
@@ -2158,6 +2205,8 @@ function MiniZooGame() {
             if (quitState.keys) Object.keys(quitState.keys).forEach((key) => { quitState.keys[key] = false; });
         }
 
+        stopTogether();
+
         // State cleanup - This will return the user to the Main Menu
         gameStartedRef.current = false;
         soundEnabledRef.current = false;
@@ -2179,7 +2228,7 @@ function MiniZooGame() {
         setGameStarted(false);
         setShowMenu(true);
         playMusic();
-    }, [clearFeedingTimer, playMusic, stopGameplaySounds]);
+    }, [clearFeedingTimer, playMusic, stopGameplaySounds, stopTogether]);
     const handleCancelQuit = useCallback(() => setShowQuitModal(false), []);
 
     const handleFeedAnimal = useCallback(() => {
@@ -2762,6 +2811,7 @@ function MiniZooGame() {
             {!isLoading && !initError && showMenu && (
                 <MainMenu
                     onStart={handleStartGame}
+                    onStartTogether={multiplayerUrl ? handleStartTogether : null}
                     onMenuInteraction={playMusic}
                     isVisible={showMenu}
                     onProfileSaved={handleProfileSaved}
@@ -2788,6 +2838,15 @@ function MiniZooGame() {
                             navigation={guidanceEnabled ? missionNavigation : { distance: null, direction: 0, onScreen: true }}
                             guidanceEnabled={guidanceEnabled}
                             onToggleGuidance={() => setGuidanceEnabled((enabled) => !enabled)}
+                        />
+                    ) : null}
+                    {!interfaceOpen && togetherInfo ? (
+                        <TogetherHUD
+                            info={togetherInfo}
+                            onEmote={(id) => togetherRef.current?.sendEmote(id)}
+                            onMute={(id) => togetherRef.current?.toggleMute(id)}
+                            onReport={(id) => togetherRef.current?.report(id)}
+                            onLeave={stopTogether}
                         />
                     ) : null}
                      {!interfaceOpen ? <Joystick baseRef={baseRef} stickRef={stickRef} isTouchDevice={isTouchDevice} /> : null}

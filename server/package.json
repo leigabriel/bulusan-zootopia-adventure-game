@@ -1,0 +1,13 @@
+{
+  "name": "bulusan-zoo-room-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "dev:node": "node dev-server.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

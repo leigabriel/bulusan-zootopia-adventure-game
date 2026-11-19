@@ -463,6 +463,26 @@ const TAGALOG = {
     'Calm and graceful': 'Mahinahon at magandang kumilos',
     'A koi can live for more than fifty years.': 'Mahigit limampung taon mabuhay ang koi.',
     'A bright fish that glides slowly through still water.': 'Makulay na isdang dahan-dahang lumalangoy sa tahimik na tubig.',
+    // Play Together
+    'Play Together': 'Maglaro Nang Sama-sama',
+    'PLAY TOGETHER': 'MAGLARO NANG SAMA-SAMA',
+    'Join the Zoo': 'Sumali sa Zoo',
+    'Shuffle Name': 'Palitan ang Pangalan',
+    'Walk around the zoo with other kids! Everyone sees your zoo name, not your real name.': 'Maglakad sa zoo kasama ang ibang bata! Zoo name mo ang makikita ng lahat, hindi ang tunay mong pangalan.',
+    'You can say hi with fun buttons. There is no chat.': 'Puwede kang bumati gamit ang mga masayang button. Walang chat.',
+    'Finding friends...': 'Hinahanap ang mga kaibigan...',
+    'The zoo is full right now. You are playing alone.': 'Puno ang zoo ngayon. Mag-isa kang maglalaro.',
+    'You were moved out of the room. You are playing alone.': 'Nailipat ka palabas ng silid. Mag-isa kang maglalaro.',
+    'Cannot reach other players. You are playing alone.': 'Hindi maabot ang ibang manlalaro. Mag-isa kang maglalaro.',
+    'Players': 'Mga Manlalaro',
+    'No one else is here yet.': 'Wala pang ibang nandito.',
+    'Hide': 'Itago',
+    'Show': 'Ipakita',
+    'Report': 'I-report',
+    'Cancel': 'Kanselahin',
+    'Play Alone': 'Maglaro Mag-isa',
+    'Tell the Zoo Helpers?': 'Sabihin sa mga Zoo Helper?',
+    'Hide {name} and tell the zoo helpers?': 'Itago si {name} at sabihin sa mga zoo helper?',
 };
 
 export default TAGALOG;
