@@ -1,0 +1,16 @@
+name = "bulusan-zoo-rooms"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+[[durable_objects.bindings]]
+name = "ZOO_ROOM"
+class_name = "ZooRoom"
+
+# The free plan only allows SQLite-backed Durable Objects.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ZooRoom"]
+
+[vars]
+# Comma separated. Leave empty to allow any website while testing.
+ALLOWED_ORIGINS = ""
