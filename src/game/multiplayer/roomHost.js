@@ -1,11 +1,18 @@
 import { RoomCore } from './roomCore.js';
 import { SNAPSHOT_INTERVAL_MS } from './protocol.js';
 
+// Timers must be called on the global object: browsers and the Workers runtime
+// reject `setInterval` when it is invoked as a method of another object.
+const defaultTimers = {
+    setInterval: (callback, ms) => globalThis.setInterval(callback, ms),
+    clearInterval: (id) => globalThis.clearInterval(id),
+};
+
 // Connects RoomCore to real sockets. A "socket" here is any object with
 // send(text) and close(code, reason), so the same host runs inside a Cloudflare
 // Durable Object, a Node `ws` server and the tests.
 export class RoomHost {
-    constructor({ name, now, log, timers = { setInterval, clearInterval }, maxPlayers } = {}) {
+    constructor({ name, now, log, timers = defaultTimers, maxPlayers } = {}) {
         this.core = new RoomCore({ name, now, log, maxPlayers });
         this.timers = timers;
         this.sockets = new Map();
