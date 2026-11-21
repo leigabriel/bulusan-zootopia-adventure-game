@@ -976,8 +976,23 @@ const WoodenTitle = ({ titlePart1, titlePart2, className = '' }) => {
     );
 };
 
-function DirectionArrow({ direction }) {
-    return <GrassIcon name="play" className={cx('sz-nudge h-7 w-7 shrink-0 object-contain', direction < 0 ? '-scale-x-100' : '')} />;
+// Quest waypoint drawn on the screen (not inside the task card). Position,
+// arrow angle and distance are written straight to the DOM every frame by
+// updateWaypointHud, so the HUD never re-renders for it.
+export function WaypointMarker({ elRef }) {
+    return (
+        <div ref={elRef} aria-hidden="true" style={{ display: 'none' }} className="pointer-events-none absolute left-0 top-0 z-60 will-change-transform select-none">
+            <div data-wp="arrow" className="absolute left-0 top-0" style={{ display: 'none' }}>
+                <svg width="44" height="44" viewBox="0 0 44 44" className="drop-shadow-[0_2px_3px_rgba(0,0,0,0.55)]">
+                    <path d="M6 12 L34 22 L6 32 L13 22 Z" fill="#ffd23f" stroke="#1d3557" strokeWidth="2.5" strokeLinejoin="round" />
+                </svg>
+            </div>
+            <div data-wp="pin" className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2" style={{ display: 'none' }}>
+                <div className="sz-nudge h-7 w-7 rotate-45 rounded-md border-[3px] border-[#1d3557] bg-[#ffd23f] shadow-lg" />
+            </div>
+            <span data-wp="label" className="absolute left-0 top-8 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-[#1d3557] bg-white/95 px-2 py-0.5 text-[13px] font-black leading-none text-[#1d3557] shadow-md" />
+        </div>
+    );
 }
 
 /**
@@ -989,7 +1004,6 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
     useLanguage();
     if (!task) return null;
     const full = variant === 'full';
-    const showArrow = navigation && navigation.onScreen === false && navigation.direction;
     const distance = navigation?.distance != null ? `${navigation.distance} m` : '';
     const chipText = t(status) || distance;
     const open = full || expanded;
@@ -1002,7 +1016,6 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
                 <span className={cx('block font-black leading-tight text-(--sz-ink)', full ? 'text-[18px]' : 'truncate text-[16px]')}>{t(task.title)}</span>
             </span>
             {chipText ? <span className="sz-chip sz-chip--sun shrink-0">{chipText}</span> : null}
-            {showArrow ? <span className="shrink-0 text-(--sz-green-deep)"><DirectionArrow direction={navigation.direction} /></span> : null}
             {!full ? <span className="shrink-0 text-(--sz-ink-soft) text-lg font-black" aria-hidden="true">{expanded ? '▴' : '▾'}</span> : null}
         </>
     );
