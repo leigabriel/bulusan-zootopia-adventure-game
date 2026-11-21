@@ -38,7 +38,7 @@ test('host closes a socket that sends a bad hello', () => {
     const host = new RoomHost({ name: 'zoo-1', timers: fakeTimers() });
     const s = fakeSocket();
     const id = host.open(s);
-    host.message(id, hello('Maria Santos'));
+    host.message(id, hello('Fuck Tiger 7'));
     assert.equal(s.closed, CLOSE.BAD_HELLO);
     assert.equal(host.size, 0);
 });
