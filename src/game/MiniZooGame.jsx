@@ -32,6 +32,7 @@ import {
     SettingsPanel,
     TaskPanel,
     HoldToFeedControl,
+    RideControl,
     FeedingSuccessNotification,
     QuitModal,
     ResetTasksModal,
@@ -1080,6 +1081,50 @@ function MiniZooGame() {
         setIsFeeding(false);
     }, []);
 
+    const [riding, setRiding] = useState(false);
+
+    const dismountHorse = useCallback(() => {
+        const state = gameStateRef.current;
+        const horse = state.riding;
+        if (!horse) return;
+        const anchor = state.playerAnchor ? state.playerAnchor.position : null;
+        const angle = horse.ride?.angle ?? horse.angle ?? 0;
+        // Step off to the horse's right side so the player is not inside it.
+        if (anchor) {
+            // eslint-disable-next-line react-hooks/immutability
+            anchor.x += Math.cos(angle) * 3.4;
+            anchor.z -= Math.sin(angle) * 3.4;
+        }
+        horse.stopRide();
+        state.riding = null;
+        state.playerHeight = PLAYER_HEIGHT;
+        state.speedScale = 1;
+        state.playerRadius = 1.5;
+        if (state.playerCharacter) state.playerCharacter.rotation.y = angle;
+        setRiding(false);
+    }, []);
+
+    const mountHorse = useCallback((horse) => {
+        const state = gameStateRef.current;
+        if (!horse?.config?.rideable || state.riding || !state.playerAnchor) return;
+        clearFeedingTimer();
+        const anchor = state.playerAnchor.position;
+        anchor.x = horse.pos.x;
+        anchor.z = horse.pos.z;
+        horse.startRide(horse.pos.x, horse.pos.z, horse.angle);
+        state.riding = horse;
+        state.playerHeight = PLAYER_HEIGHT + 1.0;
+        state.speedScale = 1.35;
+        state.playerRadius = 2.4;
+        setRiding(true);
+    }, [clearFeedingTimer]);
+
+    const toggleRide = useCallback(() => {
+        const state = gameStateRef.current;
+        if (state.riding) dismountHorse();
+        else mountHorse(nearbyAnimalRef.current);
+    }, [dismountHorse, mountHorse]);
+
     const beginFeed = useCallback((animal, info) => {
         const missionAnimal = getAnimalBookEntry(info?.name)?.name || info?.name;
         if (!animal || !missionAnimal || feedingInProgressRef.current || !gameStartedRef.current || isAnimalFed(missionAnimal)) return;
@@ -1132,6 +1177,7 @@ function MiniZooGame() {
             state.playerMixer = null;
         }
         state.playerActions = {};
+        state.playerHipsBone = null;
         state.currentPlayerAction = null;
         state.currentPlayerActionName = null;
         state.playerVictoryUntil = 0;
@@ -1408,6 +1454,8 @@ function MiniZooGame() {
             const nearbyInterval = isMobile ? 0.3 : 0.2;
 
             let shadowScanFrame = 0;
+            const rideSeat = new THREE.Vector3();
+            const rideHips = new THREE.Vector3();
             const animate = () => {
                 state.animationId = requestAnimationFrame(animate);
                 const now = performance.now();
@@ -1441,7 +1489,7 @@ function MiniZooGame() {
                 const obstaclePool = state.animalObstaclePool;
                 let obstacleCount = 0;
                 state.animals.forEach((animal) => {
-                    if (!animal?.group || animal.noCollision) return;
+                    if (!animal?.group || animal.noCollision || animal === state.riding) return;
                     const obstacle = obstaclePool[obstacleCount] || (obstaclePool[obstacleCount] = {});
                     obstacle.x = animal.group.position.x;
                     obstacle.z = animal.group.position.z;
@@ -1463,6 +1511,24 @@ function MiniZooGame() {
 
                 handleMovement();
                 const playerPosition = state.playerAnchor ? state.playerAnchor.position : camera.position;
+
+                if (state.riding?.ride) {
+                    // The horse follows the player anchor; gait follows real speed.
+                    const horse = state.riding;
+                    const rideGround = state.groundHeight ?? getTerrainHeight(playerPosition.x, playerPosition.z);
+                    const lift = Math.max(0, playerPosition.y - (rideGround + (state.playerHeight ?? PLAYER_HEIGHT)));
+                    const wantAngle = state.yaw + Math.PI;
+                    const angleStep = Math.atan2(Math.sin(wantAngle - horse.ride.angle), Math.cos(wantAngle - horse.ride.angle));
+                    const moveSpeed = state.playerIsMoving ? (state.playerMoveSpeed || 0) : 0;
+                    horse.ride.x = playerPosition.x;
+                    horse.ride.z = playerPosition.z;
+                    horse.ride.angle += angleStep * Math.min(1, dt * 8);
+                    horse.ride.lift = lift;
+                    if (!state.isGrounded) { horse.ride.gait = 'run'; horse.ride.anim = 'gallop_jump'; horse.ride.timeScale = 1; }
+                    else if (moveSpeed < 0.55) { horse.ride.gait = 'idle'; horse.ride.anim = 'idle'; horse.ride.timeScale = 1; }
+                    else if (moveSpeed < 17) { horse.ride.gait = 'walk'; horse.ride.anim = 'walk'; horse.ride.timeScale = 1.2; }
+                    else { horse.ride.gait = 'run'; horse.ride.anim = 'gallop'; horse.ride.timeScale = 1; }
+                }
 
                 if (state.playerCharacter) {
                     // Same ground height the camera uses, so the feet stay planted.
@@ -1495,7 +1561,9 @@ function MiniZooGame() {
                 if (state.playerMixer) {
                     const victoryPlaying = state.playerVictoryUntil > now;
                     if (!victoryPlaying) {
-                        if (!state.playerIsMoving) {
+                        if (state.riding) {
+                            playPlayerAction('sitdown', { loopOnce: true });
+                        } else if (!state.playerIsMoving) {
                             playPlayerAction('idle');
                         } else {
                             playPlayerAction('run');
@@ -1508,11 +1576,16 @@ function MiniZooGame() {
                     // Feet position, so other players stand on the same ground.
                     const model = state.playerCharacter;
                     const anchor = state.playerAnchor ? state.playerAnchor.position : camera.position;
-                    const feetY = model
-                        ? model.position.y - state.playerCharacterBaseYOffset - 0.02
-                        : (state.groundHeight ?? getTerrainHeight(anchor.x, anchor.z));
-                    const action = !state.isGrounded ? 'jump' : state.playerIsMoving ? 'run' : 'idle';
-                    togetherRef.current.tick(now, dt, { x: anchor.x, y: feetY, z: anchor.z }, state.yaw, action);
+                    const horse = state.riding;
+                    const feetY = horse?.ride
+                        ? anchor.y - (state.playerHeight ?? PLAYER_HEIGHT)
+                        : model
+                            ? model.position.y - state.playerCharacterBaseYOffset - 0.02
+                            : (state.groundHeight ?? getTerrainHeight(anchor.x, anchor.z));
+                    const action = horse?.ride ? 'ride' : !state.isGrounded ? 'jump' : state.playerIsMoving ? 'run' : 'idle';
+                    // Riders send the horse's heading, which the ghost turns back into a facing.
+                    const sendYaw = horse?.ride ? horse.ride.angle - Math.PI : state.yaw;
+                    togetherRef.current.tick(now, dt, { x: anchor.x, y: feetY, z: anchor.z }, sendYaw, action);
                 }
 
                 if (state.playerCharacter) {
@@ -1684,6 +1757,22 @@ function MiniZooGame() {
                         }
                     }
                 });
+                if (state.riding?.ride && state.playerCharacter) {
+                    // Seat the rider on the horse's back (hips on the middle of the back).
+                    const rider = state.playerCharacter;
+                    state.riding.getSeatPosition(rideSeat);
+                    rider.rotation.y = state.riding.ride.angle;
+                    rider.position.copy(rideSeat);
+                    if (!state.playerHipsBone) {
+                        rider.traverse((o) => { if (!state.playerHipsBone && o.isBone && /hips/i.test(o.name)) state.playerHipsBone = o; });
+                    }
+                    if (state.playerHipsBone) {
+                        rider.updateMatrixWorld(true);
+                        state.playerHipsBone.getWorldPosition(rideHips);
+                        rider.position.add(rideSeat).sub(rideHips);
+                    }
+                    if (state.playerShadow) state.playerShadow.visible = false;
+                }
                 state.ambientBirds.forEach((bird) => bird.update(now * 0.001, dt));
 
                 // World animation continues while input is locked by the book overlay.
@@ -2214,6 +2303,7 @@ function MiniZooGame() {
             if (quitState.keys) Object.keys(quitState.keys).forEach((key) => { quitState.keys[key] = false; });
         }
 
+        if (quitState?.riding) dismountHorse();
         stopTogether();
 
         // State cleanup - This will return the user to the Main Menu
@@ -2237,7 +2327,7 @@ function MiniZooGame() {
         setGameStarted(false);
         setShowMenu(true);
         playMusic();
-    }, [clearFeedingTimer, playMusic, stopGameplaySounds, stopTogether]);
+    }, [clearFeedingTimer, dismountHorse, playMusic, stopGameplaySounds, stopTogether]);
     const handleCancelQuit = useCallback(() => setShowQuitModal(false), []);
 
     const handleFeedAnimal = useCallback(() => {
@@ -2354,7 +2444,11 @@ function MiniZooGame() {
             if ((key === 't' || key === 'e') && nearbyStaff && gameStarted && characterReady && !showNpcDialogue) {
                 openNpcDialogue();
             }
-            if (key === 'f' && nearbyAnimal && gameStarted && characterReady && !settingsOpen && !tasksOpen && !showNpcDialogue) {
+            if (key === 'r' && gameStarted && characterReady && !settingsOpen && !tasksOpen && !showNpcDialogue && (riding || nearbyAnimal?.config?.rideable)) {
+                toggleRide();
+                return;
+            }
+            if (key === 'f' && !riding && nearbyAnimal && gameStarted && characterReady && !settingsOpen && !tasksOpen && !showNpcDialogue) {
                 const info = nearbyAnimal.getInfo ? nearbyAnimal.getInfo() : nearbyAnimal.config;
                 beginFeed(nearbyAnimal, info);
             }
@@ -2374,7 +2468,7 @@ function MiniZooGame() {
         const onKeyUp = e => { if (e.key.toLowerCase() === 'f') clearFeedingTimer(); };
         document.addEventListener('keyup', onKeyUp);
         return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('keyup', onKeyUp); };
-    }, [nearbyAnimal, nearbyStaff, showNpcDialogue, gameStarted, settingsOpen, tasksOpen, characterReady, cycleCameraMode, openNpcDialogue, closeNpcDialogue, bookOpen, beginFeed, clearFeedingTimer, handleCollectMissionItem, missionNavigation.distance]);
+    }, [riding, toggleRide, nearbyAnimal, nearbyStaff, showNpcDialogue, gameStarted, settingsOpen, tasksOpen, characterReady, cycleCameraMode, openNpcDialogue, closeNpcDialogue, bookOpen, beginFeed, clearFeedingTimer, handleCollectMissionItem, missionNavigation.distance]);
 
     useEffect(() => {
         gameStartedRef.current = gameStarted;
@@ -2871,8 +2965,13 @@ function MiniZooGame() {
                     ) : null}
                      {!interfaceOpen ? <Joystick baseRef={baseRef} stickRef={stickRef} isTouchDevice={isTouchDevice} /> : null}
                       {!interfaceOpen ? <JumpButton jumpRef={jumpRef} isTouchDevice={isTouchDevice} /> : null}
+                     <RideControl
+                         visible={Boolean((riding || nearbyAnimal?.config?.rideable) && !nearbyStaff && gameStarted && characterReady && !interfaceOpen)}
+                         riding={riding}
+                         onToggle={toggleRide}
+                     />
                      <HoldToFeedControl
-                         visible={Boolean(nearbyAnimal && !nearbyStaff && !isDangerousAnimalNearby && !isObserveOnlyAnimalNearby && gameStarted && characterReady && !interfaceOpen)}
+                         visible={Boolean(!riding && nearbyAnimal && !nearbyStaff && !isDangerousAnimalNearby && !isObserveOnlyAnimalNearby && gameStarted && characterReady && !interfaceOpen)}
                          animalName={nearbyAnimalInfo?.name}
                          progress={nearbyAnimalFed ? 1 : feedingProgress}
                          isHolding={isFeeding}
