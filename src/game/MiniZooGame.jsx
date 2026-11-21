@@ -33,6 +33,7 @@ import {
     TaskPanel,
     HoldToFeedControl,
     RideControl,
+    KoiFeedControl,
     FeedingSuccessNotification,
     QuitModal,
     ResetTasksModal,
@@ -93,7 +94,14 @@ import { getPlayerModel, getPlayerProfile, PLAYER_PROFILE_CHANGE_EVENT } from '.
 
 const PLAYER_HEIGHT = 0.2;
 const PLAYER_CHARACTER_TARGET_HEIGHT = 1.5;
-const FIRST_PERSON_EYE_OFFSET = 4.5;
+// Eyes sit at about 92% of the 1.5 m character; on horseback the rider's head
+// is read from the skeleton instead (see the first-person camera).
+const EYE_HEIGHT_ABOVE_FEET = PLAYER_CHARACTER_TARGET_HEIGHT * 0.92;
+const EYE_FORWARD = 0.12;
+// Third-person look target, above the player anchor (which is 0.2 m above the feet).
+const THIRD_PERSON_FOCUS_UP = 1.2;
+const MOUNTED_FOCUS_UP = 3.4;
+const MOUNTED_CAMERA_LIFT = 2.2;
 const FIRST_PERSON_FOV = 70;
 const THIRD_PERSON_FOV = 70;
 // Alpaca and Tiger photos are already taken by earlier tasks, so the "two
@@ -766,6 +774,7 @@ function MiniZooGame() {
     const birdChirpingRef = useRef(null);
     const riverAudioRef = useRef(null);
     const runAudioRef = useRef(null);
+    const hoofAudioRef = useRef(null);
     const riverStepAudioRef = useRef(null);
     const linoVoiceRef = useRef(null);
 
@@ -814,6 +823,25 @@ function MiniZooGame() {
             }).catch(() => {});
         }
         return runAudioRef.current;
+    }, []);
+
+    // Hoof beats looped while riding (replaces the footstep loop).
+    const getHoofAudio = useCallback(() => {
+        if (!hoofAudioRef.current) {
+            const fallbackPath = '/audio/horse-running.mp3';
+            const audio = new Audio(fallbackPath);
+            audio.loop = true;
+            audio.preload = 'auto';
+            audio.volume = 0;
+            audio.setAttribute('playsinline', 'true');
+            hoofAudioRef.current = audio;
+            resolveAssetUrl(fallbackPath).then((assetUrl) => {
+                if (hoofAudioRef.current === audio && assetUrl && audio.paused) {
+                    audio.src = assetUrl;
+                }
+            }).catch(() => {});
+        }
+        return hoofAudioRef.current;
     }, []);
 
     // Splashing footsteps used instead of the normal footstep loop in the water.
@@ -986,6 +1014,10 @@ function MiniZooGame() {
             riverStepAudioRef.current.pause();
             if (!keepPosition) riverStepAudioRef.current.currentTime = 0;
         }
+        if (hoofAudioRef.current) {
+            hoofAudioRef.current.pause();
+            if (!keepPosition) hoofAudioRef.current.currentTime = 0;
+        }
     }, []);
 
     const stopMusic = useCallback((keepPosition = true) => {
@@ -1082,6 +1114,13 @@ function MiniZooGame() {
     }, []);
 
     const [riding, setRiding] = useState(false);
+    const [nearKoi, setNearKoi] = useState(false);
+    const koiNearRef = useRef(false);
+
+    const feedKoi = useCallback(() => {
+        const koi = gameStateRef.current.worldProps?.koi;
+        if (koi?.feed()) playGameButtonSfx('feed');
+    }, []);
 
     const dismountHorse = useCallback(() => {
         const state = gameStateRef.current;
@@ -1178,6 +1217,7 @@ function MiniZooGame() {
         }
         state.playerActions = {};
         state.playerHipsBone = null;
+        state.playerHeadBone = null;
         state.currentPlayerAction = null;
         state.currentPlayerActionName = null;
         state.playerVictoryUntil = 0;
@@ -1454,6 +1494,7 @@ function MiniZooGame() {
             const nearbyInterval = isMobile ? 0.3 : 0.2;
 
             let shadowScanFrame = 0;
+            let smoothedEyeY = 0;
             const rideSeat = new THREE.Vector3();
             const rideHips = new THREE.Vector3();
             const animate = () => {
@@ -1545,7 +1586,7 @@ function MiniZooGame() {
                         playerPosition.z
                     );
                     // Keep movement unchanged while showing the character's back in third person.
-                    const desiredCharacterYaw = state.yaw + (cameraModeRef.current === 'third' ? Math.PI : 0);
+                    const desiredCharacterYaw = state.yaw + Math.PI;
                     const currentY = state.playerCharacter.rotation.y;
                     const angleDelta = Math.atan2(Math.sin(desiredCharacterYaw - currentY), Math.cos(desiredCharacterYaw - currentY));
                     state.playerCharacter.rotation.y += angleDelta * Math.min(1, dt * 10);
@@ -1688,12 +1729,14 @@ function MiniZooGame() {
                     zoomCurrent = easeZoom(zoomCurrent, state.cameraZoomTarget, dt);
 
                     const followDistance = (isMobile ? 5.6 : 7.0) * zoomCurrent;
-                    const followHeight = (isMobile ? 3.0 : 3.5) * zoomCurrent;
+                    const mountedNow = Boolean(state.riding);
+                    const followHeight = ((isMobile ? 3.0 : 3.5) * zoomCurrent) + (mountedNow ? MOUNTED_CAMERA_LIFT : 0);
+                    const focusUp = mountedNow ? MOUNTED_FOCUS_UP : THIRD_PERSON_FOCUS_UP;
                     const pitchLift = Math.sin(-state.pitch) * 1.3;
                     const followYBlend = 1 - Math.exp(-10 * dt);
                     smoothedFollowY += (playerPosition.y - smoothedFollowY) * followYBlend;
 
-                    cameraFocus.set(playerPosition.x, smoothedFollowY + 1.85, playerPosition.z);
+                    cameraFocus.set(playerPosition.x, smoothedFollowY + focusUp, playerPosition.z);
                     desiredCameraPosition.set(
                         playerPosition.x + Math.sin(state.yaw) * followDistance,
                         smoothedFollowY + followHeight + pitchLift,
@@ -1712,7 +1755,7 @@ function MiniZooGame() {
 
                     const cameraLerp = 1 - Math.exp(-8 * dt);
                     camera.position.lerp(desiredCameraPosition, cameraLerp);
-                    lookTarget.set(playerPosition.x, smoothedFollowY + 1.85, playerPosition.z);
+                    lookTarget.set(playerPosition.x, smoothedFollowY + focusUp, playerPosition.z);
                     previousCameraQuaternion.copy(camera.quaternion);
                     camera.lookAt(lookTarget);
                     if (cameraTransition.active) {
@@ -1720,13 +1763,31 @@ function MiniZooGame() {
                         camera.quaternion.copy(previousCameraQuaternion).slerp(targetCameraQuaternion, cameraTransitionBlend);
                     }
                 } else if (state.playerAnchor) {
-                    const minEyeY = getTerrainHeight(playerPosition.x, playerPosition.z)
-                        + (state.playerHeight ?? PLAYER_HEIGHT)
-                        + FIRST_PERSON_EYE_OFFSET;
+                    // Eyes of the character: a fixed height above the feet on foot, the
+                    // rider's head bone on horseback, nudged forward so the camera
+                    // never sits inside the face.
+                    const feetY = playerPosition.y - (state.playerHeight ?? PLAYER_HEIGHT);
+                    let eyeY = feetY + EYE_HEIGHT_ABOVE_FEET;
+                    if (state.riding && state.playerCharacter) {
+                        if (!state.playerHeadBone) {
+                            state.playerCharacter.traverse((o) => { if (!state.playerHeadBone && o.isBone && /^head$/i.test(o.name)) state.playerHeadBone = o; });
+                        }
+                        if (state.playerHeadBone) {
+                            state.playerCharacter.updateMatrixWorld(true);
+                            state.playerHeadBone.getWorldPosition(rideHips);
+                            eyeY = rideHips.y + 0.1;
+                        } else {
+                            eyeY = feetY + 5.0;
+                        }
+                        smoothedEyeY += (eyeY - smoothedEyeY) * (1 - Math.exp(-12 * dt));
+                        eyeY = smoothedEyeY;
+                    } else {
+                        smoothedEyeY = eyeY;
+                    }
                     firstPersonCameraPosition.set(
-                        playerPosition.x,
-                        Math.max(playerPosition.y + FIRST_PERSON_EYE_OFFSET, minEyeY),
-                        playerPosition.z
+                        playerPosition.x - Math.sin(state.yaw) * EYE_FORWARD,
+                        eyeY,
+                        playerPosition.z - Math.cos(state.yaw) * EYE_FORWARD
                     );
                     targetCameraEuler.set(state.pitch, state.yaw, 0, 'YXZ');
                     targetCameraQuaternion.setFromEuler(targetCameraEuler);
@@ -1773,6 +1834,15 @@ function MiniZooGame() {
                     }
                     if (state.playerShadow) state.playerShadow.visible = false;
                 }
+                state.worldProps?.update?.(dt);
+                const koiPond = state.worldProps?.koi;
+                if (koiPond) {
+                    const koiNear = !state.riding && koiPond.isNear(playerPosition.x, playerPosition.z);
+                    if (koiNear !== koiNearRef.current) {
+                        koiNearRef.current = koiNear;
+                        setNearKoi(koiNear);
+                    }
+                }
                 state.ambientBirds.forEach((bird) => bird.update(now * 0.001, dt));
 
                 // World animation continues while input is locked by the book overlay.
@@ -1801,7 +1871,7 @@ function MiniZooGame() {
                 const runAudio = getRunAudio();
                 const riverStepAudio = getRiverStepAudio();
                 if (runAudio && riverStepAudio) {
-                    const isRunning = state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
+                    const isRunning = !state.riding && state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
                     const sfxVol = volumesRef.current.sfx;
                     const inWater = Boolean(playerPosition) && !state.onBridge && isRiverArea(playerPosition.x, playerPosition.z, 0.4);
                     const activeAudio = inWater ? riverStepAudio : runAudio;
@@ -1819,6 +1889,21 @@ function MiniZooGame() {
                     } else if (!activeAudio.paused) {
                         activeAudio.pause();
                         activeAudio.currentTime = 0;
+                    }
+                }
+
+                const hoofAudio = getHoofAudio();
+                if (hoofAudio) {
+                    const hoofSfx = volumesRef.current.sfx;
+                    const galloping = Boolean(state.riding) && state.playerIsMoving && state.isGrounded && soundEnabledRef.current && gameStartedRef.current && !document.hidden;
+                    if (galloping && hoofSfx > 0) {
+                        hoofAudio.volume = Math.min(1, hoofSfx * 0.8);
+                        // Faster beat at a gallop than at a walk.
+                        hoofAudio.playbackRate = (state.riding.ride?.gait === 'run') ? 1.0 : 0.8;
+                        if (hoofAudio.paused) { try { hoofAudio.play().catch(() => {}); } catch {} }
+                    } else if (!hoofAudio.paused) {
+                        hoofAudio.pause();
+                        hoofAudio.currentTime = 0;
                     }
                 }
 
@@ -1990,7 +2075,7 @@ function MiniZooGame() {
             setInitError(true);
             setIsLoading(false);
         }
-    }, [checkNearbyAnimals, checkNearbyStaff, clearFeedingTimer, disposePlayerCharacter, getRiverAudio, getRiverStepAudio, getRunAudio, playPlayerAction]);
+    }, [checkNearbyAnimals, checkNearbyStaff, clearFeedingTimer, disposePlayerCharacter, getHoofAudio, getRiverAudio, getRiverStepAudio, getRunAudio, playPlayerAction]);
 
     const stopTogether = useCallback(() => {
         togetherRef.current?.stop();
@@ -2965,6 +3050,10 @@ function MiniZooGame() {
                     ) : null}
                      {!interfaceOpen ? <Joystick baseRef={baseRef} stickRef={stickRef} isTouchDevice={isTouchDevice} /> : null}
                       {!interfaceOpen ? <JumpButton jumpRef={jumpRef} isTouchDevice={isTouchDevice} /> : null}
+                     <KoiFeedControl
+                         visible={Boolean(nearKoi && !riding && gameStarted && characterReady && !interfaceOpen && !nearbyAnimal)}
+                         onFeed={feedKoi}
+                     />
                      <RideControl
                          visible={Boolean((riding || nearbyAnimal?.config?.rideable) && !nearbyStaff && gameStarted && characterReady && !interfaceOpen)}
                          riding={riding}
