@@ -5,10 +5,40 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 4.1** (version code 32, released 2026-11-21)
+**Current version: 4.2** (version code 33, released 2026-11-21)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.2 (2026-11-21)
+
+Version code 33.
+
+### Added
+- animals: Rideable horse with driven gait and seat position
+- controls: Speed scale and player radius hooks for riding
+- ui: Add ride horse and get off button
+- i18n: Tagalog strings for horse riding
+- multiplayer: Add ride action
+- multiplayer: Show other players riding a horse
+- game: Mount, ride and dismount horse with seated rider
+- audio: Add hoof beat loop for horse riding
+- models: Add japanese koi pond model
+- koi: Koi pond with pellets, ripples and excited swimming
+- world: Place koi pond and keep scenery clear of it
+- world: Koi pond collision footprint
+- world: Load koi pond and expose it to the game loop
+- animals: Spawn three horses
+- i18n: Tagalog string for feed koi
+- ui: Add feed koi button
+- game: Koi feeding, hoof sound while riding, eye-level cameras
+- filter: Block tagalog and english body-part, sexual and slur words
+- hud: On-screen waypoint placement and per-frame dom updater
+- ui: Move quest arrow off the task card into a screen waypoint
+
+### Fixed
+- camera: First-person eye from head bone; wire screen waypoint
+- camera: First-person eye height on horseback uses seated rider head
 
 ## 4.1 (2026-11-21)
 
