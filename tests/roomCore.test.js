@@ -103,6 +103,17 @@ test('state is clamped into the zoo and sent in the next snapshot', () => {
     assert.equal(parse(room.tick()).filter((o) => o.msg.t === 'snap').length, 0);
 });
 
+test('riding action is accepted and sent in snapshots', () => {
+    const { room, advance } = makeRoom();
+    join(room, 'a', 'Brave Parrot 7');
+    join(room, 'b', 'Kind Tiger 9');
+    advance(100);
+    room.receive('a', JSON.stringify({ t: 's', x: 5, y: 0, z: 5, yaw: 1, a: 'ride' }));
+    const snaps = parse(room.tick()).filter((o) => o.msg.t === 'snap');
+    assert.equal(snaps.length, 1);
+    assert.equal(snaps[0].msg.p[0][5], 3);
+});
+
 test('bad numbers in state are ignored and counted', () => {
     const { room, advance } = makeRoom();
     join(room, 'a', 'Brave Parrot 7');
