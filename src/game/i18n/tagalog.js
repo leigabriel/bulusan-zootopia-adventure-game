@@ -205,6 +205,8 @@ const TAGALOG = {
     'Need food': 'Kailangan ng pagkain',
     'Feeding...': 'Nagpapakain...',
     'Hold to Feed': 'Hawakan para Pakainin',
+    'Ride Horse': 'Sumakay sa Kabayo',
+    'Get Off': 'Bumaba',
     'Finish your task first': 'Tapusin muna ang gawain mo',
     'Get hay from the barn first': 'Kumuha muna ng dayami sa kamalig',
     'Find a carrot first': 'Maghanap muna ng karot',
