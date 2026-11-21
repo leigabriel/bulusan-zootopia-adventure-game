@@ -245,6 +245,15 @@ test('room codes are 4 safe characters with no vowels', () => {
     assert.equal(roomCodeFromName('zoo-1'), '');
 });
 
+test('the word filter blocks Tagalog and English body-part and sexual words', () => {
+    for (const bad of ['puki', 'p3kp3k mo', 't i t i', 'burat', 'suso', 'pwet', 'puwit', 'betlog', 'pototoy', 'boobs', 'n1pples', 'hayop ka', 'kantutan', 's e x', 'tits', 'shabu']) {
+        assert.equal(containsBlockedWord(bad), true, bad);
+    }
+    for (const fine of ['ang cute ng hayop', 'nakita ko ang kabayo', 'basement', 'therapist', 'title', 'butter', 'button', 'Kiki the parrot', 'Pepe', 'putik sa daan']) {
+        assert.equal(containsBlockedWord(fine), false, fine);
+    }
+});
+
 test('the word filter catches spaced and number spellings but not normal words', () => {
     assert.equal(containsBlockedWord('f u c k'), true);
     assert.equal(containsBlockedWord('sh1t'), true);
