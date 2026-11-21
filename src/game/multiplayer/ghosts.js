@@ -9,7 +9,12 @@ import { stepGhost } from './ghostMath.js';
 
 const CHARACTER_HEIGHT = 1.5;
 const EMOTE_SECONDS = 3;
+// The head bone sits at the top of the neck; the name tag floats above the head.
+const TAG_ABOVE_HEAD_BONE = 0.62;
+const BUBBLE_ABOVE_TAG = 0.62;
 const FILES = { boy: 'boy-character.gltf', girl: 'girl-character.gltf' };
+
+const HEAD_POINT = new THREE.Vector3();
 
 function makeLabelSprite(draw, width, height, worldHeight) {
     const canvas = document.createElement('canvas');
@@ -96,7 +101,7 @@ export class GhostPlayers {
             const height = Math.max(box.getSize(new THREE.Vector3()).y, 0.001);
             model.scale.multiplyScalar(THREE.MathUtils.clamp(CHARACTER_HEIGHT / height, 0.02, 5));
             const fitted = new THREE.Box3().setFromObject(model);
-            const template = { model, animations: gltf.animations || [], baseY: -fitted.min.y };
+            const template = { model, animations: gltf.animations || [], baseY: -fitted.min.y, height: fitted.max.y - fitted.min.y };
             this.templates.set(character, template);
             return template;
         })();
@@ -116,6 +121,9 @@ export class GhostPlayers {
             actions: {},
             current: null,
             baseY: 0,
+            height: CHARACTER_HEIGHT,
+            headBone: null,
+            tagY: CHARACTER_HEIGHT + 0.3,
             shadow: createContactShadow(1.7, 0.25),
             tag: makeNameTag(player.nick),
             bubble: null,
@@ -127,7 +135,7 @@ export class GhostPlayers {
         ghost.root.visible = !this.muted.has(player.id);
         ghost.shadow.visible = ghost.root.visible;
         ghost.root.add(ghost.tag);
-        ghost.tag.position.y = CHARACTER_HEIGHT + 0.75;
+        ghost.tag.position.y = ghost.tagY;
         this.scene.add(ghost.root);
         this.scene.add(ghost.shadow);
         this.ghosts.set(player.id, ghost);
@@ -137,6 +145,11 @@ export class GhostPlayers {
             const model = cloneSkinned(template.model);
             ghost.model = model;
             ghost.baseY = template.baseY;
+            ghost.height = template.height;
+            ghost.tagY = template.height + 0.3;
+            model.traverse((child) => {
+                if (!ghost.headBone && child.isBone && /^head$/i.test(child.name)) ghost.headBone = child;
+            });
             ghost.root.add(model);
             model.traverse((child) => {
                 if (!child.isMesh) return;
@@ -205,7 +218,7 @@ export class GhostPlayers {
         this.disposeSprite(ghost.bubble);
         ghost.bubble = makeEmoteBubble(emoteId, this.getLanguage());
         if (!ghost.bubble) return;
-        ghost.bubble.position.y = CHARACTER_HEIGHT + 1.5;
+        ghost.bubble.position.y = ghost.tagY + BUBBLE_ABOVE_TAG;
         ghost.root.add(ghost.bubble);
         ghost.bubbleUntil = nowSeconds + EMOTE_SECONDS;
     }
@@ -246,6 +259,7 @@ export class GhostPlayers {
             const wantRun = ghost.action === 'run' || next.moving;
             this.play(ghost, wantRun ? 'run' : 'idle');
             ghost.mixer?.update(dt);
+            this.placeTag(ghost);
             if (ghost.bubble && nowSeconds > ghost.bubbleUntil) {
                 this.disposeSprite(ghost.bubble);
                 ghost.bubble = null;
@@ -258,9 +272,21 @@ export class GhostPlayers {
                 this.clearLocalEmote();
             } else {
                 if (!sprite.parent) this.scene.add(sprite);
-                sprite.position.set(localPosition.x, localPosition.y + CHARACTER_HEIGHT + 1.45, localPosition.z);
+                sprite.position.set(localPosition.x, localPosition.y + CHARACTER_HEIGHT + 0.7, localPosition.z);
             }
         }
+    }
+
+    // The tag follows the real head, not a guessed height: it reads the head
+    // bone, so it stays above the head whatever the model's size or animation.
+    placeTag(ghost) {
+        if (ghost.headBone) {
+            ghost.headBone.getWorldPosition(HEAD_POINT);
+            const above = HEAD_POINT.y - ghost.root.position.y + TAG_ABOVE_HEAD_BONE;
+            ghost.tagY = Number.isFinite(above) ? above : ghost.tagY;
+        }
+        ghost.tag.position.set(0, ghost.tagY, 0);
+        if (ghost.bubble) ghost.bubble.position.set(0, ghost.tagY + BUBBLE_ABOVE_TAG, 0);
     }
 
     dispose() {
