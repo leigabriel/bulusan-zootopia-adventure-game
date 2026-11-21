@@ -5,10 +5,39 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 4.0** (version code 31, released 2026-11-19)
+**Current version: 4.1** (version code 32, released 2026-11-21)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.1 (2026-11-21)
+
+Version code 32.
+
+### Added
+- multiplayer: Add english and tagalog word filter for names and chat
+- multiplayer: Allow typed nicknames, add chat rules and private room codes
+- multiplayer: Add filtered chat with cooldown to the room
+- server: Add create room and join by code routing
+- server: Support private rooms in the local dev server
+- multiplayer: Add room modes, chat and not found status to client
+- multiplayer: Use the zoo server by default so the apk works without a variable
+- multiplayer: Keep chat log and notices in the session
+- ui: Add room setup, typed name, header chip, players panel and chat box
+- ui: Put players chip in the header and chat under the task card
+- game: Wire room modes, chat and panel; ignore game keys while typing
+- i18n: Add tagalog lines for rooms, typed names and chat
+- multiplayer: Add hook that reports whether the device is online
+- ui: Gray out play together when offline and show a connect message
+- i18n: Add tagalog lines for the offline message
+
+### Changed
+- server: Describe private rooms, default server and chat limits
+- ui: Let the game control whether the chat box is open
+
+### Fixed
+- multiplayer: Place name tags above the head bone
+- game: Start with panel and chat closed and open only one at a time
 
 ## 4.0 (2026-11-19)
 
