@@ -14,7 +14,13 @@ const TAG_ABOVE_HEAD_BONE = 0.62;
 const BUBBLE_ABOVE_TAG = 0.62;
 const FILES = { boy: 'boy-character.gltf', girl: 'girl-character.gltf' };
 
+const HORSE_SCALE = 1.3;
+// Hips sit this far above the horse's Torso2 bone, as in the local rider.
+const SEAT_LIFT = 0.8;
+
 const HEAD_POINT = new THREE.Vector3();
+const SEAT_POINT = new THREE.Vector3();
+const HIPS_POINT = new THREE.Vector3();
 
 function makeLabelSprite(draw, width, height, worldHeight) {
     const canvas = document.createElement('canvas');
@@ -109,6 +115,71 @@ export class GhostPlayers {
         try { return await promise; } finally { this.pending.delete(character); }
     }
 
+    async loadHorse() {
+        if (this.horseTemplate) return this.horseTemplate;
+        this.horsePending ??= (async () => {
+            const url = await resolveAssetUrl('/models/animals/Horse.gltf');
+            const gltf = await new Promise((resolve, reject) => createGLTFLoader().load(url, resolve, undefined, reject));
+            const model = gltf.scene;
+            model.scale.multiplyScalar(HORSE_SCALE);
+            const box = new THREE.Box3().setFromObject(model);
+            this.horseTemplate = { model, animations: gltf.animations || [], baseY: -box.min.y };
+            return this.horseTemplate;
+        })();
+        return this.horsePending;
+    }
+
+    // A horse appears under a player the first time they ride.
+    ensureHorse(ghost) {
+        if (ghost.horse || ghost.horseLoading) return;
+        ghost.horseLoading = true;
+        this.loadHorse().then((template) => {
+            if (this.disposed || this.ghosts.get(ghost.id) !== ghost) return;
+            const model = cloneSkinned(template.model);
+            const horse = { root: new THREE.Group(), model, mixer: new THREE.AnimationMixer(model), actions: {}, current: null, seat: null, baseY: template.baseY };
+            model.traverse((child) => {
+                if (child.isBone && child.name === 'Torso2') horse.seat = child;
+                if (child.isMesh) { child.castShadow = false; child.receiveShadow = false; }
+            });
+            template.animations.forEach((clip) => { horse.actions[clip.name.toLowerCase()] = horse.mixer.clipAction(clip); });
+            horse.root.add(model);
+            horse.root.visible = false;
+            this.scene.add(horse.root);
+            ghost.horse = horse;
+        }).catch(() => { /* rider shows standing without a horse */ }).finally(() => { ghost.horseLoading = false; });
+    }
+
+    playHorse(horse, name) {
+        if (horse.current === name) return;
+        const next = horse.actions[name] || horse.actions.idle;
+        if (!next) return;
+        const previous = horse.currentAction;
+        if (previous && previous !== next) previous.fadeOut(0.2);
+        next.reset().fadeIn(0.2).play();
+        horse.currentAction = next;
+        horse.current = name;
+    }
+
+    // Puts the rider on the horse's back and aligns the hips with the seat.
+    seatRider(ghost, next) {
+        const { horse, model } = ghost;
+        horse.root.visible = ghost.root.visible;
+        horse.root.position.set(next.x, next.y + horse.baseY + 0.02, next.z);
+        horse.model.rotation.y = next.yaw + Math.PI;
+        this.playHorse(horse, next.moving ? 'gallop' : 'idle');
+        horse.mixer.update(0);
+        horse.root.updateMatrixWorld(true);
+        if (!model || !horse.seat) return;
+        horse.seat.getWorldPosition(SEAT_POINT);
+        SEAT_POINT.y += SEAT_LIFT;
+        model.position.set(0, 0, 0);
+        ghost.root.updateMatrixWorld(true);
+        if (!ghost.hipsBone) model.traverse((child) => { if (!ghost.hipsBone && child.isBone && /hips/i.test(child.name)) ghost.hipsBone = child; });
+        if (!ghost.hipsBone) return;
+        ghost.hipsBone.getWorldPosition(HIPS_POINT);
+        model.position.set(SEAT_POINT.x - HIPS_POINT.x, SEAT_POINT.y - HIPS_POINT.y, SEAT_POINT.z - HIPS_POINT.z);
+    }
+
     add(player) {
         if (this.disposed || this.ghosts.has(player.id)) return;
         const ghost = {
@@ -175,7 +246,10 @@ export class GhostPlayers {
         if (!next) return;
         const previous = ghost.currentAction;
         if (previous && previous !== next) previous.fadeOut(0.2);
-        next.reset().fadeIn(0.2).play();
+        const once = name === 'sitdown';
+        next.reset().setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity);
+        next.clampWhenFinished = once;
+        next.fadeIn(0.2).play();
         ghost.currentAction = next;
         ghost.current = name;
     }
@@ -187,6 +261,10 @@ export class GhostPlayers {
         this.scene.remove(ghost.root);
         this.scene.remove(ghost.shadow);
         ghost.mixer?.stopAllAction();
+        if (ghost.horse) {
+            this.scene.remove(ghost.horse.root);
+            ghost.horse.mixer.stopAllAction();
+        }
         ghost.shadow.geometry.dispose();
         ghost.shadow.material.dispose();
         this.disposeSprite(ghost.tag);
@@ -256,9 +334,20 @@ export class GhostPlayers {
             // The player model faces yaw + PI in third person; ghosts match.
             if (ghost.model) ghost.model.rotation.y = next.yaw + Math.PI;
             ghost.shadow.position.set(next.x, next.y + 0.055, next.z);
-            const wantRun = ghost.action === 'run' || next.moving;
-            this.play(ghost, wantRun ? 'run' : 'idle');
-            ghost.mixer?.update(dt);
+            const riding = ghost.action === 'ride';
+            if (riding) this.ensureHorse(ghost);
+            if (ghost.horse) ghost.horse.root.visible = false;
+            if (riding && ghost.horse) {
+                this.play(ghost, 'sitdown');
+                ghost.mixer?.update(dt);
+                ghost.horse.mixer.update(dt);
+                this.seatRider(ghost, next);
+            } else {
+                if (ghost.model) ghost.model.position.set(0, 0, 0);
+                const wantRun = ghost.action === 'run' || next.moving;
+                this.play(ghost, wantRun ? 'run' : 'idle');
+                ghost.mixer?.update(dt);
+            }
             this.placeTag(ghost);
             if (ghost.bubble && nowSeconds > ghost.bubbleUntil) {
                 this.disposeSprite(ghost.bubble);

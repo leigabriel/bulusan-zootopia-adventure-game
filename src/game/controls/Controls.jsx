@@ -95,8 +95,8 @@ export function createMovementHandler(camera, state) {
         const wade = state.wadeScale ?? 1;
         state.wadeScale = wade + (wadeTarget - wade) * (1 - Math.exp(-9 * dt));
 
-        targetVX *= MOVEMENT_SPEED * state.wadeScale;
-        targetVZ *= MOVEMENT_SPEED * state.wadeScale;
+        targetVX *= MOVEMENT_SPEED * state.wadeScale * (state.speedScale ?? 1);
+        targetVZ *= MOVEMENT_SPEED * state.wadeScale * (state.speedScale ?? 1);
 
         // Smooth acceleration/deceleration
         const hasInput = inputMag > 0.1;
@@ -112,7 +112,7 @@ export function createMovementHandler(camera, state) {
         let nextX = previousX + velocityX * dt;
         let nextZ = previousZ + velocityZ * dt;
 
-        const PLAYER_RADIUS = 1.5; // Width of the player's body
+        const PLAYER_RADIUS = state.playerRadius ?? 1.5; // Width of the player's body (wider on horseback)
         const playableLimit = PLAYABLE_BOUNDARY - PLAYER_RADIUS;
         nextX = THREE.MathUtils.clamp(nextX, -playableLimit, playableLimit);
         nextZ = THREE.MathUtils.clamp(nextZ, -playableLimit, playableLimit);

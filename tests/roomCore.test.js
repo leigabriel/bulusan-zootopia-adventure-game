@@ -103,6 +103,17 @@ test('state is clamped into the zoo and sent in the next snapshot', () => {
     assert.equal(parse(room.tick()).filter((o) => o.msg.t === 'snap').length, 0);
 });
 
+test('riding action is accepted and sent in snapshots', () => {
+    const { room, advance } = makeRoom();
+    join(room, 'a', 'Brave Parrot 7');
+    join(room, 'b', 'Kind Tiger 9');
+    advance(100);
+    room.receive('a', JSON.stringify({ t: 's', x: 5, y: 0, z: 5, yaw: 1, a: 'ride' }));
+    const snaps = parse(room.tick()).filter((o) => o.msg.t === 'snap');
+    assert.equal(snaps.length, 1);
+    assert.equal(snaps[0].msg.p[0][5], 3);
+});
+
 test('bad numbers in state are ignored and counted', () => {
     const { room, advance } = makeRoom();
     join(room, 'a', 'Brave Parrot 7');
@@ -232,6 +243,15 @@ test('room codes are 4 safe characters with no vowels', () => {
     assert.equal(isValidRoomCode('AB12'), false);
     assert.equal(roomCodeFromName(privateRoomName('K7M2')), 'K7M2');
     assert.equal(roomCodeFromName('zoo-1'), '');
+});
+
+test('the word filter blocks Tagalog and English body-part and sexual words', () => {
+    for (const bad of ['puki', 'p3kp3k mo', 't i t i', 'burat', 'suso', 'pwet', 'puwit', 'betlog', 'pototoy', 'boobs', 'n1pples', 'hayop ka', 'kantutan', 's e x', 'tits', 'shabu']) {
+        assert.equal(containsBlockedWord(bad), true, bad);
+    }
+    for (const fine of ['ang cute ng hayop', 'nakita ko ang kabayo', 'basement', 'therapist', 'title', 'butter', 'button', 'Kiki the parrot', 'Pepe', 'putik sa daan']) {
+        assert.equal(containsBlockedWord(fine), false, fine);
+    }
 });
 
 test('the word filter catches spaced and number spellings but not normal words', () => {

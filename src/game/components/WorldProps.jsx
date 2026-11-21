@@ -6,6 +6,7 @@ import { isLandAccessible } from '../utils/riverMath.js';
 import { WORLD_PROPS, getSignBoardRotation, isInKeepClearZone, isInsideTigerEnclosure } from '../data/worldPoints.js';
 import { getTerrainHeight, plantObjectOnTerrain } from './Terrain.jsx';
 import { BRIDGE_SCALE, getBridgeFrame } from '../data/bridge.js';
+import { createKoiPond } from './KoiPond.jsx';
 
 // New environment art and structures (GLB, meshopt-compressed, vertex coloured).
 // Hand-placed props come from WORLD_PROPS; trees and logs are scattered with a
@@ -21,6 +22,7 @@ const MODEL_PATHS = {
     parrotRun: '/models/structures/parrot-run.glb',
     signBoard: '/models/structures/trailhead-sign.glb',
     footbridge: '/models/structures/creek-footbridge.glb',
+    koiPond: '/models/structures/koi-pond.glb',
 };
 
 const BUDGETS = {
@@ -88,10 +90,10 @@ function placeSingle(scene, gltf, prop, { castShadow = false, sink = 0.05 } = {}
 
 export async function loadWorldProps(scene, quality = 'medium', { existingTrees = [] } = {}) {
     const budget = BUDGETS[quality] || BUDGETS.medium;
-    const [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge] = await Promise.all(
+    const [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge, koiPondGltf] = await Promise.all(
         Object.values(MODEL_PATHS).map(loadGLB),
     );
-    [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge].forEach((gltf) => gltf && tuneMaterials(gltf.scene));
+    [oak, shadeTree, cherryTree, fallenLog, haystack, stable, parrotRun, signBoard, footbridge, koiPondGltf].forEach((gltf) => gltf && tuneMaterials(gltf.scene));
 
     const meshes = [];
     const disposables = [];
@@ -130,10 +132,20 @@ export async function loadWorldProps(scene, quality = 'medium', { existingTrees 
         obstacles.push(...footprintCircles(prop, FOOTPRINTS.signBoard));
     }
 
+    // Koi pond: sits on the highest rim point so no side is buried.
+    let koi = null;
+    if (koiPondGltf) {
+        const pond = WORLD_PROPS.koiPond;
+        const reach = 2.2 * pond.scale;
+        const rimHeights = [[0, 0], [reach, 0], [-reach, 0], [0, reach], [0, -reach]].map(([dx, dz]) => getTerrainHeight(pond.x + dx, pond.z + dz));
+        koi = createKoiPond(scene, koiPondGltf, { ...pond, y: Math.max(...rimHeights) - 0.06 }, { castShadow });
+        obstacles.push(...footprintCircles(pond, FOOTPRINTS.koiPond));
+    }
+
     // Scattered trees and logs. They keep clear of the plaza, the river, the
     // tiger enclosure, mission points, hand-placed props and existing trees.
     const rng = createRng(2611);
-    const fixedProps = [WORLD_PROPS.stable, WORLD_PROPS.parrotRun, WORLD_PROPS.signBoard, ...WORLD_PROPS.haystacks];
+    const fixedProps = [WORLD_PROPS.stable, WORLD_PROPS.parrotRun, WORLD_PROPS.signBoard, ...WORLD_PROPS.haystacks, WORLD_PROPS.koiPond];
     const isBlocked = (x, z) => (
         Math.hypot(x, z) < PLAZA_RADIUS
         || !isLandAccessible(x, z, 4)
@@ -164,7 +176,10 @@ export async function loadWorldProps(scene, quality = 'medium', { existingTrees 
 
     return {
         obstacles,
+        koi,
+        update(dt) { koi?.update(dt); },
         dispose() {
+            koi?.dispose();
             meshes.forEach((mesh) => mesh.parent?.remove(mesh));
             // Geometry and materials belong to the shared GLB cache.
             disposables.forEach((item) => item.dispose?.());
