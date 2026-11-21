@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RoomCore } from '../src/game/multiplayer/roomCore.js';
 import {
-    CLOSE, EMOTES, EMOTE_COOLDOWN_MS, IDLE_TIMEOUT_MS, MAX_PLAYERS, PROTOCOL_VERSION,
-    isValidEmote, isValidNickname, makeNickname,
+    CHAT_COOLDOWN_MS, CLOSE, EMOTES, EMOTE_COOLDOWN_MS, IDLE_TIMEOUT_MS, MAX_PLAYERS, PROTOCOL_VERSION,
+    isValidEmote, isValidNickname, isValidRoomCode, makeNickname, makeRoomCode, normalizeRoomCode,
+    privateRoomName, roomCodeFromName,
 } from '../src/game/multiplayer/protocol.js';
+import { containsBlockedWord } from '../src/game/multiplayer/wordFilter.js';
 
 function makeRoom() {
     let time = 1000;
@@ -20,13 +22,16 @@ function join(room, connId, nick) {
     return parse(room.receive(connId, hello(nick)));
 }
 
-test('nicknames come only from the safe lists', () => {
+test('list nicknames and kind typed nicknames are valid', () => {
     assert.ok(isValidNickname('Brave Parrot 7'));
     assert.ok(isValidNickname(makeNickname()));
     for (let i = 0; i < 200; i += 1) assert.ok(isValidNickname(makeNickname()));
-    assert.equal(isValidNickname('Maria Santos'), false);
-    assert.equal(isValidNickname('Brave Parrot 0'), false);
-    assert.equal(isValidNickname('Brave Parrot 100'), false);
+    assert.ok(isValidNickname('Lei Gab'));
+    assert.equal(isValidNickname('fuck123'), false);
+    assert.equal(isValidNickname('09171234567'), false);
+    assert.equal(isValidNickname('me@mail'), false);
+    assert.equal(isValidNickname('ab'), false);
+    assert.equal(isValidNickname('  Lei Gab'), false);
     assert.equal(isValidNickname('<b>Brave</b> Parrot 7'), false);
     assert.equal(isValidNickname(null), false);
 });
@@ -52,10 +57,10 @@ test('hello gives a welcome and tells others about the new player', () => {
     assert.equal(room.size, 2);
 });
 
-test('a hello with a free-typed name is refused', () => {
+test('a hello with a bad typed name is refused', () => {
     const { room } = makeRoom();
     room.connect('a');
-    const out = room.receive('a', hello('Maria Santos'));
+    const out = room.receive('a', hello('Fuck Tiger 7'));
     assert.equal(out[0].close, 'a');
     assert.equal(out[0].code, CLOSE.BAD_HELLO);
     assert.equal(room.size, 0);
@@ -181,4 +186,59 @@ test('ping gets a pong', () => {
     join(room, 'a', 'Brave Parrot 7');
     const out = parse(room.receive('a', JSON.stringify({ t: 'p' })));
     assert.equal(out[0].msg.t, 'pong');
+});
+
+test('chat reaches everyone, including the sender, after the checks', () => {
+    const { room, advance } = makeRoom();
+    join(room, 'a', 'Brave Parrot 7');
+    join(room, 'b', 'Kind Tiger 9');
+    advance(2000);
+    const out = parse(room.receive('a', JSON.stringify({ t: 'c', m: '  Hi   friends!  ' })));
+    assert.equal(out.length, 1);
+    assert.equal(out[0].broadcast, true);
+    assert.deepEqual(out[0].msg, { t: 'chat', id: 1, m: 'Hi friends!' });
+});
+
+test('chat with a bad word, link or number is refused to the sender only', () => {
+    const { room, advance } = makeRoom();
+    join(room, 'a', 'Brave Parrot 7');
+    for (const [text, reason] of [['you are a b1tch', 'blocked'], ['see www.x.com', 'contact'], ['call 09171234567', 'contact'], ['<b>hi</b>', 'chars'], ['x'.repeat(61), 'long']]) {
+        advance(2000);
+        const out = parse(room.receive('a', JSON.stringify({ t: 'c', m: text })));
+        assert.equal(out.length, 1, text);
+        assert.equal(out[0].to, 'a');
+        assert.deepEqual(out[0].msg, { t: 'chatno', r: reason });
+    }
+});
+
+test('chat is rate limited', () => {
+    const { room, advance } = makeRoom();
+    join(room, 'a', 'Brave Parrot 7');
+    advance(2000);
+    assert.equal(parse(room.receive('a', JSON.stringify({ t: 'c', m: 'one' })))[0].msg.t, 'chat');
+    advance(300);
+    assert.deepEqual(parse(room.receive('a', JSON.stringify({ t: 'c', m: 'two' })))[0].msg, { t: 'chatno', r: 'slow' });
+    advance(CHAT_COOLDOWN_MS);
+    assert.equal(parse(room.receive('a', JSON.stringify({ t: 'c', m: 'three' })))[0].msg.t, 'chat');
+});
+
+test('room codes are 4 safe characters with no vowels', () => {
+    for (let i = 0; i < 300; i += 1) {
+        const code = makeRoomCode();
+        assert.ok(isValidRoomCode(code), code);
+        assert.equal(/[AEIOUY01]/.test(code), false, code);
+    }
+    assert.equal(normalizeRoomCode(' k7-m2x '), 'K7M2');
+    assert.equal(isValidRoomCode('AB12'), false);
+    assert.equal(roomCodeFromName(privateRoomName('K7M2')), 'K7M2');
+    assert.equal(roomCodeFromName('zoo-1'), '');
+});
+
+test('the word filter catches spaced and number spellings but not normal words', () => {
+    assert.equal(containsBlockedWord('f u c k'), true);
+    assert.equal(containsBlockedWord('sh1t'), true);
+    assert.equal(containsBlockedWord('ang bobo mo'), true);
+    for (const fine of ['class', 'Sassy the tiger', 'I love the zoo', 'Assistant ranger', 'Hello po', 'Kumusta ka na?']) {
+        assert.equal(containsBlockedWord(fine), false, fine);
+    }
 });
