@@ -709,11 +709,11 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
         setTogetherOpen(true);
     }, []);
 
-    const handleTogetherStart = useCallback((nick) => {
+    const handleTogetherStart = useCallback((choice) => {
         setTogetherOpen(false);
         playGameButtonSfx('confirm');
         setStarting(true);
-        onStartTogether?.(nick);
+        onStartTogether?.(choice);
     }, [onStartTogether]);
 
     const handleProfileSaved = useCallback((profile) => {
@@ -1006,7 +1006,7 @@ export function MissionCard({ task, status = '', navigation, variant = 'compact'
 
 const WEBSITE_URL = 'https://bulusanzoo.com';
 
-export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, cameraMode = 'third', onCycleCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
+export function GameHUD({ togetherChip = null, togetherChat = null, playerName, onMenuClick, onPlayerDetails, onTasksClick, onBook, onCamera, cameraMode = 'third', onCycleCamera, currentTask, taskProgress, missionItem, navigation, guidanceEnabled, onToggleGuidance }) {
     useLanguage();
     const [taskTrackerOpen, setTaskTrackerOpen] = useState(false);
     const [taskCardVisible, setTaskCardVisible] = useState(() => {
@@ -1058,13 +1058,17 @@ export function GameHUD({ playerName, onMenuClick, onPlayerDetails, onTasksClick
                             )}
                         </div>
                     ) : null}
+                    {togetherChat}
                 </div>
 
-                {/* Right: tasks */}
+                {/* Right: players chip and tasks on one row, camera view under them */}
                 <div className="pointer-events-auto flex flex-col items-end gap-2" data-ui-hud="true">
-                    <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label={t('Tasks')} data-ui-button="true" data-sfx-self="true">
-                        <GrassIcon name="tasks" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {togetherChip}
+                        <button type="button" onClick={onTasksClick} className="sz-icon-btn" aria-label={t('Tasks')} data-ui-button="true" data-sfx-self="true">
+                            <GrassIcon name="tasks" />
+                        </button>
+                    </div>
                     <button
                         type="button"
                         onClick={onCycleCamera}
