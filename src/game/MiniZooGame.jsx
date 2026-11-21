@@ -15,6 +15,7 @@ import { createWaterTrail } from './components/WaterTrail.jsx';
 import { createRiver, updateRiver, updateRiverQuality, disposeRiver, getRiverMetrics, isLandAccessible, findAccessiblePosition, isRiverArea } from './components/River.jsx';
 import { loadNewHouses } from './components/Structures.jsx';
 import { loadWorldProps } from './components/WorldProps.jsx';
+import { updateWaypointHud } from './utils/waypointHud.js';
 import { loadRiverAnimals } from './components/RiverAnimals.jsx';
 import { releaseGLBCache } from './utils/glbCache.js';
 import { createGLTFLoader } from './utils/gltfLoader.js';
@@ -34,6 +35,7 @@ import {
     HoldToFeedControl,
     RideControl,
     KoiFeedControl,
+    WaypointMarker,
     FeedingSuccessNotification,
     QuitModal,
     ResetTasksModal,
@@ -98,6 +100,7 @@ const PLAYER_CHARACTER_TARGET_HEIGHT = 1.5;
 // is read from the skeleton instead (see the first-person camera).
 const EYE_HEIGHT_ABOVE_FEET = PLAYER_CHARACTER_TARGET_HEIGHT * 0.92;
 const EYE_FORWARD = 0.12;
+const EYE_ABOVE_HEAD_BONE = 0.1;
 // Third-person look target, above the player anchor (which is 0.2 m above the feet).
 const THIRD_PERSON_FOCUS_UP = 1.2;
 const MOUNTED_FOCUS_UP = 3.4;
@@ -482,6 +485,7 @@ function MiniZooGame() {
     const interfaceOpenRef = useRef(false);
     const observationStartedAtRef = useRef(0);
     const missionCheckRef = useRef(() => {});
+    const waypointRef = useRef(null);
     const graphicsQualityRef = useRef((getSettings().graphicsQuality || 'medium'));
     const shadowQualityRef = useRef(normalizeShadowQuality(getSettings().shadowQuality));
     // Cached volumes so the render loop never parses localStorage each frame.
@@ -682,6 +686,7 @@ function MiniZooGame() {
         const progress = missionProgressRef.current;
         if (progress.completedTaskIds.length >= STORY_TASKS.length) {
             if (state.missionObjects?.marker) state.missionObjects.marker.visible = false;
+            state.waypointTarget = null;
             publishNavigation({ distance: null, direction: 0, onScreen: true });
             return;
         }
@@ -713,6 +718,8 @@ function MiniZooGame() {
         const dz = target ? playerPosition.z - target.z : 0;
         const distance = target ? Math.sqrt(dx * dx + dz * dz) : null;
         const within = (limit) => distance !== null && distance <= limit;
+        // The on-screen waypoint is drawn every frame from this target.
+        state.waypointTarget = guidanceEnabledRef.current && target && !['book', 'photo'].includes(task.target) ? target : null;
         const marker = state.missionObjects?.marker;
         if (marker) {
             const hideNear = distance !== null && distance < 5.5;
@@ -1763,27 +1770,26 @@ function MiniZooGame() {
                         camera.quaternion.copy(previousCameraQuaternion).slerp(targetCameraQuaternion, cameraTransitionBlend);
                     }
                 } else if (state.playerAnchor) {
-                    // Eyes of the character: a fixed height above the feet on foot, the
-                    // rider's head bone on horseback, nudged forward so the camera
-                    // never sits inside the face.
+                    // Eyes of the character: read from the head bone so the view
+                    // matches the model whatever its size, on foot or on a horse.
+                    // The fixed height is only a fallback until the model loads.
                     const feetY = playerPosition.y - (state.playerHeight ?? PLAYER_HEIGHT);
                     let eyeY = feetY + EYE_HEIGHT_ABOVE_FEET;
-                    if (state.riding && state.playerCharacter) {
+                    if (state.playerCharacter) {
                         if (!state.playerHeadBone) {
                             state.playerCharacter.traverse((o) => { if (!state.playerHeadBone && o.isBone && /^head$/i.test(o.name)) state.playerHeadBone = o; });
                         }
                         if (state.playerHeadBone) {
                             state.playerCharacter.updateMatrixWorld(true);
                             state.playerHeadBone.getWorldPosition(rideHips);
-                            eyeY = rideHips.y + 0.1;
-                        } else {
-                            eyeY = feetY + 5.0;
+                            eyeY = rideHips.y + EYE_ABOVE_HEAD_BONE;
                         }
-                        smoothedEyeY += (eyeY - smoothedEyeY) * (1 - Math.exp(-12 * dt));
-                        eyeY = smoothedEyeY;
-                    } else {
-                        smoothedEyeY = eyeY;
                     }
+                    // Smooth the head's run bounce; snap when the mode just changed.
+                    smoothedEyeY = cameraTransition.active || smoothedEyeY === 0
+                        ? eyeY
+                        : smoothedEyeY + (eyeY - smoothedEyeY) * (1 - Math.exp(-14 * dt));
+                    eyeY = smoothedEyeY;
                     firstPersonCameraPosition.set(
                         playerPosition.x - Math.sin(state.yaw) * EYE_FORWARD,
                         eyeY,
@@ -1835,6 +1841,7 @@ function MiniZooGame() {
                     if (state.playerShadow) state.playerShadow.visible = false;
                 }
                 state.worldProps?.update?.(dt);
+                updateWaypointHud(waypointRef.current, state.waypointTarget, camera, playerPosition, !interfaceOpenRef.current);
                 const koiPond = state.worldProps?.koi;
                 if (koiPond) {
                     const koiNear = !state.riding && koiPond.isNear(playerPosition.x, playerPosition.z);
@@ -3010,6 +3017,7 @@ function MiniZooGame() {
             )}
             {gameStarted && (
                 <>
+                    <WaypointMarker elRef={waypointRef} />
                     {!interfaceOpen ? (
                         <GameHUD
                             playerName={playerName || 'Explorer'}
