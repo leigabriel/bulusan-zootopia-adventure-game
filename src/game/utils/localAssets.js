@@ -54,6 +54,7 @@ const WORLD_PROP_MODELS = [
   '/models/structures/parrot-run.glb',
   '/models/structures/creek-footbridge.glb',
   '/models/structures/trailhead-sign.glb',
+  '/models/structures/koi-pond.glb',
 ];
 
 const AUDIO_ASSETS = [
@@ -72,6 +73,7 @@ const AUDIO_ASSETS = [
   '/audio/game-bg-music.mp3',
   '/audio/goat.mp3',
   '/audio/horse.mp3',
+  '/audio/horse-running.mp3',
   '/audio/monkey.mp3',
   '/audio/ostrich.mp3',
   '/audio/pigeon.mp3',
