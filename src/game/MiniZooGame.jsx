@@ -496,6 +496,7 @@ function MiniZooGame() {
     const togetherRef = useRef(null);
     const [togetherInfo, setTogetherInfo] = useState(null);
     const [togetherPanelOpen, setTogetherPanelOpen] = useState(false);
+    const [togetherChatOpen, setTogetherChatOpen] = useState(false);
     const multiplayerUrl = useMemo(() => getMultiplayerUrl(), []);
 
     const isEnteringGameRef = useRef(false);
@@ -1907,6 +1908,7 @@ function MiniZooGame() {
         togetherRef.current = null;
         setTogetherInfo(null);
         setTogetherPanelOpen(false);
+        setTogetherChatOpen(false);
     }, []);
 
     const startTogether = useCallback(({ nick, mode, code }, character) => {
@@ -1924,6 +1926,9 @@ function MiniZooGame() {
             onChange: setTogetherInfo,
         });
         togetherRef.current = session;
+        // Every Play Together box starts closed.
+        setTogetherPanelOpen(false);
+        setTogetherChatOpen(false);
         setTogetherInfo(session.snapshot());
         session.start();
     }, [multiplayerUrl]);
@@ -2846,10 +2851,10 @@ function MiniZooGame() {
                             guidanceEnabled={guidanceEnabled}
                             onToggleGuidance={() => setGuidanceEnabled((enabled) => !enabled)}
                             togetherChip={togetherInfo ? (
-                                <TogetherChip info={togetherInfo} open={togetherPanelOpen} onToggle={() => setTogetherPanelOpen((open) => !open)} />
+                                <TogetherChip info={togetherInfo} open={togetherPanelOpen} onToggle={() => { setTogetherChatOpen(false); setTogetherPanelOpen((open) => !open); }} />
                             ) : null}
                             togetherChat={togetherInfo ? (
-                                <TogetherChat info={togetherInfo} onSend={(text) => Boolean(togetherRef.current?.sendChat(text))} />
+                                <TogetherChat info={togetherInfo} open={togetherChatOpen} onOpenChange={(next) => { if (next) setTogetherPanelOpen(false); setTogetherChatOpen(next); }} onSend={(text) => Boolean(togetherRef.current?.sendChat(text))} />
                             ) : null}
                         />
                     ) : null}
