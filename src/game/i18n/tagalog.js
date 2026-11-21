@@ -518,6 +518,10 @@ const TAGALOG = {
     'Use letters and numbers only.': 'Letra at numero lang ang gamitin.',
     'That message is too long.': 'Masyadong mahaba ang mensahe.',
     'Slow down a little!': 'Dahan-dahan lang!',
+    'No internet connection': 'Walang internet',
+    'No Internet': 'Walang Internet',
+    'Please connect to the internet.': 'Mangyaring kumonekta sa internet.',
+    'OK': 'OK',
 };
 
 export default TAGALOG;
