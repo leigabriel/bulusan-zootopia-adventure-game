@@ -44,6 +44,12 @@ export const FOOTPRINTS = {
         { x: 0, z: 3.4, radius: 3.6 },
     ],
     haystack: [{ x: 0, z: 0, radius: 1.0 }],
+    // The pond is 3.0 x 2.1 m with a raised rim, so the player cannot wade in.
+    koiPond: [
+        { x: -0.85, z: 0, radius: 1.15 },
+        { x: 0, z: 0, radius: 1.15 },
+        { x: 0.85, z: 0, radius: 1.15 },
+    ],
     fallenLog: [
         { x: -1.0, z: 0, radius: 0.55 },
         { x: 0, z: 0, radius: 0.55 },
