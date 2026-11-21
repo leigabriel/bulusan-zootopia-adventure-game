@@ -1498,6 +1498,24 @@ export function RideControl({ visible, riding = false, onToggle }) {
     );
 }
 
+export function KoiFeedControl({ visible, onFeed }) {
+    useLanguage();
+    if (!visible) return null;
+    return (
+        <div className="absolute left-[75%] top-[70%] z-70 -translate-x-1/2 -translate-y-1/2">
+            <button
+                type="button"
+                data-ui-button="true"
+                onClick={(event) => { event.stopPropagation(); onFeed?.(); }}
+                onPointerDown={(event) => event.stopPropagation()}
+                className="rounded-2xl border-2 border-orange-200/80 bg-orange-600/95 px-4 py-2 text-sm font-black uppercase tracking-wider text-white shadow-xl backdrop-blur-md active:scale-95"
+            >
+                {t('Feed Koi')}
+            </button>
+        </div>
+    );
+}
+
 export function HoldToFeedControl({
     visible,
     animalName,
