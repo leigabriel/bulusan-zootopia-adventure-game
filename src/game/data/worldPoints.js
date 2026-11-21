@@ -33,6 +33,8 @@ export const WORLD_PROPS = {
     stable: { x: 100, z: -138, rotation: 0.12, scale: 1.7 },
     parrotRun: { x: -55, z: -42, rotation: 0, scale: 3.2 },
     signBoard: { x: 30, z: -8, scale: 1.7 },
+    // Japanese koi pond in the meadow west of the statue; 1.8x like the other props.
+    koiPond: { x: -50, z: 0, rotation: 0.3, scale: 1.8 },
     haystacks: [
         { x: 160, z: -138, rotation: 0.4, scale: 1.8 },
         { x: 126, z: -168, rotation: 2.1, scale: 1.8 },
@@ -68,6 +70,7 @@ const KEEP_CLEAR_ZONES = [
     { ...WORLD_PROPS.stable, radius: 14 },
     { ...WORLD_PROPS.parrotRun, radius: 10 },
     { ...WORLD_PROPS.signBoard, radius: 7 },
+    { ...WORLD_PROPS.koiPond, radius: 9 },
     ...WORLD_PROPS.haystacks.map((hay) => ({ x: hay.x, z: hay.z, radius: 4 })),
 ];
 
