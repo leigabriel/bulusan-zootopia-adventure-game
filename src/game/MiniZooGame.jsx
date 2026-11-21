@@ -1143,6 +1143,7 @@ function MiniZooGame() {
         }
         horse.stopRide();
         state.riding = null;
+        state.riderHeadY = undefined;
         state.playerHeight = PLAYER_HEIGHT;
         state.speedScale = 1;
         state.playerRadius = 1.5;
@@ -1775,7 +1776,12 @@ function MiniZooGame() {
                     // The fixed height is only a fallback until the model loads.
                     const feetY = playerPosition.y - (state.playerHeight ?? PLAYER_HEIGHT);
                     let eyeY = feetY + EYE_HEIGHT_ABOVE_FEET;
-                    if (state.playerCharacter) {
+                    if (state.riding && state.riderHeadY !== undefined) {
+                        // The rider is seated later in the frame, so the head
+                        // height measured there last frame is used (the model
+                        // is still at ground level at this point).
+                        eyeY = state.riderHeadY + EYE_ABOVE_HEAD_BONE;
+                    } else if (state.playerCharacter) {
                         if (!state.playerHeadBone) {
                             state.playerCharacter.traverse((o) => { if (!state.playerHeadBone && o.isBone && /^head$/i.test(o.name)) state.playerHeadBone = o; });
                         }
@@ -1839,6 +1845,14 @@ function MiniZooGame() {
                         rider.position.add(rideSeat).sub(rideHips);
                     }
                     if (state.playerShadow) state.playerShadow.visible = false;
+                    if (!state.playerHeadBone) {
+                        rider.traverse((o) => { if (!state.playerHeadBone && o.isBone && /^head$/i.test(o.name)) state.playerHeadBone = o; });
+                    }
+                    if (state.playerHeadBone) {
+                        rider.updateMatrixWorld(true);
+                        state.playerHeadBone.getWorldPosition(rideHips);
+                        state.riderHeadY = rideHips.y;
+                    }
                 }
                 state.worldProps?.update?.(dt);
                 updateWaypointHud(waypointRef.current, state.waypointTarget, camera, playerPosition, !interfaceOpenRef.current);
