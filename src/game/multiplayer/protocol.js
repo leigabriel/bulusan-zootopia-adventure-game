@@ -20,7 +20,7 @@ export const WORLD_LIMIT = 200;
 export const HEIGHT_MIN = -5;
 export const HEIGHT_MAX = 60;
 
-export const ACTIONS = ['idle', 'run', 'jump'];
+export const ACTIONS = ['idle', 'run', 'jump', 'ride'];
 export const CHARACTERS = ['boy', 'girl'];
 
 // Nicknames. The game suggests one from these lists ("Brave Parrot 24"), and a
