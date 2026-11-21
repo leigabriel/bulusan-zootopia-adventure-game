@@ -53,7 +53,7 @@ import { cx } from './ui/UIComponents.jsx';
 import { t, useLanguage, getLanguage } from './i18n/index.js';
 import { TogetherSession } from './multiplayer/session.js';
 import { getMultiplayerUrl } from './multiplayer/config.js';
-import { TogetherHUD } from './ui/TogetherUI.jsx';
+import { TogetherChat, TogetherChip, TogetherPanel } from './ui/TogetherUI.jsx';
 
 import {
     getTasks,
@@ -495,6 +495,7 @@ function MiniZooGame() {
     const [showMenu, setShowMenu] = useState(true);
     const togetherRef = useRef(null);
     const [togetherInfo, setTogetherInfo] = useState(null);
+    const [togetherPanelOpen, setTogetherPanelOpen] = useState(false);
     const multiplayerUrl = useMemo(() => getMultiplayerUrl(), []);
 
     const isEnteringGameRef = useRef(false);
@@ -1905,9 +1906,10 @@ function MiniZooGame() {
         togetherRef.current?.stop();
         togetherRef.current = null;
         setTogetherInfo(null);
+        setTogetherPanelOpen(false);
     }, []);
 
-    const startTogether = useCallback((nick, character) => {
+    const startTogether = useCallback(({ nick, mode, code }, character) => {
         const state = gameStateRef.current;
         if (!state.scene || !multiplayerUrl) return;
         togetherRef.current?.stop();
@@ -1916,6 +1918,8 @@ function MiniZooGame() {
             url: multiplayerUrl,
             nick,
             character,
+            mode,
+            code,
             getLanguage,
             onChange: setTogetherInfo,
         });
@@ -1965,7 +1969,7 @@ function MiniZooGame() {
 
             // Only a nickname from the list and the character go online. The
             // real player name stays on this device.
-            if (options.nick) startTogether(options.nick, profile.gender);
+            if (options.nick) startTogether(options, profile.gender);
 
             setTimeout(() => {
                 setEnterFadeActive(false);
@@ -1977,7 +1981,7 @@ function MiniZooGame() {
             }, 250);
         }, 380);
     }, [playAmbience, playMusic, handleSelectCharacter, startTogether]);
-    const handleStartTogether = useCallback((nick) => handleStartGame({ nick }), [handleStartGame]);
+    const handleStartTogether = useCallback((choice) => handleStartGame(choice), [handleStartGame]);
 
     const handleProfileSaved = useCallback((profile) => {
         setPlayerName(profile.name);
@@ -2333,6 +2337,9 @@ function MiniZooGame() {
 
     useEffect(() => {
         const onKey = e => {
+            // Typing in the chat or name box must not open dialogue or feed animals.
+            const tag = e.target && e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
             const key = e.key.toLowerCase();
             if (bookOpen) return;
             if (key === 'e' && ['collect-hay', 'collect-carrot'].includes(missionProgressRef.current.activeTaskId) && (missionNavigation.distance !== null && missionNavigation.distance <= 6)) {
@@ -2838,11 +2845,19 @@ function MiniZooGame() {
                             navigation={guidanceEnabled ? missionNavigation : { distance: null, direction: 0, onScreen: true }}
                             guidanceEnabled={guidanceEnabled}
                             onToggleGuidance={() => setGuidanceEnabled((enabled) => !enabled)}
+                            togetherChip={togetherInfo ? (
+                                <TogetherChip info={togetherInfo} open={togetherPanelOpen} onToggle={() => setTogetherPanelOpen((open) => !open)} />
+                            ) : null}
+                            togetherChat={togetherInfo ? (
+                                <TogetherChat info={togetherInfo} onSend={(text) => Boolean(togetherRef.current?.sendChat(text))} />
+                            ) : null}
                         />
                     ) : null}
                     {!interfaceOpen && togetherInfo ? (
-                        <TogetherHUD
+                        <TogetherPanel
                             info={togetherInfo}
+                            open={togetherPanelOpen}
+                            onClose={() => setTogetherPanelOpen(false)}
                             onEmote={(id) => togetherRef.current?.sendEmote(id)}
                             onMute={(id) => togetherRef.current?.toggleMute(id)}
                             onReport={(id) => togetherRef.current?.report(id)}
