@@ -1,5 +1,5 @@
 import {
-    ACTIONS, CLOSE, HEARTBEAT_MS, PROTOCOL_VERSION, SEND_INTERVAL_MS,
+    ACTIONS, CLOSE, HEARTBEAT_MS, PROTOCOL_VERSION, SEND_INTERVAL_MS, roomCodeFromName,
 } from './protocol.js';
 
 export const STATUS = {
@@ -7,19 +7,22 @@ export const STATUS = {
     CONNECTING: 'connecting',
     ONLINE: 'online',
     FULL: 'full',
+    NOT_FOUND: 'notfound',
     KICKED: 'kicked',
     ERROR: 'error',
 };
 
 const RETRY_DELAYS_MS = [1000, 2000, 4000];
-const NO_RETRY = new Set([CLOSE.FULL, CLOSE.BAD_HELLO, CLOSE.KICKED, CLOSE.TOO_MANY_ERRORS, CLOSE.VERSION]);
+const NO_RETRY = new Set([CLOSE.NOT_FOUND, CLOSE.FULL, CLOSE.BAD_HELLO, CLOSE.KICKED, CLOSE.TOO_MANY_ERRORS, CLOSE.VERSION]);
 
 // One connection to a zoo room. It keeps the list of other players, sends the
 // local player's position about ten times a second and tells the game what
 // happens through the `on*` callbacks. The game keeps working if it fails.
 export class MultiplayerClient {
-    constructor({ url, nick, character, WebSocketImpl = globalThis.WebSocket, setTimeoutImpl, clearTimeoutImpl } = {}) {
+    constructor({ url, nick, character, mode = 'public', code = '', WebSocketImpl = globalThis.WebSocket, setTimeoutImpl, clearTimeoutImpl } = {}) {
         this.url = url;
+        this.mode = mode;   // 'public', 'create' or 'join'
+        this.code = code;
         this.nick = nick;
         this.character = character;
         this.WebSocketImpl = WebSocketImpl;
@@ -38,6 +41,8 @@ export class MultiplayerClient {
         this.onLeave = () => {};
         this.onSnap = () => {};
         this.onEmote = () => {};
+        this.onChat = () => {};
+        this.onChatRefused = () => {};
 
         this.socket = null;
         this.closedByUs = false;
@@ -65,7 +70,7 @@ export class MultiplayerClient {
 
         let socket;
         try {
-            socket = new this.WebSocketImpl(this.url);
+            socket = new this.WebSocketImpl(this.endpoint());
         } catch {
             this.setStatus(STATUS.ERROR);
             return;
@@ -78,6 +83,14 @@ export class MultiplayerClient {
         socket.onmessage = (event) => this.handle(event.data);
         socket.onclose = (event) => this.handleClose(event.code);
         socket.onerror = () => { /* onclose follows */ };
+    }
+
+    // Same server address for every kind of room; the choice goes in the query.
+    endpoint() {
+        const target = new URL(this.url);
+        if (this.mode === 'create') target.searchParams.set('mode', 'create');
+        if (this.mode === 'join') target.searchParams.set('code', this.code);
+        return target.toString();
     }
 
     handle(raw) {
@@ -112,6 +125,12 @@ export class MultiplayerClient {
                 if (changed.length > 0) this.onSnap(changed);
                 break;
             }
+            case 'chat':
+                this.onChat(message.id, message.m);
+                break;
+            case 'chatno':
+                this.onChatRefused(message.r);
+                break;
             case 'emote':
                 this.onEmote(message.id, message.e);
                 break;
@@ -130,6 +149,7 @@ export class MultiplayerClient {
             this.setStatus(STATUS.IDLE);
             return;
         }
+        if (code === CLOSE.NOT_FOUND) { this.setStatus(STATUS.NOT_FOUND); return; }
         if (code === CLOSE.FULL) { this.setStatus(STATUS.FULL); return; }
         if (code === CLOSE.KICKED) { this.setStatus(STATUS.KICKED); return; }
         if (NO_RETRY.has(code) || (!wasOnline && this.retry >= RETRY_DELAYS_MS.length)) {
@@ -139,6 +159,13 @@ export class MultiplayerClient {
         if (this.retry >= RETRY_DELAYS_MS.length) {
             this.setStatus(STATUS.ERROR);
             return;
+        }
+        // A dropped connection to a room we created must return to the SAME
+        // room, not make a new code.
+        const privateCode = roomCodeFromName(this.room);
+        if (wasOnline && privateCode) {
+            this.mode = 'join';
+            this.code = privateCode;
         }
         const delay = RETRY_DELAYS_MS[this.retry];
         this.retry += 1;
@@ -167,6 +194,10 @@ export class MultiplayerClient {
 
     sendEmote(id) {
         return this.send({ t: 'e', id });
+    }
+
+    sendChat(text) {
+        return this.send({ t: 'c', m: text });
     }
 
     report(playerId) {
