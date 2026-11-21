@@ -8,6 +8,7 @@ import { ActionButton, GrassIcon, ModalShell, PaginationControls, SurfacePanel, 
 import { createGLTFLoader } from '../utils/gltfLoader.js';
 import { applyHumanSkinColor } from '../utils/characterMaterials.js';
 import { TogetherSetupModal } from './TogetherUI.jsx';
+import { isOnlineNow, useOnlineStatus } from '../multiplayer/useOnline.js';
 import { ControlsContent } from './ControlsGuide.jsx';
 import { DEFAULT_SETTINGS, getSettings, saveSettings } from '../utils/storage.js';
 import { LANGUAGES, getLanguage, setLanguage, t, useLanguage } from '../i18n/index.js';
@@ -640,6 +641,8 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
     const [profileRequired, setProfileRequired] = useState(false);
     const startAfterProfileRef = useRef(false);
     const [togetherOpen, setTogetherOpen] = useState(false);
+    const [offlineNoticeOpen, setOfflineNoticeOpen] = useState(false);
+    const online = useOnlineStatus();
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     useEffect(() => {
@@ -700,6 +703,10 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
     }, [onStart]);
 
     const handleTogetherClick = useCallback(() => {
+        if (!isOnlineNow()) {
+            setOfflineNoticeOpen(true);
+            return;
+        }
         if (!isPlayerProfileComplete()) {
             startAfterProfileRef.current = 'together';
             setProfileRequired(true);
@@ -710,6 +717,11 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
     }, []);
 
     const handleTogetherStart = useCallback((choice) => {
+        if (!isOnlineNow()) {
+            setTogetherOpen(false);
+            setOfflineNoticeOpen(true);
+            return;
+        }
         setTogetherOpen(false);
         playGameButtonSfx('confirm');
         setStarting(true);
@@ -782,11 +794,15 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
                             type="button"
                             onClick={handleTogetherClick}
                             disabled={starting}
-                            className="menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+                            aria-disabled={!online}
+                            className={`menu-primary-button group flex min-h-11 items-center justify-center gap-2.5 px-4 transition-transform active:scale-95 cursor-pointer disabled:opacity-50 ${online ? 'hover:scale-105' : 'grayscale opacity-60'}`}
                         >
                             <GrassIcon name="character" alt="" className="menu-primary-icon object-contain drop-shadow-md group-hover:scale-110 transition-transform" />
-                            <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
-                                {t('PLAY TOGETHER')}
+                            <span className="flex flex-col items-center leading-tight">
+                                <span className="menu-primary-label font-black uppercase text-slate-800 drop-shadow-[0_2px_4px_rgba(255,255,255,0.9)]">
+                                    {t('PLAY TOGETHER')}
+                                </span>
+                                {online ? null : <span className="text-[11px] font-black uppercase text-slate-700">{t('No internet connection')}</span>}
                             </span>
                         </button>
                     ) : null}
@@ -868,6 +884,15 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
             </div>
 
             {/* Modals */}
+            <ModalShell
+                isOpen={offlineNoticeOpen}
+                onClose={() => setOfflineNoticeOpen(false)}
+                title="No Internet"
+                size="sm"
+                footer={<ActionButton size="sm" onClick={() => setOfflineNoticeOpen(false)}>{t('OK')}</ActionButton>}
+            >
+                <p className="text-center text-sm font-bold">{t('Please connect to the internet.')}</p>
+            </ModalShell>
             {onStartTogether ? <TogetherSetupModal isOpen={togetherOpen} onClose={() => setTogetherOpen(false)} onStart={handleTogetherStart} /> : null}
             <ModalShell isOpen={howToPlayOpen} onClose={() => setHowToPlayOpen(false)} title="How To Play" size="md">
                 <HowToPlayContent />
