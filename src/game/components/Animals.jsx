@@ -37,6 +37,7 @@ const ANIMAL_CONFIGS = [
         runSpeed: 0.16,
         count: 1,
         name: 'Domestic Horse',
+        rideable: true,
         species: 'Equus caballus',
         emoji: '🐴',
         description: 'A majestic animal that has been a companion to humans for thousands of years.'
@@ -677,6 +678,30 @@ class GLTFAnimal {
         this.scheduleNextAmbientSound(nowSeconds);
     }
 
+    // Hip anchor on the horse's back (world space) for a seated rider.
+    getSeatPosition(target = new THREE.Vector3()) {
+        if (!this.seatBone) {
+            this.seatBone = null;
+            this.group.traverse((o) => { if (!this.seatBone && o.isBone && o.name === 'Torso2') this.seatBone = o; });
+        }
+        if (!this.seatBone) return target.set(this.pos.x, this.group.position.y + 4.3, this.pos.z);
+        this.group.updateMatrixWorld(true);
+        this.seatBone.getWorldPosition(target);
+        target.y += 0.8;
+        return target;
+    }
+
+    startRide(x, z, angle) {
+        this.ride = { x, z, angle, gait: 'idle', anim: 'idle', lift: 0, timeScale: 1 };
+    }
+
+    stopRide() {
+        this.ride = null;
+        this.state = 'idle';
+        this.timer = 1;
+        this.playAnimation('idle');
+    }
+
     playAnimation(name, options = {}) {
         const actionKeys = Object.keys(this.actions);
         if (actionKeys.length === 0) return;
@@ -749,7 +774,17 @@ class GLTFAnimal {
             }
         }
 
-        if (this.movementStyle !== 'static') {
+        const driven = !!this.ride;
+        if (driven) {
+            // A rider steers: position, heading and gait come from the game.
+            this.pos.x = this.ride.x;
+            this.pos.z = this.ride.z;
+            this.angle = this.ride.angle;
+            this.targetAngle = this.ride.angle;
+            this.state = this.ride.gait === 'idle' ? 'idle' : 'walk';
+            this.currentSpeed = 0;
+            this.playAnimation(this.ride.anim, { timeScale: this.ride.timeScale ?? 1 });
+        } else if (this.movementStyle !== 'static') {
             this.timer -= dt;
             if (this.timer < 0) this.switchBehavior();
         } else {
@@ -804,18 +839,18 @@ class GLTFAnimal {
         }
 
         const frameScale = Math.min(dt * 60, 3);
-        if (this.movementStyle !== 'static') {
+        if (!driven && this.movementStyle !== 'static') {
             const angleDiff = ((this.targetAngle - this.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
             // turnSpeed is tuned per 60 fps frame; scale so 30/144 fps match.
             this.angle += angleDiff * Math.min(1, this.turnSpeed * frameScale);
         }
 
-        if (this.movementStyle !== 'static') {
+        if (!driven && this.movementStyle !== 'static') {
             const speedLerp = 1 - Math.exp(-3 * dt);
             this.currentSpeed += (this.targetSpeed - this.currentSpeed) * speedLerp;
         }
 
-        if (this.movementStyle !== 'static' && (this.state === 'walk' || this.state === 'run')) {
+        if (!driven && this.movementStyle !== 'static' && (this.state === 'walk' || this.state === 'run')) {
             let nextX = this.pos.x + Math.sin(this.angle) * this.currentSpeed * frameScale;
             let nextZ = this.pos.z + Math.cos(this.angle) * this.currentSpeed * frameScale;
             let hitObstacle = false;
@@ -861,7 +896,7 @@ class GLTFAnimal {
             }
         }
 
-        const h = this.getGroundHeight();
+        const h = this.getGroundHeight() + (driven ? (this.ride.lift || 0) : 0);
         this.group.position.set(this.pos.x, h + this.groundOffset, this.pos.z);
         const terrainNormal = getTerrainNormalAt(this.terrainNormal, this.pos.x, this.pos.z);
         const targetPitch = THREE.MathUtils.clamp(Math.atan2(-terrainNormal.z, terrainNormal.y), -0.28, 0.28);
