@@ -1,7 +1,7 @@
 import {
     ACTIONS, CHARACTERS, CLOSE, EMOTE_COOLDOWN_MS, HEIGHT_MAX, HEIGHT_MIN, IDLE_TIMEOUT_MS,
     MAX_MESSAGE_BYTES, MAX_PLAYERS, PROTOCOL_VERSION, REPORTS_TO_KICK, WORLD_LIMIT,
-    isValidEmote, isValidNickname,
+    CHAT_COOLDOWN_MS, chatProblem, isValidEmote, isValidNickname, normalizeChat,
 } from './protocol.js';
 
 // All the rules of one zoo room, with no network code in it. A Cloudflare
@@ -83,6 +83,7 @@ export class RoomCore {
         switch (message.t) {
             case 's': return this.state(player, message);
             case 'e': return this.emote(player, message);
+            case 'c': return this.chat(player, message);
             case 'r': return this.report(player, message);
             case 'p': return [{ to: connId, data: json({ t: 'pong' }) }];
             default: return this.bad(connId, player);
@@ -104,7 +105,7 @@ export class RoomCore {
         const player = {
             id, connId, nick: message.nick, ch: message.ch,
             x: 0, y: 0, z: 0, yaw: 0, a: 'idle',
-            dirty: false, lastState: 0, lastEmote: 0, lastSeen: this.now(),
+            dirty: false, lastState: 0, lastEmote: 0, lastChat: 0, lastSeen: this.now(),
             bad: 0, reportedBy: new Set(),
         };
         this.players.set(connId, player);
@@ -143,6 +144,21 @@ export class RoomCore {
         if (at - player.lastEmote < EMOTE_COOLDOWN_MS) return [];
         player.lastEmote = at;
         return [{ broadcast: true, data: json({ t: 'emote', id: player.id, e: message.id }) }];
+    }
+
+    // The room checks every message again, whatever the client did. A refused
+    // message is answered with { t: 'chatno', r: reason } to the sender only.
+    chat(player, message) {
+        const at = this.now();
+        if (typeof message.m !== 'string') return this.bad(player.connId, player);
+        if (at - player.lastChat < CHAT_COOLDOWN_MS) {
+            return [{ to: player.connId, data: json({ t: 'chatno', r: 'slow' }) }];
+        }
+        const text = normalizeChat(message.m);
+        const problem = chatProblem(text);
+        if (problem) return [{ to: player.connId, data: json({ t: 'chatno', r: problem }) }];
+        player.lastChat = at;
+        return [{ broadcast: true, data: json({ t: 'chat', id: player.id, m: text }) }];
     }
 
     report(player, message) {
