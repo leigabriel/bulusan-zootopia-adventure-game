@@ -35,7 +35,7 @@ const ANIMAL_CONFIGS = [
         scale: 1.3,
         speed: 0.08,
         runSpeed: 0.16,
-        count: 1,
+        count: 3,
         name: 'Domestic Horse',
         rideable: true,
         species: 'Equus caballus',
