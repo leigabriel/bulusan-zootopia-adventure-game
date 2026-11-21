@@ -300,9 +300,9 @@ export function TogetherPanel({ info, open, onClose, onEmote, onMute, onReport, 
 }
 
 // Chat in the top left, under the task card. Closed it is one small button.
-export function TogetherChat({ info, onSend }) {
+export function TogetherChat({ info, open, onOpenChange, onSend }) {
     useLanguage();
-    const [open, setOpen] = useState(false);
+    const setOpen = onOpenChange;
     const [text, setText] = useState('');
     const [seen, setSeen] = useState(0);
     const logRef = useRef(null);
