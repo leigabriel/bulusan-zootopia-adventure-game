@@ -5,10 +5,34 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 4.2** (version code 33, released 2026-11-21)
+**Current version: 4.3** (version code 34, released 2026-11-22)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.3 (2026-11-22)
+
+Version code 34.
+
+### Added
+- cursor: Add pixel glove pointing-hand cursor draft
+- multiplayer: Hold a new private room open to show its code first
+- ui: Compact option for modal windows
+- together: Show room code screen before entering and shrink type
+- ui: Richer how-to-play guide, compact task panel, no menu animals
+- i18n: Tagalog for room code screen, guide pages, no stag
+- game: Release held room on join, keep stick during camera mode
+
+### Changed
+- audio: Replace game background music with new soundtrack
+- audio: Re-encode background music to 112k to keep downloads small
+- tasks: Feed all 12 animals after stag removal
+- Compact window sizing and remove menu animal styles
+
+### Removed
+- cursor: Drop glove cursor draft
+- animals: Remove red deer stag from the zoo
+- data: Drop red deer stag from the animal book
 
 ## 4.2 (2026-11-21)
 
