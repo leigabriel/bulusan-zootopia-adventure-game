@@ -198,3 +198,32 @@ test('two new private rooms get different codes', async () => {
         await server.close();
     }
 });
+
+test('a reserved room keeps its code until the real player joins, then it can be released', async () => {
+    const { reserveRoom } = await import('../src/game/multiplayer/reserve.js');
+    const server = await startDevServer({ port: 0, log: () => {} });
+    const url = `ws://localhost:${server.port}/join`;
+    try {
+        const reserved = await reserveRoom({ url, nick: 'Brave Parrot 7', WebSocketImpl: WebSocket, keepAliveMs: 50 });
+        assert.equal(isValidRoomCode(reserved.code), true);
+
+        // A friend can join while the creator is still reading the code.
+        const friend = makeClient(url, 'Kind Tiger 9', 'girl', { mode: 'join', code: reserved.code });
+        friend.connect();
+        await until(() => friend.isOnline);
+        assert.equal(roomCodeFromName(friend.room), reserved.code);
+
+        // The creator joins for real, then the reservation is released.
+        const creator = makeClient(url, 'Brave Parrot 7', 'boy', { mode: 'join', code: reserved.code });
+        creator.connect();
+        await until(() => creator.isOnline);
+        reserved.release();
+        await wait(150);
+        assert.equal(creator.isOnline, true);
+        assert.equal(roomCodeFromName(creator.room), reserved.code);
+        creator.close();
+        friend.close();
+    } finally {
+        await server.close();
+    }
+});
