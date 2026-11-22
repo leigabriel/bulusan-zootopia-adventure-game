@@ -2106,10 +2106,11 @@ function MiniZooGame() {
         setTogetherChatOpen(false);
     }, []);
 
-    const startTogether = useCallback(({ nick, mode, code }, character) => {
+    const startTogether = useCallback(({ nick, mode, code, release = null }, character) => {
         const state = gameStateRef.current;
-        if (!state.scene || !multiplayerUrl) return;
+        if (!state.scene || !multiplayerUrl) { release?.(); return; }
         togetherRef.current?.stop();
+        let heldRoom = release;
         const session = new TogetherSession({
             scene: state.scene,
             url: multiplayerUrl,
@@ -2118,7 +2119,14 @@ function MiniZooGame() {
             mode,
             code,
             getLanguage,
-            onChange: setTogetherInfo,
+            onChange: (info) => {
+                setTogetherInfo(info);
+                // A room made on the code screen is held open until we are inside it.
+                if (heldRoom && info.status !== 'connecting' && info.status !== 'idle') {
+                    heldRoom();
+                    heldRoom = null;
+                }
+            },
         });
         togetherRef.current = session;
         // Every Play Together box starts closed.
@@ -3070,8 +3078,9 @@ function MiniZooGame() {
                             onLeave={stopTogether}
                         />
                     ) : null}
-                     {!interfaceOpen ? <Joystick baseRef={baseRef} stickRef={stickRef} isTouchDevice={isTouchDevice} /> : null}
-                      {!interfaceOpen ? <JumpButton jumpRef={jumpRef} isTouchDevice={isTouchDevice} /> : null}
+                     {/* The stick and Jump stay on while the camera is open so players can walk and shoot. */}
+                     {!modalOpen ? <Joystick baseRef={baseRef} stickRef={stickRef} isTouchDevice={isTouchDevice} /> : null}
+                      {!modalOpen ? <JumpButton jumpRef={jumpRef} isTouchDevice={isTouchDevice} /> : null}
                      <KoiFeedControl
                          visible={Boolean(nearKoi && !riding && gameStarted && characterReady && !interfaceOpen && !nearbyAnimal)}
                          onFeed={feedKoi}

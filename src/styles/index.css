@@ -625,18 +625,6 @@ select:focus-visible,
 .menu-leaf--3 { left: 63%; animation-delay: -2s; background: #ffd95e; }
 .menu-leaf--4 { left: 79%; animation-delay: -7s; animation-duration: 16s; background: #f7a8c4; }
 .menu-leaf--5 { left: 92%; animation-delay: -11s; }
-.menu-animal {
-    position: absolute;
-    bottom: clamp(56px, 12dvh, 120px);
-    height: auto;
-    filter: drop-shadow(0 8px 6px rgba(20, 70, 50, 0.35));
-    transform-origin: 50% 100%;
-    animation: menu-bob 3.6s ease-in-out infinite;
-}
-.menu-animal--alpaca { left: clamp(6px, 4vw, 70px); width: clamp(64px, 17dvh, 150px); }
-.menu-animal--rabbit { left: clamp(70px, 14vw, 230px); width: clamp(48px, 11dvh, 100px); animation-delay: -1.2s; }
-.menu-animal--tiger { right: clamp(6px, 3vw, 60px); width: clamp(90px, 24dvh, 210px); animation-delay: -0.6s; }
-.menu-animal--parrot { right: clamp(100px, 17vw, 280px); width: clamp(44px, 10dvh, 90px); animation-delay: -2s; }
 @keyframes menu-spin { to { transform: rotate(360deg); } }
 @keyframes menu-drift-x { from { transform: translateX(-3vw); } to { transform: translateX(3vw); } }
 @keyframes menu-fall {
@@ -644,15 +632,8 @@ select:focus-visible,
     50% { transform: translate3d(26px, 55dvh, 0) rotate(180deg); }
     100% { transform: translate3d(-10px, 110dvh, 0) rotate(360deg); }
 }
-@keyframes menu-bob {
-    0%, 100% { transform: translateY(0) scale(1, 1); }
-    50% { transform: translateY(-5px) scale(1.02, 0.98); }
-}
 @media (prefers-reduced-motion: reduce) {
-    .menu-sun-rays, .menu-cloud, .menu-leaf, .menu-animal { animation: none; }
-}
-@media (max-height: 430px) {
-    .menu-animal--rabbit, .menu-animal--parrot { display: none; }
+    .menu-sun-rays, .menu-cloud, .menu-leaf { animation: none; }
 }
 
 .gb-pressed { display: none; }
@@ -1252,3 +1233,32 @@ button:active .gb-pressed { display: inline; }
     box-shadow: 0 4px 0 #9f1239;
     touch-action: manipulation;
 }
+
+/* Compact windows (Play Together, Adventure Tasks): smaller type and tighter
+   spacing so every button and line fits on small phones. */
+.sz-compact {
+    --sz-text-sm: 12px;
+    --sz-text-md: 13px;
+    --sz-text-lg: 15px;
+    --sz-target: 40px;
+}
+.sz-compact .sz-title,
+.sz-compact .ui-modal-title { font-size: clamp(15px, 2.4vw, 19px) !important; }
+.sz-compact .sz-card-header,
+.sz-compact .ui-modal-header { min-height: 44px; padding-block: 2px; }
+.sz-compact .sz-icon-btn { width: 40px; min-width: 40px; height: 40px; }
+.sz-compact .sz-icon-btn--close { width: 36px; min-width: 36px; height: 36px; }
+.sz-compact .sz-btn { min-height: 38px; padding-inline: 10px; font-size: 12px; letter-spacing: .04em; }
+.sz-compact .sz-btn--sm { min-height: 36px; font-size: 11.5px; }
+.sz-compact .sz-tab { min-height: 36px; font-size: 12px !important; }
+.sz-compact .sz-tabs { padding: 6px 10px; gap: 6px; }
+.sz-compact .sz-row { min-height: 40px; padding-block: 6px; font-size: 12px !important; }
+.sz-compact .sz-label { font-size: 10.5px !important; }
+.sz-compact .sz-text { font-size: 12px !important; }
+.sz-compact .sz-badge { width: 30px !important; height: 30px !important; font-size: 12px !important; }
+.sz-compact .sz-progress { height: 10px; }
+.sz-compact .sz-mission .text-\[18px\],
+.sz-compact .sz-mission .text-\[16px\] { font-size: 14px !important; }
+.sz-compact .sz-mission .text-\[15px\] { font-size: 12.5px !important; }
+.sz-compact .ui-modal-body,
+.sz-compact .ui-modal-footer { padding: 10px 12px; }

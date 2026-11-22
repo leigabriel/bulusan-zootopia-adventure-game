@@ -148,28 +148,37 @@ function HowToPlayContent() {
              { label: 'Move', color: 'text-emerald-600', icon: <GrassIcon name="controls" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Slide the round stick to walk.' },
              { label: 'Look and jump', color: 'text-amber-600', icon: <GrassIcon name="phone" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Slide your finger to look around. Tap Jump to hop.' },
              { label: 'Care for animals', color: 'text-sky-600', icon: <GrassIcon name="character" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Walk up to a friendly animal. Press and hold Feed.' },
-             { label: 'Meet the ranger', color: 'text-emerald-700', icon: <GrassIcon name="trophy" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Tap Talk near a ranger. Finish tasks to win a prize.' },
+             { label: 'Ride a horse', color: 'text-orange-600', icon: '🐴', iconClass: 'bg-orange-100', text: 'Stand next to a horse and tap Ride Horse. Tap Get Off to hop down.' },
+             { label: 'Feed the koi', color: 'text-rose-600', icon: '🐟', iconClass: 'bg-rose-100', text: 'Walk to the koi pond and tap Feed Koi.' },
+             { label: 'Take photos', color: 'text-fuchsia-600', icon: <GrassIcon name="camera" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Tap Photo, then Take Photo. You can keep walking with the stick.' },
+             { label: 'Play together', color: 'text-teal-600', icon: '👋', iconClass: 'bg-teal-100', text: 'Tap Play Together on the menu. Make a room and share its code, or type a friend\'s code.' },
+             { label: 'Follow the arrow', color: 'text-emerald-700', icon: <GrassIcon name="trophy" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'The yellow arrow shows where to go. Tap Talk near a ranger. Finish tasks to win a prize.' },
         ]
         : [
              { label: 'Move and look', color: 'text-emerald-600', icon: 'WASD', iconClass: 'bg-emerald-100 text-xs', text: 'Press W A S D to walk. Drag the mouse to look around.' },
              { label: 'Jump and view', color: 'text-amber-600', icon: 'SPACE', iconClass: 'bg-amber-100 text-[11px]', text: 'Press Space to jump. Press V to change the view.' },
              { label: 'Care and talk', color: 'text-sky-600', icon: 'F / T', iconClass: 'bg-sky-100 text-xs', text: 'Hold F to feed an animal. Press T or E to talk.' },
-             { label: 'Finish tasks', color: 'text-emerald-700', icon: 'ESC', iconClass: 'bg-lime-100 text-xs', text: 'Press Esc to close a window. Finish tasks to win a prize.' },
+             { label: 'Ride a horse', color: 'text-orange-600', icon: 'R', iconClass: 'bg-orange-100 text-base', text: 'Stand next to a horse and press R to ride. Press R again to get off.' },
+             { label: 'Feed the koi', color: 'text-rose-600', icon: '🐟', iconClass: 'bg-rose-100', text: 'Walk to the koi pond and click Feed Koi.' },
+             { label: 'Take photos', color: 'text-fuchsia-600', icon: <GrassIcon name="camera" className="h-12 w-12 object-contain" />, iconClass: 'bg-transparent', text: 'Click Photo, then Take Photo. You can keep walking while the camera is open.' },
+             { label: 'Play together', color: 'text-teal-600', icon: '👋', iconClass: 'bg-teal-100', text: 'Click Play Together on the menu. Make a room and share its code, or type a friend\'s code.' },
+             { label: 'Follow the arrow', color: 'text-emerald-700', icon: 'ESC', iconClass: 'bg-lime-100 text-xs', text: 'The yellow arrow shows where to go. Press Esc to close a window. Finish tasks to win a prize.' },
         ];
     const current = pages[page];
 
     return (
         <div className="flex min-h-0 flex-col gap-3 text-sm text-slate-700">
             <p className="text-center text-[11px] font-semibold italic">{usesTouchControls ? t('Playing with your fingers') : t('Playing with keyboard and mouse')}</p>
-            <div className="flex min-h-20 flex-1 items-center rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-sm">
-                <div className="flex items-center gap-4">
+            <div className="flex min-h-24 flex-1 items-center rounded-2xl border-2 border-slate-100 bg-white p-3 shadow-sm">
+                <div className="flex items-center gap-3">
                     <div className={cx('flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl', current.iconClass)}>{current.icon}</div>
-                    <div>
+                    <div className="min-w-0">
                         <p className={cx('mb-1 text-[11px] font-black uppercase tracking-wide', current.color)}>{t(current.label)}</p>
-                        <p className="font-bold leading-snug text-slate-800">{t(current.text)}</p>
+                        <p className="text-sm font-bold leading-snug text-slate-800">{t(current.text)}</p>
                     </div>
                 </div>
             </div>
+            <p className="text-center text-[11px] font-black uppercase tracking-wide text-slate-400">{page + 1} / {pages.length}</p>
             <PaginationControls className="sticky bottom-0 bg-white" page={page} pageCount={pages.length} onPageChange={setPage} />
         </div>
     );
@@ -750,7 +759,7 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
                 starting ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
             )}
         >
-            {/* Background: mint meadow with bush corners, sunny sky, drifting clouds and leaves, zoo friends peeking in */}
+            {/* Background: mint meadow with bush corners, sunny sky, drifting clouds and leaves */}
             <div className="menu-scene pointer-events-none absolute inset-0 z-0" aria-hidden="true">
                 <div className="menu-sun-rays" />
                 <div className="menu-sun-glow" />
@@ -758,10 +767,6 @@ export function MainMenu({ onStart, onStartTogether = null, onMenuInteraction, o
                 <div className="menu-cloud menu-cloud--b" />
                 <div className="menu-cloud menu-cloud--c" />
                 {[0, 1, 2, 3, 4, 5].map((n) => <span key={n} className={`menu-leaf menu-leaf--${n}`} />)}
-                <img className="menu-animal menu-animal--alpaca" src="/images/animals/alpaca.webp" alt="" draggable="false" />
-                <img className="menu-animal menu-animal--rabbit" src="/images/animals/rabbit.webp" alt="" draggable="false" />
-                <img className="menu-animal menu-animal--tiger" src="/images/animals/bengal-tiger.webp" alt="" draggable="false" />
-                <img className="menu-animal menu-animal--parrot" src="/images/animals/parrot.webp" alt="" draggable="false" />
             </div>
 
             {/* Main Interface Content Container */}
@@ -1174,7 +1179,7 @@ export function TaskPanel({ isOpen, onClose, tasks = [], storyTasks = [], active
             />
 
             <section className={cx(
-                'sz-card pointer-events-auto relative flex w-[min(94vw,640px)] max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden transition-all duration-300 ease-out',
+                'sz-card sz-compact pointer-events-auto relative flex w-[min(94vw,560px)] max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden transition-all duration-300 ease-out',
                 active ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
             )}>
                 <header className="sz-card-header shrink-0">

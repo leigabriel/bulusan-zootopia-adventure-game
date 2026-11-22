@@ -27,14 +27,14 @@ export const STORY_TASKS = [
     ['feed-three', 'Feed Three Animals', 'Feed three animals you have not fed yet.', 'unfed'],
     ['discover-five', 'Meet Five Animals', 'Get five different animals into your Animal Book.', 'undiscovered'],
     ['photo-two', 'Take Two Animal Photos', 'Take photos of two animals. Not the Alpaca or the Tiger.', 'photo'],
-    ['animal-care', 'Feed All the Animals', 'Feed all 13 friendly animals.', 'unfed'],
+    ['animal-care', 'Feed All the Animals', 'Feed all 12 friendly animals.', 'unfed'],
     ['final-lino', 'Go Back to Ranger Lino', 'Go back to get your Junior Zoo Ranger prize.', 'lino'],
 ].map(([id, title, instruction, target], index) => ({ id, number: index + 1, title, instruction, target }));
 
 export const STORY_TASK_IDS = STORY_TASKS.map((task) => task.id);
 export const SAFE_ANIMAL_NAMES = [
     'White-tailed Deer', 'Domestic Horse', 'Ostrich', 'Donkey', 'Domestic Cow',
-    'Alpaca', 'Red Deer Stag', 'Bull', 'Forest Monkey', 'Rabbit',
+    'Alpaca', 'Bull', 'Forest Monkey', 'Rabbit',
     // Newer arrivals: only part of the feeding tasks, not of the find or observe tasks.
     'Goat', 'Parrot', 'Pigeon',
 ];

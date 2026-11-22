@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMAL_METADATA, ANIMAL_METADATA_BY_NAME, getAnimalBookEntry } from '../src/game/data/animalMetadata.js';
 
-test('ANIMAL_METADATA contains 17 animals', () => {
-    assert.equal(ANIMAL_METADATA.length, 17);
+test('ANIMAL_METADATA contains 16 animals', () => {
+    assert.equal(ANIMAL_METADATA.length, 16);
 });
 
 test('every animal has required fields', () => {

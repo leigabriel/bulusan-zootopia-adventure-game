@@ -176,7 +176,7 @@ export function useModalTransition(isOpen, duration = 250) {
     return { mounted, active };
 }
 
-export function ModalShell({ isOpen, onClose, title, children, footer = null, size = 'md', closeOnBackdrop = true, showClose = true }) {
+export function ModalShell({ isOpen, onClose, title, children, footer = null, size = 'md', closeOnBackdrop = true, showClose = true, compact = false }) {
     useLanguage();
     const { mounted, active } = useModalTransition(isOpen, 250);
     const titleId = useId();
@@ -241,6 +241,7 @@ export function ModalShell({ isOpen, onClose, title, children, footer = null, si
                     'ui-modal relative z-121 flex flex-col overflow-hidden transition-all duration-250 ease-out transform',
                     active ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
                     maxWidth[size] || maxWidth.md,
+                    compact && 'sz-compact',
                 )}
             >
                 <div className="ui-modal-header sz-card-header shrink-0">

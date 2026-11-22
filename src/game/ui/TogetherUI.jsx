@@ -5,7 +5,8 @@ import {
     EMOTES, MAX_CHAT_LENGTH, NICK_MAX_TYPED, ROOM_CODE_LENGTH, isValidRoomCode, makeNickname,
     nicknameProblem, normalizeNickname, normalizeRoomCode,
 } from '../multiplayer/protocol.js';
-import { getSavedNickname, saveNickname } from '../multiplayer/config.js';
+import { getMultiplayerUrl, getSavedNickname, saveNickname } from '../multiplayer/config.js';
+import { reserveRoom } from '../multiplayer/reserve.js';
 
 const NICK_MESSAGES = {
     short: 'Your name needs at least 3 letters.',
@@ -25,7 +26,7 @@ const CHAT_MESSAGES = {
 
 const EMOTE_ICONS = { wave: '👋', heart: '❤️', hello: '😊', thanks: '🌼', clap: '👏', star: '⭐' };
 
-const FIELD = 'w-full min-w-0 rounded-xl border-2 border-emerald-700/30 bg-white px-3 py-2 text-base font-black text-slate-800 outline-none focus:border-emerald-600';
+const FIELD = 'w-full min-w-0 rounded-xl border-2 border-emerald-700/30 bg-white px-3 py-1.5 text-sm font-black text-slate-800 outline-none focus:border-emerald-600';
 
 const MODES = [
     { id: 'public', label: 'Public Zoo' },
@@ -43,6 +44,30 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
     const [mode, setMode] = useState('public');
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
+    // Create Room: the room is made first so its code can be read before playing.
+    const [creating, setCreating] = useState(false);
+    const [room, setRoom] = useState(null); // { code, release, nick }
+    const [copied, setCopied] = useState(false);
+    const roomRef = useRef(null);
+    const aliveRef = useRef(true);
+
+    useEffect(() => {
+        aliveRef.current = true;
+        return () => {
+            aliveRef.current = false;
+            roomRef.current?.release();
+            roomRef.current = null;
+        };
+    }, []);
+
+    // Closing the window gives the room back.
+    useEffect(() => {
+        if (isOpen) return;
+        roomRef.current?.release();
+        roomRef.current = null;
+        setRoom(null);
+        setCreating(false);
+    }, [isOpen]);
 
     const shuffle = () => {
         setNick(makeNickname());
@@ -50,25 +75,101 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
         setError('');
     };
 
-    const start = () => {
+    const pickName = () => {
         let finalNick = nick;
         if (typing) {
             finalNick = normalizeNickname(typed);
             const problem = nicknameProblem(finalNick);
             if (problem) {
                 setError(NICK_MESSAGES[problem] || NICK_MESSAGES.chars);
-                return;
+                return null;
             }
         }
+        return finalNick;
+    };
+
+    const start = async () => {
+        if (creating) return;
+        const finalNick = pickName();
+        if (finalNick === null) return;
         if (mode === 'join' && !isValidRoomCode(code)) {
             setError('Type the 4 letters or numbers of your friend\'s room.');
             return;
         }
         saveNickname(finalNick);
+        if (mode === 'create') {
+            setCreating(true);
+            setError('');
+            try {
+                const reserved = await reserveRoom({ url: getMultiplayerUrl(), nick: finalNick });
+                if (!aliveRef.current) { reserved.release(); return; }
+                roomRef.current = reserved;
+                setRoom({ ...reserved, nick: finalNick });
+            } catch {
+                if (aliveRef.current) setError('We could not make a room. Check your internet and try again.');
+            } finally {
+                if (aliveRef.current) setCreating(false);
+            }
+            return;
+        }
         onStart({ nick: finalNick, mode, code: mode === 'join' ? code : '' });
     };
 
+    const enterRoom = () => {
+        if (!room) return;
+        // The game joins the room by its code; the held connection is let go
+        // once the game is inside (see startTogether).
+        const release = room.release;
+        roomRef.current = null;
+        onStart({ nick: room.nick, mode: 'join', code: room.code, release });
+    };
+
+    const backFromRoom = () => {
+        roomRef.current?.release();
+        roomRef.current = null;
+        setRoom(null);
+        setCopied(false);
+    };
+
+    const copyCode = async () => {
+        try {
+            await navigator.clipboard.writeText(room.code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1800);
+        } catch { /* clipboard is not allowed here: the code is on screen */ }
+    };
+
     const startLabel = mode === 'create' ? 'Create Room' : mode === 'join' ? 'Join Room' : 'Join the Zoo';
+
+    // Step 2 of Create Room: show the code first, then play.
+    if (room) {
+        return (
+            <ModalShell
+                isOpen={isOpen}
+                onClose={onClose}
+                title="Your Room"
+                size="sm"
+                compact
+                footer={(
+                    <div className="grid grid-cols-2 gap-2">
+                        <ActionButton variant="secondary" size="sm" onClick={backFromRoom}>{t('Back')}</ActionButton>
+                        <ActionButton size="sm" onClick={enterRoom}>{t('Start Playing')}</ActionButton>
+                    </div>
+                )}
+            >
+                <div className="flex w-full flex-col items-center gap-2 text-center">
+                    <p className="text-xs font-bold">{t('Your room is ready! Tell your friends this code.')}</p>
+                    <div className="flex gap-1.5" aria-label={room.code} role="img">
+                        {room.code.split('').map((char, index) => (
+                            <span key={index} className="grid h-12 w-10 place-items-center rounded-xl border-2 border-emerald-700/40 bg-white text-2xl font-black text-emerald-800 shadow-sm">{char}</span>
+                        ))}
+                    </div>
+                    <ActionButton variant="warning" size="sm" onClick={copyCode}>{copied ? t('Copied!') : t('Copy Code')}</ActionButton>
+                    <p className="text-[11px] font-semibold opacity-80">{t('Friends tap Join Room and type this code. Keep this window open until they are ready, or just start playing.')}</p>
+                </div>
+            </ModalShell>
+        );
+    }
 
     return (
         <ModalShell
@@ -76,23 +177,24 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
             onClose={onClose}
             title="Play Together"
             size="md"
+            compact
             footer={(
                 <div className="grid grid-cols-2 gap-2">
                     <ActionButton variant="secondary" size="sm" onClick={onClose}>{t('Back')}</ActionButton>
-                    <ActionButton size="sm" onClick={start}>{t(startLabel)}</ActionButton>
+                    <ActionButton size="sm" onClick={start} disabled={creating}>{creating ? t('Making your room...') : t(startLabel)}</ActionButton>
                 </div>
             )}
         >
-            <div className="flex w-full flex-col gap-3 text-center">
-                <p className="text-sm font-bold">{t('Walk around the zoo with other kids! Everyone sees your zoo name, not your real name.')}</p>
+            <div className="flex w-full flex-col gap-2 text-center">
+                <p className="text-xs font-bold">{t('Walk around the zoo with other kids! Everyone sees your zoo name, not your real name.')}</p>
 
-                <div className="rounded-2xl border-2 border-emerald-700/30 bg-white/70 px-4 py-2 text-xl font-black" aria-live="polite">
+                <div className="rounded-xl border-2 border-emerald-700/30 bg-white/70 px-3 py-1.5 text-base font-black" aria-live="polite">
                     {typing ? (typed || '...') : nick}
                 </div>
 
                 {typing ? (
                     <div className="flex flex-col gap-1 text-left">
-                        <label className="text-xs font-black" htmlFor="together-nick">{t('Type your zoo name')}</label>
+                        <label className="text-[11px] font-black" htmlFor="together-nick">{t('Type your zoo name')}</label>
                         <input
                             id="together-nick"
                             className={FIELD}
@@ -104,7 +206,7 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
                             placeholder={t('Your zoo name')}
                             onChange={(event) => { setTyped(event.target.value); setError(''); }}
                         />
-                        <p className="text-xs font-semibold opacity-80">{t('Do not use your real name.')}</p>
+                        <p className="text-[11px] font-semibold opacity-80">{t('Do not use your real name.')}</p>
                     </div>
                 ) : null}
 
@@ -119,7 +221,7 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
                     </ActionButton>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('Where to play')}>
+                <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t('Where to play')}>
                     {MODES.map((item) => (
                         <button
                             key={item.id}
@@ -129,7 +231,7 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
                             data-ui-button="true"
                             onClick={() => { setMode(item.id); setError(''); }}
                             className={cx(
-                                'min-h-12 rounded-xl border-2 px-1 text-sm font-black leading-tight active:scale-95',
+                                'min-h-10 rounded-xl border-2 px-1 text-xs font-black leading-tight active:scale-95',
                                 mode === item.id ? 'border-emerald-600 bg-emerald-100 text-emerald-900' : 'border-emerald-700/20 bg-white/70 text-slate-700',
                             )}
                         >
@@ -138,14 +240,14 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
                     ))}
                 </div>
 
-                {mode === 'create' ? <p className="text-xs font-semibold opacity-80">{t('You get a room code. Tell your friends so they can join you.')}</p> : null}
-                {mode === 'public' ? <p className="text-xs font-semibold opacity-80">{t('Meet kids from all over in the open zoo.')}</p> : null}
+                {mode === 'create' ? <p className="text-[11px] font-semibold opacity-80">{t('You get a room code first. Tell your friends so they can join you.')}</p> : null}
+                {mode === 'public' ? <p className="text-[11px] font-semibold opacity-80">{t('Meet kids from all over in the open zoo.')}</p> : null}
                 {mode === 'join' ? (
                     <div className="flex flex-col gap-1 text-left">
-                        <label className="text-xs font-black" htmlFor="together-code">{t('Room code')}</label>
+                        <label className="text-[11px] font-black" htmlFor="together-code">{t('Room code')}</label>
                         <input
                             id="together-code"
-                            className={cx(FIELD, 'text-center text-2xl tracking-[0.4em] uppercase')}
+                            className={cx(FIELD, 'text-center text-xl tracking-[0.4em] uppercase')}
                             value={code}
                             maxLength={ROOM_CODE_LENGTH}
                             autoComplete="off"
@@ -157,8 +259,8 @@ export function TogetherSetupModal({ isOpen, onClose, onStart }) {
                     </div>
                 ) : null}
 
-                {error ? <p role="alert" className="text-sm font-black text-rose-600">{t(error)}</p> : null}
-                <p className="text-xs font-semibold opacity-80">{t('Say hi with fun buttons or kind words. Never share personal details.')}</p>
+                {error ? <p role="alert" className="text-xs font-black text-rose-600">{t(error)}</p> : null}
+                <p className="text-[11px] font-semibold opacity-80">{t('Say hi with fun buttons or kind words. Never share personal details.')}</p>
             </div>
         </ModalShell>
     );
