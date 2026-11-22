@@ -99,20 +99,6 @@ const ANIMAL_CONFIGS = [
         description: 'A fluffy South American camelid, prized for its soft and luxurious fleece.'
     },
     {
-        file: 'Stag.gltf',
-        soundFile: 'redd.mp3',
-        soundGain: 0.80,
-        scale: 1.3,
-        speed: 0.06,
-        runSpeed: 0.13,
-        collisionRadius: 2.0,
-        count: 1,
-        name: 'Red Deer Stag',
-        species: 'Cervus elaphus',
-        emoji: '🦌',
-        description: 'A magnificent male deer with impressive antlers, symbol of wild forests.'
-    },
-    {
         file: 'Bull.gltf',
         soundFile: 'bull.wav',
         soundGain: 0.75,
