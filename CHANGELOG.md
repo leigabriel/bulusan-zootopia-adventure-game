@@ -5,10 +5,18 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 4.3** (version code 34, released 2026-11-22)
+**Current version: 4.4** (version code 35, released 2026-11-23)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.4 (2026-11-23)
+
+Version code 35.
+
+### Changed
+- book: Use new english about-me text for all 16 animals
+- i18n: New tagalog about-me text for the animal book
 
 ## 4.3 (2026-11-22)
 
