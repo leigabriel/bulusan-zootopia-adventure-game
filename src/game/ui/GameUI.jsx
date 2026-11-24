@@ -1526,7 +1526,7 @@ export function KoiFeedControl({ visible, onFeed }) {
                 data-ui-button="true"
                 onClick={(event) => { event.stopPropagation(); onFeed?.(); }}
                 onPointerDown={(event) => event.stopPropagation()}
-                className="rounded-2xl border-2 border-orange-200/80 bg-orange-600/95 px-4 py-2 text-sm font-black uppercase tracking-wider text-white shadow-xl backdrop-blur-md active:scale-95"
+                className="sz-feed-cursor rounded-2xl border-2 border-orange-200/80 bg-orange-600/95 px-4 py-2 text-sm font-black uppercase tracking-wider text-white shadow-xl backdrop-blur-md active:scale-95"
             >
                 {t('Feed Koi')}
             </button>
@@ -1590,7 +1590,7 @@ export function HoldToFeedControl({
                 onTouchEnd={handlePressEnd}
                 onTouchCancel={handlePressEnd}
                 className={cx(
-                    'pointer-events-auto relative grid h-16 w-16 place-items-center rounded-full border-4 border-white/80 shadow-2xl touch-none select-none transition-transform active:scale-95 cursor-pointer',
+                    'sz-feed-cursor pointer-events-auto relative grid h-16 w-16 place-items-center rounded-full border-4 border-white/80 shadow-2xl touch-none select-none transition-transform active:scale-95',
                     completed ? 'bg-emerald-500' : disabled ? 'bg-slate-400 opacity-70' : 'bg-emerald-950/90',
                 )}
             >
