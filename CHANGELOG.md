@@ -5,10 +5,29 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 4.4** (version code 35, released 2026-11-23)
+**Current version: 4.5** (version code 36, released 2026-11-24)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.5 (2026-11-24)
+
+Version code 36.
+
+### Added
+- cursor: Add white default cursor svg
+- cursor: Add white pointer cursor svg
+- cursor: Add white grabbing cursor svg
+- cursor: Add white text cursor svg
+- styles: Apply custom cursors via css variables
+- utils: Add click particle burst for default cursor
+- app: Install click sparkles listener
+- ui: Use grabbing cursor on feed buttons
+- game: Set grabbing cursor on body while feeding
+- styles: Map tailwind cursor utilities and add feeding grab cursor
+
+### Removed
+- app: Drop click sparkles listener
 
 ## 4.4 (2026-11-23)
 
