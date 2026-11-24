@@ -555,6 +555,10 @@ function MiniZooGame() {
     const [cameraFlash, setCameraFlash] = useState(false);
     const [feedingProgress, setFeedingProgress] = useState(0);
     const [isFeeding, setIsFeeding] = useState(false);
+    useEffect(() => {
+        document.body.classList.toggle('sz-feeding', isFeeding);
+        return () => document.body.classList.remove('sz-feeding');
+    }, [isFeeding]);
     const feedingInProgressRef = useRef(null);
     const feedingTimerRef = useRef(null);
     const feedingFrameRef = useRef(null);

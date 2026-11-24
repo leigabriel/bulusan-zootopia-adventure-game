@@ -9,6 +9,10 @@
 }
 
 :root {
+    --sz-cursor-default: url('/cursors/cursor-default.svg') 2 1, default;
+    --sz-cursor-pointer: url('/cursors/cursor-pointer.svg') 16 2, pointer;
+    --sz-cursor-grab: url('/cursors/cursor-grabbing.svg') 20 14, grab;
+    --sz-cursor-text: url('/cursors/cursor-text.svg') 15 19, text;
     --ui-green-50: #eefbf4;
     --ui-green-200: #bde7cb;
     --ui-green-500: #28a36f;
@@ -254,7 +258,7 @@ body,
     overflow: hidden;
     overscroll-behavior: none;
     background-color: #70e0ff; /* Fallback to match menu sky color */
-    cursor: default;
+    cursor: var(--sz-cursor-default);
 }
 
 body {
@@ -283,7 +287,7 @@ label,
 .ranger-choice-button,
 .ranger-footer-button,
 .ranger-close-button {
-    cursor: pointer;
+    cursor: var(--sz-cursor-pointer);
 }
 
 canvas {
@@ -767,10 +771,10 @@ button:active .gb-pressed { display: inline; }
     perspective: 2400px;
     perspective-origin: 50% 45%;
     touch-action: none;
-    cursor: grab;
+    cursor: var(--sz-cursor-pointer);
 }
 
-.zb-book:active { cursor: grabbing; }
+.zb-book:active { cursor: var(--sz-cursor-grab); }
 
 /* Covers: two boards that meet at a hinge. */
 .zb-board {
@@ -1142,7 +1146,7 @@ button:active .gb-pressed { display: inline; }
     border: 2px solid rgba(80, 60, 30, 0.22);
     border-radius: 8px;
     background: #fffaf0;
-    cursor: pointer;
+    cursor: var(--sz-cursor-pointer);
     touch-action: manipulation;
 }
 
@@ -1192,13 +1196,13 @@ button:active .gb-pressed { display: inline; }
     color: #4b3216;
     font-size: 20px;
     line-height: 1;
-    cursor: pointer;
+    cursor: var(--sz-cursor-pointer);
     box-shadow: 0 3px 0 #6b4a2a;
     touch-action: manipulation;
 }
 
 .zb-arrow:active { transform: translateY(2px); box-shadow: 0 1px 0 #6b4a2a; }
-.zb-arrow:disabled { opacity: 0.35; cursor: default; }
+.zb-arrow:disabled { opacity: 0.35; cursor: var(--sz-cursor-default); }
 .zb-arrow--prev { left: -2px; }
 .zb-arrow--next { right: -2px; }
 
@@ -1229,7 +1233,7 @@ button:active .gb-pressed { display: inline; }
     background: #e5484d;
     color: #fff;
     font: 800 26px/1 system-ui, sans-serif;
-    cursor: pointer;
+    cursor: var(--sz-cursor-pointer);
     box-shadow: 0 4px 0 #9f1239;
     touch-action: manipulation;
 }
@@ -1262,3 +1266,39 @@ button:active .gb-pressed { display: inline; }
 .sz-compact .sz-mission .text-\[15px\] { font-size: 12.5px !important; }
 .sz-compact .ui-modal-body,
 .sz-compact .ui-modal-footer { padding: 10px 12px; }
+
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]),
+textarea {
+    cursor: var(--sz-cursor-text);
+}
+
+button,
+a[href],
+select,
+summary,
+label[for],
+[role="button"],
+input[type="range"],
+input[type="checkbox"],
+input[type="radio"] {
+    cursor: var(--sz-cursor-pointer);
+}
+
+button:disabled {
+    cursor: var(--sz-cursor-default);
+}
+
+/* Tailwind cursor utilities must use the custom cursor set too. */
+.cursor-pointer { cursor: var(--sz-cursor-pointer); }
+.cursor-default { cursor: var(--sz-cursor-default); }
+.cursor-grab,
+.cursor-grabbing { cursor: var(--sz-cursor-grab); }
+.cursor-text { cursor: var(--sz-cursor-text); }
+
+/* Feeding: grabbing hand on feed buttons and while a feed is in progress. */
+.sz-feed-cursor,
+.sz-feed-cursor:hover,
+body.sz-feeding,
+body.sz-feeding * {
+    cursor: var(--sz-cursor-grab) !important;
+}
