@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import MiniZooGame from './game/MiniZooGame.jsx';
+import { installClickSparkles } from './game/utils/clickSparkles.js';
 
 function App() {
     const [showSplash, setShowSplash] = useState(true);
@@ -9,6 +10,8 @@ function App() {
         const timer = window.setTimeout(() => setShowSplash(false), 2200);
         return () => window.clearTimeout(timer);
     }, []);
+
+    useEffect(() => installClickSparkles(), []);
 
     if (showSplash) {
         return (
