@@ -1287,3 +1287,18 @@ input[type="radio"] {
 button:disabled {
     cursor: var(--sz-cursor-default);
 }
+
+/* Tailwind cursor utilities must use the custom cursor set too. */
+.cursor-pointer { cursor: var(--sz-cursor-pointer); }
+.cursor-default { cursor: var(--sz-cursor-default); }
+.cursor-grab,
+.cursor-grabbing { cursor: var(--sz-cursor-grab); }
+.cursor-text { cursor: var(--sz-cursor-text); }
+
+/* Feeding: grabbing hand on feed buttons and while a feed is in progress. */
+.sz-feed-cursor,
+.sz-feed-cursor:hover,
+body.sz-feeding,
+body.sz-feeding * {
+    cursor: var(--sz-cursor-grab) !important;
+}
