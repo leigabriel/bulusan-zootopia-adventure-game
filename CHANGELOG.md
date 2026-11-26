@@ -5,10 +5,18 @@ version by 0.1 (see `version.json`) and the release workflow adds a section here
 from the commit messages, so the newest version is always on top.
 
 <!-- changelog:current -->
-**Current version: 4.5** (version code 36, released 2026-11-24)
+**Current version: 4.6** (version code 37, released 2026-11-26)
 <!-- /changelog:current -->
 
 <!-- changelog:entries -->
+
+## 4.6 (2026-11-26)
+
+Version code 37.
+
+### Added
+- character: Make boy shirt blue
+- character: Make girl shirt pink
 
 ## 4.5 (2026-11-24)
 
